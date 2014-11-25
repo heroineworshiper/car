@@ -1,0 +1,217 @@
+; remote control for RC car
+
+
+; 18f1320
+; usb_programmer -p 18f1320 -c 0x300000 1100100000000000
+; Internal oscillator
+; usb_programmer -p 18f1320 -c 0x300002 0001111100001010
+; brownout protection
+; usb_programmer -p 18f1320 -c 0x300006 0000000010000001
+; low voltage programming disabled
+; make car
+; usb_programmer -p 18f1320 -z 256 car_remote.hex
+; usb_programmer -p 18f1320 -z 256 -r car_remote.hex
+
+
+PROCESSOR 18f1320
+#include "p18f1320.inc"
+#include "util.inc"
+#include "chksum.inc"
+#include "cc1101.inc"
+
+
+
+#define SDO_PIN 2
+#define SDO_LAT LATA
+#define SDO_TRIS TRISA
+
+#define SCK_PIN 3
+#define SCK_LAT LATA
+#define SCK_TRIS TRISA
+
+#define CS0_PIN 5
+#define CS0_LAT LATB
+#define CS0_TRIS TRISB
+
+
+
+
+
+; bits in FLAGS
+cblock 0x0
+	HAVE_ANALOG : 1
+	GET_THROTTLE : 1
+endc
+
+#define CLOCKSPEED 8000000
+#define BUFFER_SIZE 12
+#define BAUD 9600
+#define BAUD_RATE_CODE (CLOCKSPEED / (BAUD * 4) - 1)
+#define SYNC_CODE 0xe5
+
+
+	VARSTART H'00', H'100'
+	VARADD FLAGS, 1
+	VARADD THROTTLE, 2
+	VARADD STEERING, 2
+	VARADD BUFFER, BUFFER_SIZE
+	VARADD BUFFER_PTR, 2
+	VARADD TEMP, 1
+	VARADD TEMP1, 1
+	VARADD TEMP2, 1
+	CHKSUM_VARS
+
+
+
+
+	ORG RESETVECTOR
+	goto start
+
+	ORG INTVECTORHI
+	goto start
+
+	ORG INTVECTORLO
+	goto start
+
+
+
+#include "cc1101.s"
+#include "chksum.s"
+
+
+start:
+	BANKSEL H'00'
+	SET_REGISTER OSCCON, B'00000000'
+
+
+; pin modes
+; pin mode: 1 = digital  0 = analog
+	SET_REGISTER ADCON1, B'10101111'
+	SET_REGISTER ADCON0, B'00011001'
+	SET_REGISTER ADCON2, B'00111110'
+
+
+
+
+	SET_REGISTER TXSTA, B'00100100'
+	SET_REGISTER RCSTA, B'10000000'
+	SET_REGISTER BAUDCTL, B'00001000'
+	SET_REGISTER16 SPBRG, BAUD_RATE_CODE
+
+
+
+	bsf ADCON0, 1
+	clrf FLAGS
+	CLEAR_REGISTER16 THROTTLE
+	SET_REGISTER16 STEERING, 0x8000
+	SET_REGISTER16 BUFFER_PTR, BUFFER + BUFFER_SIZE
+	bsf FLAGS, GET_THROTTLE
+
+
+
+	bcf SDO_LAT, SDO_PIN
+	bcf SDO_TRIS, SDO_PIN
+
+	bcf SCK_LAT, SCK_PIN
+	bcf SCK_TRIS, SCK_PIN
+	
+	bsf CS0_LAT, CS0_PIN
+	bcf CS0_TRIS, CS0_PIN
+
+
+
+
+
+
+
+	call reset_chip
+
+
+
+
+	CC1101_TRANSMITTER
+
+	SET_REGISTER OSCCON, B'01110000'
+
+
+loop:
+	clrwdt
+	btfsc PIR1, ADIF
+	call handle_analog
+	
+	btfsc PIR1, TXIF
+	call handle_uart
+	
+	bra loop
+
+
+
+handle_uart:
+	SKIP_LESS_LITERAL BUFFER_PTR, BUFFER + BUFFER_SIZE
+	bra handle_uart2
+		SET_POINTER0_REG BUFFER_PTR
+		COPY_REGISTER TXREG, POSTINC0
+		COPY_REGISTER16 BUFFER_PTR, POINTER0
+		return
+
+handle_uart2:
+	btfss FLAGS, HAVE_ANALOG
+	return
+
+		SET_REGISTER BUFFER + 0, 0x00
+		SET_REGISTER BUFFER + 1, 0xff
+		SET_REGISTER BUFFER + 2, 0x2d
+		SET_REGISTER BUFFER + 3, 0xd4
+		SET_REGISTER BUFFER + 4, SYNC_CODE
+		SET_REGISTER BUFFER + 5, 0
+; reverse
+		COPY_BIT BUFFER + 5, 0, PORTA, 1
+		COPY_REGISTER16 BUFFER + 6, THROTTLE
+		COPY_REGISTER16 BUFFER + 8, STEERING
+		GET_CHKSUM BUFFER + BUFFER_SIZE - 2, BUFFER + 4, BUFFER_SIZE - 6
+		
+		SET_REGISTER BUFFER_PTR, BUFFER
+		return
+
+
+handle_analog:
+	bcf PIR1, ADIF
+
+
+	btfss FLAGS, GET_THROTTLE
+	bra handle_analog2
+		SET_REGISTER ADCON0, B'00010001'
+		bcf FLAGS, GET_THROTTLE
+		COPY_REGISTER16 THROTTLE, ADRESL
+		bsf ADCON0, 1
+		return
+
+handle_analog2:
+	SET_REGISTER ADCON0, B'00011001'
+	bsf FLAGS, GET_THROTTLE
+	bsf FLAGS, HAVE_ANALOG
+	COPY_REGISTER16 STEERING, ADRESL
+	bsf ADCON0, 1
+	return
+	
+	
+	
+
+
+
+
+
+
+
+END
+
+
+
+
+
+
+
+
+
+
+

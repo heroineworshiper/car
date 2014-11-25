@@ -1,0 +1,128 @@
+#ifndef ARM_CAR_H
+#define ARM_CAR_H
+
+#include "stm32f4xx_adc.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_tim.h"
+
+#define MOTORS 2
+#define PHASES 3
+
+// timer for packet flashing
+#define LED_DELAY2 2
+#define LED_PIN GPIO_Pin_10
+#define LED_GPIO GPIOB
+
+typedef struct
+{
+	float p_gain;
+	float i_gain;
+	float d_gain;
+	float i_limit;
+	float o_limit;
+	int counter;
+	float error_accum;
+	float accum;
+} pid_t;
+
+typedef struct
+{
+	TIM_TypeDef *phase_timer;
+	TIM_TypeDef *pwm_timer;
+	ADC_TypeDef *adc;
+	
+	
+// 0 - PWM_PERIOD-1
+	int power;
+// direction to move phase for a right turn
+	int turn_sign;
+// phase of each motor (0 - 360)
+	float phase;
+// raw PWM for each phase
+	int pwm[PHASES];
+// direction of phase
+	int direction;
+
+// time between commutations
+	int period;
+	int need_period_change;
+// what phases are floating in freewheel mode
+	int disabled[PHASES];
+// phase voltage in freewheel mode
+	int voltage[PHASES];
+// commutate in the next interrupt
+	int commutate;
+// counter
+	int commutations;  
+// filtered back EMF range
+	float threshold_emf;
+// filtered crossing time
+	float crossing_time;
+// new back EMF range
+	int min_emf;
+	int max_emf;
+// direction of back EMF crossing
+// -1 = not set
+// 0 = looking for fall
+// 1 = looking for rise
+	int emf_direction;
+// new time of half emf
+// -1 = not detected
+	int crossing_time2;
+	int total_conversions;
+	int delay_counter;
+} motor_t;
+
+typedef struct
+{
+	int timer_high;
+	
+	int throttle_reverse;
+	int throttle;
+// last value from remote control
+	int throttle_reverse2;
+// last value from remote control
+	int throttle2;
+	int steering;
+	int led_counter;
+	
+	pid_t angle_pid;
+	pid_t balance_pid;
+// radians
+	float target_pitch;
+	float total_step;
+	
+	int motor_timer;
+	int shutdown_timeout;
+	int stepper_power;
+	int freewheel_power;
+	int operating_power;
+
+
+	motor_t motor[MOTORS];
+// motor mode
+	int mode;
+
+	int test_motors;
+// debugging value
+	float period_lowpass;
+	int debug_counter;
+} car_t;
+
+extern car_t car;
+
+
+
+
+
+
+
+
+
+
+#endif
+
+
+
+
+

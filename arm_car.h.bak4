@@ -1,0 +1,100 @@
+#ifndef ARM_CAR_H
+#define ARM_CAR_H
+
+#define MOTORS 2
+#define PHASES 3
+
+// timer for packet flashing
+#define LED_DELAY2 2
+#define LED_PIN GPIO_Pin_10
+#define LED_GPIO GPIOB
+
+typedef struct
+{
+	float p_gain;
+	float i_gain;
+	float d_gain;
+	float i_limit;
+	float o_limit;
+	int counter;
+	float error_accum;
+	float accum;
+} pid_t;
+
+typedef struct
+{
+	int timer_high;
+	
+	int throttle_reverse;
+	int throttle;
+	int steering;
+	int led_counter;
+	
+	pid_t angle_pid;
+	pid_t balance_pid;
+// radians
+	float target_pitch;
+	float total_step;
+	
+	int motor_timer;
+	int shutdown_timeout;
+// phase of each motor (0 - 360)
+	float phase[MOTORS];
+// raw PWM for each phase
+	int pwm[MOTORS][PHASES];
+
+// what phases are floating in freewheel mode
+	int disabled[MOTORS][PHASES];
+// direction of phases in freewheel mode
+	int direction[MOTORS][PHASES];
+// commutate in the next interrupt
+	int commutate[MOTORS];
+// counter
+	int commutations[MOTORS];  
+// filtered back EMF range
+	float threshold_emf[MOTORS];
+// filtered crossing time
+	float crossing_time[MOTORS];
+// new back EMF range
+	int min_emf[MOTORS];
+	int max_emf[MOTORS];
+// direction of back EMF crossing
+// -1 = not set
+// 0 = looking for fall
+// 1 = looking for rise
+	int emf_direction[MOTORS];
+// new time of half emf
+// -1 = not detected
+	int crossing_time2[MOTORS];
+	int total_conversions[MOTORS];
+// motor mode
+	int mode;
+// 0 - PWM_PERIOD-1
+	int power;
+	int test_motors;
+	int delay_counter;
+// time between commutations
+	int period;
+// debugging value
+	float period_lowpass;
+	int period_changed;
+	int debug_counter;
+} car_t;
+
+extern car_t car;
+
+
+
+
+
+
+
+
+
+
+#endif
+
+
+
+
+

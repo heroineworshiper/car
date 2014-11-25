@@ -1,0 +1,447 @@
+; mane board for RC car using continuous steering gradient
+
+
+; 18f1320
+; usb_programmer -p 18f1320 -c 0x300000 1100100000000000
+; Internal oscillator
+; usb_programmer -p 18f1320 -c 0x300002 0001111100001010
+; brownout protection
+; usb_programmer -p 18f1320 -c 0x300006 0000000010000001
+; low voltage programming disabled
+; make car
+; usb_programmer -p 18f1320 -z 256 car.hex
+; usb_programmer -p 18f1320 -z 256  -r car.hex
+
+
+PROCESSOR 18f1320
+#include "p18f1320.inc"
+#include "util.inc"
+#include "chksum.inc"
+#include "cc1101.inc"
+
+
+#define SDO_PIN 2
+#define SDO_LAT LATA
+#define SDO_TRIS TRISA
+
+#define SCK_PIN 3
+#define SCK_LAT LATA
+#define SCK_TRIS TRISA
+
+#define CS0_PIN 5
+#define CS0_LAT LATB
+#define CS0_TRIS TRISB
+
+
+
+
+
+
+; bits in FLAGS
+cblock 0x0
+	INTERRUPT_COMPLETE : 1
+	GOT_PACKET : 1
+	THROTTLE_ACTIVE : 1
+	STEERING_ACTIVE : 1
+; direction of steering
+	STEERING_LEFT : 1
+	STEERING_RIGHT  : 1
+endc
+
+
+#define CLOCKSPEED 8000000
+#define BUFFER_SIZE 8
+#define BAUD 1200
+; clock jitter is keeping it as low as possible
+#define BAUD_RATE_CODE (CLOCKSPEED / (BAUD * 4) - 1)
+#define SYNC_CODE 0xe5
+#define THROTTLE_PERIOD 65535
+#define STEERING_PERIOD 32767
+
+; analog range
+#define STEERING_MID 0x8000
+; deadband
+#define STEERING_MIN 0x800
+#define STEERING_MAX 0x7000
+#define THROTTLE_MIN 0x100
+#define THROTTLE_MAX 0xff00
+
+
+	VARSTART H'00', H'100'
+	VARADD FLAGS, 1
+	VARADD UART_STATE, 2
+	
+	
+	VARADD BUFFER, BUFFER_SIZE
+	VARADD NEXT_BUFFER, BUFFER_SIZE
+	VARADD BUFFER_PTR, 2
+	VARADD THROTTLE, 2
+	VARADD STEERING, 2
+	VARADD STEERING_MAGNITUDE, 2
+	VARADD TEMP, 2
+	VARADD TEMP1, 2
+	VARADD TEMP2, 2
+	VARADD INT_TEMP, 2
+	CHKSUM_VARS
+
+
+
+	ORG RESETVECTOR
+	goto start
+
+	ORG INTVECTORHI
+	goto interrupt_handler
+
+	ORG INTVECTORLO
+	goto interrupt_handler
+
+
+
+
+#include "cc1101.s"
+#include "chksum.s"
+
+
+
+start:
+	BANKSEL H'00'
+	SET_REGISTER OSCCON, B'00000000'
+	clrf FLAGS
+
+; pin modes
+; pin mode: 1 = digital  0 = analog
+	SET_REGISTER ADCON1, B'11111111'
+
+
+
+
+	bcf SDO_LAT, SDO_PIN
+	bcf SDO_TRIS, SDO_PIN
+
+	bcf SCK_LAT, SCK_PIN
+	bcf SCK_TRIS, SCK_PIN
+	
+	bsf CS0_LAT, CS0_PIN
+	bcf CS0_TRIS, CS0_PIN
+
+
+
+
+
+
+
+	call reset_chip
+
+	CC1101_RECEIVER
+
+	SET_REGISTER OSCCON, B'01110000'
+; need tuning to get the UART to work
+	SET_REGISTER OSCTUNE, 12
+
+
+
+
+	CLEAR_REGISTER16 THROTTLE
+	CLEAR_REGISTER16 STEERING_MAGNITUDE
+	SET_REGISTER16 STEERING, 0x8000
+	SET_REGISTER16 BUFFER_PTR, NEXT_BUFFER
+
+;	SET_REGISTER16 STEERING_MAGNITUDE, 24576
+;	bsf FLAGS, STEERING_LEFT
+
+	bcf TRISB, 3
+	bcf TRISA, 1
+	bcf TRISA, 7
+	bcf TRISA, 6
+	bcf LATB, 3
+	bcf LATA, 1
+	bcf LATA, 7
+	bcf LATA, 6
+
+	SET_REGISTER T0CON, B'10001000'
+	bsf INTCON, TMR0IE
+	SET_REGISTER T1CON, B'10000001'
+	bsf PIE1, TMR1IE
+
+	SET_REGISTER16 UART_STATE, sync_code1
+	SET_REGISTER TXSTA, B'00000100'
+	SET_REGISTER RCSTA, B'10010000'
+	SET_REGISTER BAUDCTL, B'00001000'
+	SET_REGISTER16 SPBRG, BAUD_RATE_CODE
+	bcf PIR1, RCIF
+	bsf PIE1, RCIE
+
+; enable interrupts
+	bsf INTCON, PEIE
+	bsf INTCON, GIE
+
+
+
+
+loop:
+	clrwdt
+	
+	btfsc FLAGS, GOT_PACKET
+	call handle_packet
+
+
+
+	bra loop
+
+
+
+
+
+
+interrupt_handler:
+	clrwdt
+	bsf FLAGS, INTERRUPT_COMPLETE
+
+	btfsc PIR1, RCIF
+	call handle_uart
+
+	btfsc INTCON, TMR0IF
+	call handle_timer0
+
+	btfsc PIR1, TMR1IF
+	call handle_timer1
+
+
+; loop again if interrupt was handled
+	btfss FLAGS, INTERRUPT_COMPLETE
+	bra interrupt_handler
+; return after popping context from fast register stack
+		retfie FAST
+
+
+
+
+
+
+handle_uart:
+	bcf FLAGS, INTERRUPT_COMPLETE
+	COPY_REGISTER INT_TEMP, RCREG
+
+	SET_PC_REG UART_STATE
+
+
+sync_code1:
+	SKIP_EQUAL_LITERAL INT_TEMP, 0xff
+	return
+		SET_REGISTER16 UART_STATE, sync_code2
+		return
+
+sync_code2:
+	SET_REGISTER16 UART_STATE, sync_code1
+	SKIP_EQUAL_LITERAL INT_TEMP, 0x2d
+	return
+		SET_REGISTER16 UART_STATE, sync_code3
+		return
+
+sync_code3:
+	SET_REGISTER16 UART_STATE, sync_code1
+	SKIP_EQUAL_LITERAL INT_TEMP, 0xd4
+	return
+		SET_REGISTER16 BUFFER_PTR, NEXT_BUFFER
+		SET_REGISTER16 UART_STATE, get_data
+		return
+
+get_data:
+	SET_POINTER0_REG BUFFER_PTR
+	COPY_REGISTER POSTINC0, INT_TEMP
+	COPY_REGISTER16 BUFFER_PTR, POINTER0
+	SKIP_GREATEREQUAL_LITERAL BUFFER_PTR, NEXT_BUFFER + BUFFER_SIZE
+	return
+
+		SET_REGISTER16 UART_STATE, sync_code1
+
+; only store if previous packet hasn't been processed
+		btfsc FLAGS, GOT_PACKET
+		return
+		
+			bsf FLAGS, GOT_PACKET
+			COPY_REGISTER BUFFER + 0, NEXT_BUFFER + 0
+			COPY_REGISTER BUFFER + 1, NEXT_BUFFER + 1
+			COPY_REGISTER BUFFER + 2, NEXT_BUFFER + 2
+			COPY_REGISTER BUFFER + 3, NEXT_BUFFER + 3
+			COPY_REGISTER BUFFER + 4, NEXT_BUFFER + 4
+			COPY_REGISTER BUFFER + 5, NEXT_BUFFER + 5
+			COPY_REGISTER BUFFER + 6, NEXT_BUFFER + 6
+			COPY_REGISTER BUFFER + 7, NEXT_BUFFER + 7
+			return
+
+
+
+handle_packet:
+	GET_CHKSUM TEMP, BUFFER, BUFFER_SIZE - 2
+	
+	SKIP_EQUAL TEMP + 0, BUFFER + BUFFER_SIZE - 2
+	bra packet_fail
+	SKIP_EQUAL TEMP + 1, BUFFER + BUFFER_SIZE - 1
+	bra packet_fail
+
+; debug
+bcf TRISA, 0
+btg LATA, 0
+
+		bcf INTCON, GIE
+		COPY_REGISTER16 THROTTLE, BUFFER + 2
+		SKIP_GREATEREQUAL_LITERAL16 THROTTLE, THROTTLE_MAX
+		bra clamp_throttle_max
+			SET_REGISTER16 THROTTLE, THROTTLE_MAX
+
+clamp_throttle_max:
+		SKIP_LESS_LITERAL16 THROTTLE, THROTTLE_MIN
+		bra clamp_throttle_min
+			SET_REGISTER16 THROTTLE, 0
+
+clamp_throttle_min:
+		SKIP_NONZERO16 THROTTLE
+		bra throttle_done
+			ADD_LITERAL16 THROTTLE, (THROTTLE_PERIOD - THROTTLE_MAX)
+
+throttle_done:
+		
+
+
+		COPY_REGISTER16 STEERING, BUFFER + 4
+		SKIP_GREATEREQUAL_LITERAL16 STEERING, STEERING_MID
+		bra steering_left1
+
+			bsf FLAGS, STEERING_RIGHT
+			bcf FLAGS, STEERING_LEFT
+			COPY_REGISTER16 STEERING_MAGNITUDE, STEERING
+			SUBTRACT_LITERAL16 STEERING_MAGNITUDE, STEERING_MID
+			bra clamp_steering
+		
+steering_left1:
+			bcf FLAGS, STEERING_RIGHT
+			bsf FLAGS, STEERING_LEFT
+			SET_REGISTER16 STEERING_MAGNITUDE, STEERING_MID - 1
+			SUBTRACT16 STEERING_MAGNITUDE, STEERING
+
+clamp_steering:
+		SKIP_GREATEREQUAL_LITERAL16 STEERING_MAGNITUDE, STEERING_MAX
+		bra clamp_steering_max
+			SET_REGISTER16 STEERING_MAGNITUDE, STEERING_MAX
+			
+
+clamp_steering_max:
+		SKIP_LESS_LITERAL16 STEERING_MAGNITUDE, STEERING_MIN
+	bra clamp_steering_min
+			SET_REGISTER16 STEERING_MAGNITUDE, 0
+
+clamp_steering_min:
+		SKIP_NONZERO16 STEERING_MAGNITUDE
+		bra steering_done
+			ADD_LITERAL16 STEERING_MAGNITUDE, (STEERING_PERIOD - STEERING_MAX)
+		
+steering_done:
+		bsf INTCON, GIE
+
+packet_fail:
+	bcf FLAGS, GOT_PACKET
+	return
+
+
+
+
+
+
+handle_timer0:
+	bcf INTCON, TMR0IF
+	bcf FLAGS, INTERRUPT_COMPLETE
+	
+	btfss FLAGS, THROTTLE_ACTIVE
+	bra handle_throttle1
+		bcf FLAGS, THROTTLE_ACTIVE
+		
+		
+		SKIP_LESS_LITERAL16 THROTTLE, THROTTLE_PERIOD
+		bra handle_throttle2
+		bcf LATB, 3
+
+handle_throttle2:
+		SET_REGISTER16 INT_TEMP, 0xffff
+		SUBTRACT_LITERAL16 INT_TEMP, THROTTLE_PERIOD
+		ADD16 INT_TEMP, THROTTLE
+		
+		COPY_TO_TIMER TMR0L, INT_TEMP
+		return
+
+
+handle_throttle1:
+	SKIP_ZERO16 THROTTLE
+	bsf LATB, 3
+
+	bsf FLAGS, THROTTLE_ACTIVE
+	SET_REGISTER16 INT_TEMP, 0xffff
+	SUBTRACT16 INT_TEMP, THROTTLE
+	COPY_TO_TIMER TMR0L, INT_TEMP
+	return
+
+
+
+
+handle_timer1:
+	bcf PIR1, TMR1IF
+	bcf FLAGS, INTERRUPT_COMPLETE
+	
+	btfss FLAGS, STEERING_ACTIVE
+	bra handle_steering1
+		bcf FLAGS, STEERING_ACTIVE
+
+; turn off for inactivity
+		btfss FLAGS, STEERING_LEFT
+		bcf LATA, 7
+		btfss FLAGS, STEERING_RIGHT
+		bcf LATA, 6
+
+; turn off for PWM
+		SKIP_LESS_LITERAL16 STEERING_MAGNITUDE, STEERING_PERIOD
+		bra handle_steering3
+			bcf LATA, 7
+			bcf LATA, 6
+
+handle_steering3:
+		SET_REGISTER16 INT_TEMP, 0xffff
+		SUBTRACT_LITERAL16 INT_TEMP, STEERING_PERIOD
+		ADD16 INT_TEMP, STEERING_MAGNITUDE
+		COPY_TO_TIMER TMR1L, INT_TEMP
+		return
+
+
+handle_steering1:
+	SKIP_NONZERO16 STEERING_MAGNITUDE
+	bra handle_steering2
+	
+	btfsc FLAGS, STEERING_LEFT
+	bsf LATA, 7
+	btfsc FLAGS, STEERING_RIGHT
+	bsf LATA, 6
+
+handle_steering2:
+	bsf FLAGS, STEERING_ACTIVE
+	SET_REGISTER16 INT_TEMP, 0xffff
+	SUBTRACT16 INT_TEMP, STEERING_MAGNITUDE
+	COPY_TO_TIMER TMR1L, INT_TEMP
+	return
+
+
+
+
+
+
+
+END
+
+
+
+
+
+
+
+
+
+
+

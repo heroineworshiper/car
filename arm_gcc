@@ -1,0 +1,1 @@
+/opt/gcc-arm-none-eabi-4_6-2012q2/bin/arm-none-eabi-gcc -O2 -c -mcpu=cortex-m4 -mthumb -march=armv7e-m -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mlittle-endian -ffreestanding -I. -I../copter/arm -I../copter/stm32f4

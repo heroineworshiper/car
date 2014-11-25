@@ -1,0 +1,1 @@
+--optimize-df --optimize-cmp --obanksel=1 -mpic16 -p18f1320 -Dpic18f1320 -I. -I/usr/local//share/sdcc/include/pic16/ -I/usr/local//share/sdcc/non-free/include/pic16 -I../copter/pic
