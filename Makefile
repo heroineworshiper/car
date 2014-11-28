@@ -93,7 +93,6 @@ INTERVAL_SRCS := \
 
 ARM_OBJS := \
 	../copter/stm32f4/startup_main.o \
-	arm_car.o \
 	cc1101.o \
 	imu.o \
 	../copter/arm/arm_math.o \
@@ -114,20 +113,37 @@ ARM_OBJS := \
 	../copter/stm32f4/stm32f4xx_flash.o
 
 
+ARM_CAR_OBJS := \
+	arm_car.o \
+
+ARM_TRUCK_OBJS := \
+	arm_truck.o \
 
 
-all: speedo.hex interval.hex interval_rec.hex usb_download usb_programmer parse
 
-arm: car.bin
+#all: speedo.hex interval.hex interval_rec.hex usb_download usb_programmer parse
 
-car.bin: $(ARM_OBJS)
+all: truck.bin
+
+car: car.bin
+
+car.bin: $(ARM_CAR_OBJS) $(ARM_OBJS)
 	$(GCC_ARM) -o car.elf \
+		$(ARM_CAR_OBJS) \
 		$(ARM_OBJS) \
 		$(ARM_LFLAGS) \
 		-T../copter/stm32f4/main.ld
 	$(OBJCOPY) -O binary car.elf car.bin
 
-$(ARM_OBJS):
+truck.bin: $(ARM_TRUCK_OBJS) $(ARM_OBJS)
+	$(GCC_ARM) -o truck.elf \
+		$(ARM_TRUCK_OBJS) \
+		$(ARM_OBJS) \
+		$(ARM_LFLAGS) \
+		-T../copter/stm32f4/main.ld
+	$(OBJCOPY) -O binary truck.elf truck.bin
+
+$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_CAR_OBJS):
 	`cat arm_gcc` -c $< -o $*.o
 
 car: car.hex car_remote.s
@@ -325,6 +341,7 @@ oscilloscope: oscilloscope.c
 ../copter/stm32f4/stm32f4xx_adc.o:   ../copter/stm32f4/stm32f4xx_adc.c
 ../copter/stm32f4/stm32f4xx_flash.o: ../copter/stm32f4/stm32f4xx_flash.c
 arm_car.o: 			     arm_car.c
+arm_truck.o: 			     arm_truck.c
 cc1101.o: 			     cc1101.c
 imu.o: 			   	     imu.c
 
