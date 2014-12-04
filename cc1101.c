@@ -175,7 +175,7 @@
 #define CC1101_SDA_PIN GPIO_Pin_9
 #define CC1101_SDA_GPIO GPIOA
 #define CC1101_CS_PIN GPIO_Pin_8
-#define CC1101_CS_GPIO GPIOC
+#define CC1101_CS_GPIO GPIOA
 // in us
 #define DELAY 1000
 

@@ -20,17 +20,15 @@
 
 // Useful commands to install it:
 
-// make;uart_programmer truck.bin
+// make;../copter/uart_programmer truck.bin
 
 // pass bluetooth to the debug port to configure the device by enabling 
-// BLUETOOTH_PASSTHROUGH in settings.h
+// BLUETOOTH_PASSTHROUGH
 // useful configuration commands:
 // at+version
 // AT+VERSION
-// at+namemarcy2-px4flow
-// at+namemarcy2-lidar
-// AT+NAMEmarcy2-lidar
-// AT+NAMEsensor
+// at+nametruck
+// AT+NAMEtruck
 // at+baud8
 // AT+BAUD8
 // new devices start at 9600 baud.  Be sure to set the initial baud rate 
@@ -43,7 +41,6 @@
 #include "arm_truck.h"
 #include "arm_math.h"
 #include "cc1101.h"
-#include "imu.h"
 #include "linux.h"
 #include "uart.h"
 #include "misc.h"
@@ -56,7 +53,7 @@
 
 
 // pass bluetooth to debug port
-#define BLUETOOTH_PASSTHROUGH
+//#define BLUETOOTH_PASSTHROUGH
 #define SYNC_CODE 0xe5
 
 
@@ -74,8 +71,13 @@
 #define STEERING_MID 0x8000
 
 
-#define BATTERY_OVERSAMPLE 2048
+#define BATTERY_OVERSAMPLE 1000
+#define GYRO_OVERSAMPLE 20
 
+// TIM10 wraps at this frequency
+#define TIMER_HZ 100
+// gyro update rate
+#define NAV_HZ 1024
 // timer for LED flashing
 #define LED_DELAY (NAV_HZ / 2)
 
@@ -144,37 +146,6 @@ void reset_pid(pid_t *pid)
 
 
 
-void handle_battery()
-{
-	DISABLE_INTERRUPTS
-	int battery = truck.battery;
-	truck.got_battery = 0;
-	ENABLE_INTERRUPTS
-	float voltage = battery * 8.58f / 984.0f;
-
-TRACE2
-print_number(battery);
-print_float(voltage);
-
-}
-
-void handle_battery_adc()
-{
-	ADC3->SR = ~ADC_FLAG_EOC;
-	
-	truck.battery_accum += ADC3->DR;
-	truck.battery_count++;
-	if(truck.battery_count >= BATTERY_OVERSAMPLE)
-	{
-		truck.battery = truck.battery_accum / truck.battery_count;
-		truck.battery_accum = 0;
-		truck.battery_count = 0;
-		truck.got_battery = 1;
-	}
-	
-	ADC_SoftwareStartConv(ADC3);
-}
-
 
 void handle_controls()
 {
@@ -228,7 +199,7 @@ void handle_radio()
 		((chksum >> 8) & 0xff) == radio.packet[PACKET_SIZE - 1])
 	{
 // packet good
-		if(!imu.need_gyro_center)
+		if(!truck.need_gyro_center)
 		{
 			truck.led_counter++;
 			if(truck.led_counter >= LED_DELAY2)
@@ -242,17 +213,24 @@ void handle_radio()
 		truck.throttle_reverse = radio.packet[1] & 0x1;
 		truck.throttle = radio.packet[2] | (radio.packet[3] << 8);
 		truck.steering = radio.packet[4] | (radio.packet[5] << 8);
+TRACE2
+print_text("reverse=");
+print_number(truck.throttle_reverse);
+print_text("throttle=");
+print_number(truck.throttle);
+print_text("steering=");
+print_number(truck.steering);
 
 
 // begin gyro calibration		
 		if(truck.throttle >= THROTTLE_MAX && 
-			!imu.have_gyro_center && 
-			!imu.need_gyro_center)
+			!truck.have_gyro_center && 
+			!truck.need_gyro_center)
 		{
-			imu.need_gyro_center = 1;
+			truck.need_gyro_center = 1;
 		}
 		
-		if(imu.have_gyro_center)
+		if(truck.have_gyro_center)
 		{
 			DISABLE_INTERRUPTS
 
@@ -282,11 +260,39 @@ static void bluetooth_passthrough()
 #endif // BLUETOOTH_PASSTHROUGH
 
 
+void get_code1()
+{
+}
+
+void handle_beacon()
+{
+}
+
+
 void USART3_IRQHandler(void)
 {
 	truck.bluetooth.data = USART3->DR;
 	truck.bluetooth.current_function();
 }
+
+// TIM10 wraps at TIMER_HZ
+void TIM1_UP_TIM10_IRQHandler()
+{
+	if(TIM10->SR & TIM_FLAG_Update)
+	{
+		TIM10->SR = ~TIM_FLAG_Update;
+		
+
+		truck.timer_high++;
+
+// Update shutdown timer
+		if(truck.shutdown_timeout > 0)
+		{
+			truck.shutdown_timeout--;
+		}
+	}
+}
+
 
 void handle_bluetooth()
 {
@@ -295,6 +301,7 @@ void handle_bluetooth()
 	if(uart_got_input() && (USART3->SR & USART_FLAG_TC) != 0)
 	{
 		unsigned char c = uart_get_input();
+
 		USART3->DR = c;
 	}
 #else // BLUETOOTH_PASSTHROUGH
@@ -327,6 +334,7 @@ void init_bluetooth()
 
 
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+
 #define UART_RX_PIN 11
 #define UART_TX_PIN 10
 	GPIO_PinAFConfig(GPIOB, UART_RX_PIN, GPIO_AF_USART3);
@@ -336,13 +344,14 @@ void init_bluetooth()
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_Pin = 1 << UART_RX_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-  	GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = 1 << UART_RX_PIN;
+  	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 // TX enabled
 	GPIO_InitStructure.GPIO_Pin = 1 << UART_TX_PIN;
-  	GPIO_Init(GPIOA, &GPIO_InitStructure);
+  	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 	USART_InitTypeDef USART_InitStructure;
 // once a device is configured
@@ -367,6 +376,97 @@ void init_bluetooth()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
   	USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
+
+}
+
+void handle_analog()
+{
+// battery
+	if((ADC1->SR & ADC_FLAG_EOC))
+	{
+
+		truck.battery_accum += ADC1->DR;
+		ADC_SoftwareStartConv(ADC1);
+		truck.battery_count++;
+		if(truck.battery_count >= BATTERY_OVERSAMPLE)
+		{
+			truck.battery = truck.battery_accum / truck.battery_count;
+			truck.battery_accum = 0;
+			truck.battery_count = 0;
+			float voltage = truck.battery * 8.67f / 965.0f;
+
+/*
+ * TRACE2
+ * print_number(truck.battery);
+ * print_float(voltage);
+ */
+
+
+		}
+	
+	}
+
+// Gyro
+	if((ADC2->SR & ADC_FLAG_EOC))
+	{
+		truck.gyro_accum += ADC2->DR;
+		ADC_SoftwareStartConv(ADC2);
+		truck.gyro_count++;
+		if(truck.gyro_count >= GYRO_OVERSAMPLE)
+		{
+			int gyro = truck.gyro_accum / truck.gyro_count;
+			truck.gyro_accum = 0;
+			truck.gyro_count = 0;
+			TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
+			TRACE2
+			print_number(gyro);
+		}
+		
+	}
+}
+
+
+void init_analog()
+{
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	ADC_InitTypeDef       ADC_InitStructure;
+	ADC_CommonInitTypeDef ADC_CommonInitStructure;
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
+	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
+	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div8;
+	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
+	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_20Cycles;
+	ADC_CommonInit(&ADC_CommonInitStructure);
+	ADC_StructInit(&ADC_InitStructure);
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+	ADC_Init(ADC1, &ADC_InitStructure);
+	ADC_Init(ADC2, &ADC_InitStructure);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 |
+		GPIO_Pin_1;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+// must call this before ENABLE
+	ADC_RegularChannelConfig(ADC1, 
+		ADC_Channel_0, 
+		1, 
+		ADC_SampleTime_480Cycles);
+	ADC_RegularChannelConfig(ADC2, 
+		ADC_Channel_1, 
+		1, 
+		ADC_SampleTime_480Cycles);
+	ADC_Cmd(ADC1, ENABLE);
+	ADC_Cmd(ADC2, ENABLE);
+	ADC_SoftwareStartConv(ADC1);
+	ADC_SoftwareStartConv(ADC2);
 
 }
 
@@ -395,6 +495,9 @@ int main(void)
 // enable the interrupt handler
  	NVIC_SetVectorTable(NVIC_VectTab_FLASH, PROGRAM_START - 0x08000000);
 
+	init_uart();
+	
+
 
 // general purpose timer
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -403,7 +506,7 @@ int main(void)
 	TIM_DeInit(TIM10);
 	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
 	TIM_TimeBaseStructure.TIM_Period = 65535;
-	TIM_TimeBaseStructure.TIM_Prescaler = 50;
+	TIM_TimeBaseStructure.TIM_Prescaler = 25;
 	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInit(TIM10, &TIM_TimeBaseStructure);
@@ -412,8 +515,6 @@ int main(void)
 
 
 
-	init_uart();
-	
  	NVIC_InitTypeDef NVIC_InitStructure;
  	NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
@@ -423,15 +524,16 @@ int main(void)
 
 	USART_ITConfig(USART6, USART_IT_RXNE, ENABLE);
 
-	init_bluetooth();
-
-
 
  	NVIC_InitStructure.NVIC_IRQChannel = TIM1_UP_TIM10_IRQn;
  	NVIC_Init(&NVIC_InitStructure);
+	
 	TIM_ITConfig(TIM10, 
 		TIM_IT_Update, 
 		ENABLE);
+
+	print_text("Welcome to the truck\n");
+	flush_uart();
 
 	GPIO_InitTypeDef  GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -450,16 +552,16 @@ int main(void)
 // debug pin
 	GPIO_InitStructure.GPIO_Pin = DEBUG_PIN;
 	GPIO_Init(DEBUG_GPIO, &GPIO_InitStructure);
+	CLEAR_PIN(DEBUG_GPIO, DEBUG_PIN);
 
 
-
-	print_text("Welcome to the truck\n");
+	init_bluetooth();
+	init_analog();
 
 	flush_uart();
 	
 	init_cc1101();
 	cc1101_receiver();
-	init_imu(&imu);
 
 // DEBUG
 // bypass calibration for testing
@@ -488,6 +590,8 @@ int main(void)
 	{
 
 		handle_uart();
+		handle_bluetooth();
+		handle_analog();
 //		handle_timer1();
 		if(radio.got_packet)
 		{
@@ -495,9 +599,6 @@ int main(void)
 			handle_radio();
 		}
 
-		if(truck.got_battery) handle_battery();
-		HANDLE_IMU(imu);
-		if(imu.got_ahrs) handle_controls();
 
 
 

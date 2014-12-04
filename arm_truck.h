@@ -65,10 +65,13 @@ typedef struct
 	int battery;
 	int battery_accum;
 	int battery_count;
-	int got_battery;
 	
 	int motor_timer;
 	int shutdown_timeout;
+	int need_gyro_center;
+	int have_gyro_center;
+	int gyro_accum;
+	int gyro_count;
 	
 	bluetooth_t bluetooth;
 } truck_t;
