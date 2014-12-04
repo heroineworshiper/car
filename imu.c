@@ -2,7 +2,6 @@
 #include "linux.h"
 #include "imu.h"
 #include <math.h>
-#include "arm_car.h"
 #include "arm_math.h"
 #include "uart.h"
 #include "stm32f4xx_gpio.h"
@@ -16,8 +15,6 @@
 #define GYRO_RATIO 8
 #define BLEND_DOWNSAMPLE (NAV_HZ / 10)
 #define CALIBRATE_IMU_DOWNSAMPLE (NAV_HZ / 10)
-// timer for LED flashing
-#define LED_DELAY (NAV_HZ / 2)
 
 static int debug_counter = 0;
 imu_t imu;
@@ -231,12 +228,7 @@ void imu_update_gyro(imu_t *imu, int gyro_x, int gyro_y, int gyro_z)
 	imu->total_gyro++;
 	if(imu->need_gyro_center && !imu->have_gyro_center)
 	{
-		car.led_counter++;
-		if(car.led_counter >= LED_DELAY)
-		{
-			TOGGLE_PIN(LED_GPIO, LED_PIN);
-			car.led_counter = 0;
-		}
+		imu_led_flash();
 
 
 		imu->gyro_x_accum += gyro_x;

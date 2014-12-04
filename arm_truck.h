@@ -5,14 +5,15 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 
-#define MOTORS 2
-#define PHASES 3
-#define SENSORS 3
 
 // timer for packet flashing
 #define LED_DELAY2 2
-#define LED_PIN GPIO_Pin_10
-#define LED_GPIO GPIOB
+// green pin when high
+#define LED_PIN1 GPIO_Pin_4
+#define LED_GPIO1 GPIOC
+// red pin when high
+#define LED_PIN2 GPIO_Pin_5
+#define LED_GPIO2 GPIOC
 
 typedef struct
 {
@@ -26,68 +27,40 @@ typedef struct
 	float accum;
 } pid_t;
 
+
+#define BLUE_BUFSIZE 256
 typedef struct
 {
-	TIM_TypeDef *pwm_timer;
-	ADC_TypeDef *adc;
-	uint16_t in_pin[PHASES];
-	GPIO_TypeDef *in_gpio[PHASES];
-	uint16_t en_pin[PHASES];
-	GPIO_TypeDef *en_gpio[PHASES];
-
-// 0 - 2
-	int adc_channel;
-	int adc_channels[SENSORS];
-	int adc_results[SENSORS];
-	int adc_min[SENSORS];
-	int adc_max[SENSORS];
-	int adc_throwaway;
-// filtered sensor values
-	int sensors[SENSORS];
-// index of table
-	int sensor_order;
-// hall effect sensor threshold
-	int threshold;
+	void (*current_function)();
 	
-// 0 - MAX_PWM
-	int power;
-// direction to move phase for a right turn
-	int turn_sign;
-// phase of each motor (0 - 360)
-	float phase;
-// raw PWM for each phase
-	int pwm[PHASES];
-// directions of motors
-	int commutation_direction;
-	int stepper_direction;
-// ramp for commutation
-	int do_ramp;
+	unsigned char receive_buf[BLUE_BUFSIZE];
+	unsigned char receive_buf2[BLUE_BUFSIZE];
+	unsigned char send_buf[BLUE_BUFSIZE];
+	int send_offset;
+	int send_size;
+	int counter;
+	unsigned char data;
+	int got_data;
+} bluetooth_t;
 
-// what phases are floating in freewheel mode
-	int disabled[PHASES];
-// phase voltage in freewheel mode
-	int voltage[PHASES];
-// last slot in table used
-	int commutation_slot;
-// debugging
-	int commutations;
-} motor_t;
+
 
 typedef struct
 {
 	int timer_high;
-	
+// data from radio	
 	int throttle_reverse;
-	int throttle;
 	int throttle_reverse2;
+	int throttle;
 	int throttle2;
 	int steering;
+
+// PWM values
+	int throttle_pwm;
+	int steering_pwm;
 	int led_counter;
 	
 	pid_t heading_pid;
-// radians
-	float target_pitch;
-	float total_step;
 	
 	int battery;
 	int battery_accum;
@@ -96,21 +69,8 @@ typedef struct
 	
 	int motor_timer;
 	int shutdown_timeout;
-	int stepper_power;
-//	int operating_power0;
-	int operating_power;
-
-
-	motor_t motor[MOTORS];
-// motor mode
-	int mode;
-// time between steps
-	int period;
-
-	int test_motors;
-// debugging value
-	float period_lowpass;
-	int debug_counter;
+	
+	bluetooth_t bluetooth;
 } truck_t;
 
 extern truck_t truck;

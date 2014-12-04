@@ -99,6 +99,8 @@
 //#define POWER_VOLTAGE 9.0f
 #define STEPPER_VOLTAGE 6.0f
 
+// timer for LED flashing
+#define LED_DELAY (NAV_HZ / 2)
 
 
 
@@ -217,6 +219,18 @@ const uint16_t sin_table[] =
         0x6706, 0x67cc, 0x6891, 0x6957, 0x6a1d, 0x6ae3, 0x6baa, 0x6c70, 0x6d37, 0x6dfe, 0x6ec5, 0x6f8c, 0x7054, 0x711c, 0x71e3, 0x72ab, 
         0x7373, 0x743b, 0x7504, 0x75cc, 0x7694, 0x775d, 0x7826, 0x78ee, 0x79b7, 0x7a80, 0x7b49, 0x7c12, 0x7cdb, 0x7da4, 0x7e6d, 0x7f36
 };
+
+
+void imu_led_flash()
+{
+	car.led_counter++;
+	if(car.led_counter >= LED_DELAY)
+	{
+		TOGGLE_PIN(LED_GPIO, LED_PIN);
+		car.led_counter = 0;
+	}
+}
+
 
 int calculate_waveform(int x, int motor)
 {

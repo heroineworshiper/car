@@ -331,7 +331,6 @@ uint8_t uart_out_offset;
 
 #define DESELECT_CHIP CS0_LAT = 1;
 
-
 void write_spi(uint8_t value)
 {
 	uint8_t i;
