@@ -69,9 +69,20 @@ typedef struct
 	int motor_timer;
 	int shutdown_timeout;
 	int need_gyro_center;
+	int gyro_center_accum;
+	int gyro_center_count;
 	int have_gyro_center;
 	int gyro_accum;
 	int gyro_count;
+	int gyro_min;
+	int gyro_max;
+// maximum amount gyros can move while calculating center
+	int gyro_center_max;
+	float gyro_center;
+	float angle_to_gyro;
+// in radians
+	float current_heading;
+	int debug_counter;
 	
 	bluetooth_t bluetooth;
 } truck_t;

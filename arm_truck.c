@@ -1,5 +1,5 @@
 /*
- * STM32F4 Wifi flight controller
+ * 1 handed truck
  * Copyright (C) 2012-2014 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
@@ -60,7 +60,6 @@
 #define DEBUG_PIN GPIO_Pin_4
 #define DEBUG_GPIO GPIOB
 
-#define MAX_PWM 1024
 #define I_DOWNSAMPLE (NAV_HZ / 100)
 // packets per second
 #define PACKET_RATE 40
@@ -73,6 +72,7 @@
 
 #define BATTERY_OVERSAMPLE 1000
 #define GYRO_OVERSAMPLE 20
+#define GYRO_CENTER_TOTAL 4096
 
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
@@ -81,8 +81,12 @@
 // timer for LED flashing
 #define LED_DELAY (NAV_HZ / 2)
 
-
-
+// 50hz
+#define PWM_PERIOD 1680000
+// 2ms
+#define MAX_PWM 168000
+// 1ms
+#define MIN_PWM 84000
 
 truck_t truck;
 
@@ -204,6 +208,8 @@ void handle_radio()
 			truck.led_counter++;
 			if(truck.led_counter >= LED_DELAY2)
 			{
+TRACE2
+print_text("Begin gyro calibration\n");
 				TOGGLE_PIN(LED_GPIO1, LED_PIN1);
 				CLEAR_PIN(LED_GPIO2, LED_PIN2);
 				truck.led_counter = 0;
@@ -213,13 +219,15 @@ void handle_radio()
 		truck.throttle_reverse = radio.packet[1] & 0x1;
 		truck.throttle = radio.packet[2] | (radio.packet[3] << 8);
 		truck.steering = radio.packet[4] | (radio.packet[5] << 8);
-TRACE2
-print_text("reverse=");
-print_number(truck.throttle_reverse);
-print_text("throttle=");
-print_number(truck.throttle);
-print_text("steering=");
-print_number(truck.steering);
+/*
+ * TRACE2
+ * print_text("reverse=");
+ * print_number(truck.throttle_reverse);
+ * print_text("throttle=");
+ * print_number(truck.throttle);
+ * print_text("steering=");
+ * print_number(truck.steering);
+ */
 
 
 // begin gyro calibration		
@@ -228,14 +236,14 @@ print_number(truck.steering);
 			!truck.need_gyro_center)
 		{
 			truck.need_gyro_center = 1;
+			truck.gyro_center_count = 0;
+			truck.gyro_accum = 0;
+			truck.gyro_min = 65535;
+			truck.gyro_max = -65535;
 		}
 		
 		if(truck.have_gyro_center)
 		{
-			DISABLE_INTERRUPTS
-
-			
-			ENABLE_INTERRUPTS
 			truck.throttle2 = truck.throttle;
 			truck.throttle_reverse2 = truck.throttle_reverse;
 		}
@@ -296,7 +304,7 @@ void TIM1_UP_TIM10_IRQHandler()
 
 void handle_bluetooth()
 {
-	
+
 #ifdef BLUETOOTH_PASSTHROUGH
 	if(uart_got_input() && (USART3->SR & USART_FLAG_TC) != 0)
 	{
@@ -417,11 +425,81 @@ void handle_analog()
 			int gyro = truck.gyro_accum / truck.gyro_count;
 			truck.gyro_accum = 0;
 			truck.gyro_count = 0;
-			TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
-			TRACE2
-			print_number(gyro);
+
+
+
+//			TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
+
+
+//			TRACE2
+//			print_number(gyro);
+			
+			
+			if(truck.need_gyro_center && !truck.have_gyro_center)
+			{
+				imu_led_flash();
+
+
+				truck.gyro_center_accum += gyro;
+				if(truck.gyro_center_count == 0)
+				{
+					truck.gyro_min = gyro;
+					truck.gyro_max = gyro;
+				}
+				else
+				{
+					truck.gyro_min = MIN(gyro, truck.gyro_min);
+					truck.gyro_max = MAX(gyro, truck.gyro_max);
+				}
+				truck.gyro_center_count++;
+
+				if(ABS(truck.gyro_max - truck.gyro_min) > truck.gyro_center_max)
+				{
+					TRACE2
+					print_text("center too big min=");
+					print_number(truck.gyro_min);
+					print_text("max=");
+					print_number(truck.gyro_max);
+					print_lf();
+					truck.gyro_center_count = 0;
+					truck.gyro_center_accum = 0;
+					truck.gyro_min = 65535;
+					truck.gyro_max = -65535;
+				}
+			}
+
+			if(truck.need_gyro_center &&
+				!truck.have_gyro_center && 
+				truck.gyro_center_count >= GYRO_CENTER_TOTAL)
+			{
+				truck.gyro_center = (float)truck.gyro_center_accum / 
+					truck.gyro_center_count;
+
+				TRACE2
+				print_number(truck.gyro_center_accum);
+				print_number(truck.gyro_center_count);
+				print_text("center=");
+				print_float(truck.gyro_center);
+
+				truck.have_gyro_center = 1;
+				truck.need_gyro_center = 0;
+			}
+			
+			if(truck.have_gyro_center)
+			{
+				truck.current_heading += (gyro - truck.gyro_center) / 
+					truck.angle_to_gyro /
+					NAV_HZ;
+				truck.current_heading = fix_angle(truck.current_heading);
+				truck.debug_counter++;
+				if(truck.debug_counter >= 128)
+				{
+					truck.debug_counter = 0;
+//					TRACE2
+//					print_float(TO_DEG(truck.current_heading));
+				}
+			}
 		}
-		
 	}
 }
 
@@ -470,6 +548,74 @@ void init_analog()
 
 }
 
+void TIM2_IRQHandler()
+{
+	if(TIM2->SR & TIM_FLAG_Update)
+	{
+		TIM2->SR = ~TIM_FLAG_Update;
+		SET_PIN(GPIOA, GPIO_Pin_6);
+		SET_PIN(GPIOA, GPIO_Pin_7);
+	}
+
+	if(TIM2->SR & TIM_FLAG_CC1)
+	{
+		TIM2->SR = ~TIM_FLAG_CC1;
+		CLEAR_PIN(GPIOA, GPIO_Pin_6);
+	}
+
+	if(TIM2->SR & TIM_FLAG_CC2)
+	{
+		TIM2->SR = ~TIM_FLAG_CC2;
+		CLEAR_PIN(GPIOA, GPIO_Pin_7);
+	}
+}
+
+void init_pwm()
+{
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+	
+	
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | 
+		GPIO_Pin_7;
+	GPIO_ResetBits(GPIOA, GPIO_InitStructure.GPIO_Pin);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+
+	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+	TIM_OCInitTypeDef  TIM_OCInitStructure;
+	TIM_TimeBaseStructure.TIM_Period = PWM_PERIOD;
+// Seems to be a power of 2
+	TIM_TimeBaseStructure.TIM_Prescaler = 0;
+	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
+	TIM_OCInitStructure.TIM_Pulse = MIN_PWM;
+	TIM_OC1Init(TIM2, &TIM_OCInitStructure);
+	TIM_OC2Init(TIM2, &TIM_OCInitStructure);
+  	TIM_Cmd(TIM2, ENABLE);
+
+ 	NVIC_InitTypeDef NVIC_InitStructure;
+ 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+ 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+ 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+ 	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+ 	NVIC_Init(&NVIC_InitStructure);
+	TIM_ITConfig(TIM2, 
+		TIM_IT_Update | 
+			TIM_IT_CC1 |
+			TIM_IT_CC2, 
+		ENABLE);
+	
+}
 
 
 int main(void)
@@ -481,7 +627,8 @@ int main(void)
 	bzero(&truck, sizeof(truck_t));
 
 	truck.steering = STEERING_MID;
-
+	truck.gyro_center_max = 100;
+	truck.angle_to_gyro = 450;
 
 /* Enable the GPIOs */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA |
@@ -557,9 +704,9 @@ int main(void)
 
 	init_bluetooth();
 	init_analog();
+	init_pwm();
 
-	flush_uart();
-	
+
 	init_cc1101();
 	cc1101_receiver();
 

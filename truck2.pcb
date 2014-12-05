@@ -1,5 +1,5 @@
 # release: pcb 20100929
-# date:    Sun Nov 30 16:09:11 2014
+# date:    Wed Dec  3 22:33:51 2014
 # user:    root (root)
 # host:    heroine
 
@@ -1446,7 +1446,7 @@ Layer(5 "signal1")
 	Line[74997 113022 61425 113022 1000 2000 "clearline"]
 	Line[98592 120666 90831 120666 1000 2000 "clearline"]
 	Line[90480 120783 90480 118482 1000 2000 "clearline"]
-	Line[32253 138333 98241 138216 1000 2000 "clearline"]
+	Line[32253 138333 98124 138333 1000 2000 "clearline"]
 	Line[44031 113061 64584 113061 1000 2000 "clearline"]
 	Line[61542 122187 58734 119379 1000 2000 "clearline"]
 	Line[61074 99450 80457 99450 1000 2000 "clearline"]
@@ -1703,19 +1703,17 @@ Layer(10 "silk")
 	Text[7254 122889 0 73 "GYRO 5V" "clearline"]
 	Text[3666 113100 0 73 "GYRO GND" "clearline"]
 	Text[7137 151788 0 73 "ESC 5V" "clearline"]
-	Text[6474 63063 0 73 "7.2V" "clearline"]
+	Text[6864 63648 0 73 "BATT" "clearline"]
 	Text[12207 82212 0 73 "ADJ" "clearline"]
 	Text[1404 93756 0 73 "LED 3.3V" "clearline"]
 	Text[18915 100074 1 73 "LM317" "clearline"]
 	Text[2496 142896 0 73 "TIM3_CH1" "clearline"]
 	Text[12870 163176 0 73 "GND" "clearline"]
-	Text[68913 60099 1 73 "ADJ" "clearline"]
-	Text[66924 80262 0 73 "POT" "clearline"]
+	Text[70902 178854 3 73 "GND" "clearline"]
+	Text[83226 178659 3 73 "GND" "clearline"]
 	Text[164190 138840 0 73 "0R" "clearline"]
 	Text[193284 112983 0 73 "3.3V" "clearline"]
 	Text[194142 121992 0 73 "3.3V" "clearline"]
 	Text[85020 147264 0 73 "0R" "clearline"]
 	Text[91806 178659 3 73 "GND" "clearline"]
-	Text[83226 178659 3 73 "GND" "clearline"]
-	Text[70902 178854 3 73 "GND" "clearline"]
 )
