@@ -205,8 +205,8 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) (Settings.headlights ? 1 :0);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
