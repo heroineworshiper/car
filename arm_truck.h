@@ -69,7 +69,11 @@ typedef struct
 	int battery_accum;
 	int battery_count;
 	float battery_voltage;
-	
+
+// steering was pressed before throttle
+	int steering_first;
+// Make the interrupt handler not write the steering PWM
+	int writing_settings;
 	int motor_timer;
 	int shutdown_timeout;
 	int need_gyro_center;

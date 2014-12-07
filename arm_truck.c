@@ -538,8 +538,10 @@ void handle_beacon()
 					truck.mid_steering /
 					100;
 				int steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
-					truck.max_steering / 
+					truck.min_steering / 
 					100;
+				truck.writing_settings = 1;
+
 				for(i = 0; i < 4; i++)
 				{
 					if(toggle == 0)
@@ -553,7 +555,7 @@ void handle_beacon()
 						write_pwm();
 					}
 					toggle ^= 1;
-					
+
 					while(1)
 					{
 						DISABLE_INTERRUPTS
@@ -572,8 +574,7 @@ void handle_beacon()
 					TOGGLE_PIN(LED_GPIO2, LED_PIN2);
 				}
 
-				truck.steering_pwm = mid_steering_pwm;
-				write_pwm();
+				truck.writing_settings = 0;
 				CLEAR_PIN(LED_GPIO1, LED_PIN1);
 				SET_PIN(LED_GPIO2, LED_PIN2);
 				break;
@@ -940,6 +941,7 @@ void TIM2_IRQHandler()
 		SET_PIN(GPIOA, GPIO_Pin_6);
 		SET_PIN(GPIOA, GPIO_Pin_7);
 
+		if(truck.writing_settings) return;
 		int mid_steering_pwm = MIN_PWM + 
 			(MAX_PWM - MIN_PWM) * 
 			truck.mid_steering /
@@ -1014,12 +1016,11 @@ void TIM2_IRQHandler()
 					case 0:
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
 						need_feedback = 0;
-						reset_pid(&truck.heading_pid);
-						truck.current_heading = 0;
 						break;
 // slow left
 					case 16384:
-						if(!truck.auto_steering)
+						if(!truck.auto_steering ||
+							truck.steering_first)
 						{
 							need_feedback = 0;
 							truck.steering_pwm = mid_steering_pwm - min_steering_magnitude;
@@ -1036,7 +1037,8 @@ void TIM2_IRQHandler()
 						break;
 // slow right
 					case 49152:
-						if(!truck.auto_steering)
+						if(!truck.auto_steering ||
+							truck.steering_first)
 						{
 							need_feedback = 0;
 							truck.steering_pwm = mid_steering_pwm + min_steering_magnitude;
@@ -1055,8 +1057,6 @@ void TIM2_IRQHandler()
 					case 65535:
 						truck.steering_pwm = mid_steering_pwm + max_steering_magnitude;
 						need_feedback = 0;
-						reset_pid(&truck.heading_pid);
-						truck.current_heading = 0;
 						break;
 					
 					default:
@@ -1081,6 +1081,12 @@ void TIM2_IRQHandler()
 						(MAX_PWM - MIN_PWM) / 2 / 
 						100;
 				}
+				else
+				{
+					reset_pid(&truck.heading_pid);
+					truck.current_heading = 0;
+				}
+
 /*
  * 				TRACE2
  * 				print_float(steering_feedback);
@@ -1098,22 +1104,27 @@ void TIM2_IRQHandler()
 // full left
 					case 0:
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
+						truck.steering_first = 1;
 						break;
 // slow left
 					case 16384:
 						truck.steering_pwm = mid_steering_pwm - min_steering_magnitude;
+						truck.steering_first = 1;
 						break;
 // slow right
 					case 49152:
 						truck.steering_pwm = mid_steering_pwm + min_steering_magnitude;
+						truck.steering_first = 1;
 						break;
 // full right
 					case 65535:
 						truck.steering_pwm = mid_steering_pwm + max_steering_magnitude;
+						truck.steering_first = 1;
 						break;
-					
+// no steering
 					default:
 						truck.steering_pwm = mid_steering_pwm;
+						truck.steering_first = 0;
 						break;
 				}
 
