@@ -59,12 +59,14 @@ public class SettingsWin  extends WindowBase
         case R.id.send:
         	Settings.loadFile();
         	Truck.needConfig = true;
+        	Truck.needSaveConfig = true;
         	break;
         case R.id.headlights:
         	Settings.loadFile();
         	Settings.headlights = !Settings.headlights;
         	Settings.save();
         	Truck.needConfig = true;
+        	Truck.needSaveConfig = false;
         	break;
         case R.id.reset:
         	Truck.needReset = true;

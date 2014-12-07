@@ -199,7 +199,7 @@ public class Truck extends Thread {
 		    			offset += 2;
 		    			// command
 		    			beacon[offset++] = (byte) 2;
-		    			beacon[offset++] = (byte) 0;
+		    			beacon[offset++] = (byte) (needSaveConfig ? 1 : 0);
 		    			
 		    			
 		    			beacon[offset++] = (byte) (Settings.headlights ? 1 :0);
@@ -475,6 +475,7 @@ public class Truck extends Thread {
     
     static boolean needReset = false;
     static boolean needConfig = false;
+    static boolean needSaveConfig = false;
     
     long lastSentTime;
     boolean initialized = false;

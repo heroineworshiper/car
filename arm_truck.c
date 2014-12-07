@@ -438,6 +438,8 @@ void save_config(unsigned char *buffer, int bytes)
 	
    	USART_Cmd(USART3, ENABLE);
    	USART_Cmd(USART1, ENABLE);
+	TRACE2
+	print_text("Saved flash config\n");
 }
 
 void load_config()
@@ -523,8 +525,12 @@ void handle_beacon()
 //print_buffer(truck.bluetooth.receive_buf, truck.bluetooth.receive_size);
 
 				int bytes = read_config_packet(truck.bluetooth.receive_buf + offset);
-				save_config(truck.bluetooth.receive_buf + offset,
-					bytes);
+				if(truck.bluetooth.receive_buf[7])
+				{
+					save_config(truck.bluetooth.receive_buf + offset,
+						bytes);
+				}
+				
 				dump_config();
 
 
@@ -542,7 +548,7 @@ void handle_beacon()
 					100;
 				truck.writing_settings = 1;
 
-				for(i = 0; i < 4; i++)
+				for(i = 0; i < 2; i++)
 				{
 					if(toggle == 0)
 					{
@@ -950,6 +956,9 @@ void TIM2_IRQHandler()
 			(MAX_PWM - MIN_PWM) * 
 			truck.mid_throttle / 
 			100;
+		int throttle_ramp_step = (MAX_PWM - MIN_PWM) *
+			truck.throttle_ramp_step / 
+			100;
 
 		if(truck.have_gyro_center)
 		{
@@ -981,7 +990,7 @@ void TIM2_IRQHandler()
 					truck.throttle_ramp_counter = 0;
 					if(truck.throttle_reverse)
 					{
-						truck.throttle_pwm += truck.throttle_ramp_step;
+						truck.throttle_pwm += throttle_ramp_step;
 
 						if(truck.throttle_pwm > mid_throttle_pwm +
 							max_throttle_magnitude)
@@ -992,7 +1001,7 @@ void TIM2_IRQHandler()
 					}
 					else
 					{
-						truck.throttle_pwm -= truck.throttle_ramp_step;
+						truck.throttle_pwm -= throttle_ramp_step;
 						if(truck.throttle_pwm < mid_throttle_pwm -
 							max_throttle_magnitude)
 						{
@@ -1249,7 +1258,7 @@ int main(void)
 	truck.gyro_center_max = 100;
 	truck.angle_to_gyro = 450;
 	truck.throttle_ramp_delay = 0;
-	truck.throttle_ramp_step = 4000;
+	truck.throttle_ramp_step = 1;
 	truck.pid_downsample = 1;
 	truck.steering_step_delay = 0;
 	truck.steering_step = TO_RAD(30) / PWM_HZ;
