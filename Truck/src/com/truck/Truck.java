@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Calendar;
+import java.util.Formatter;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -77,25 +78,6 @@ public class Truck extends Thread {
 			        	try {
 			                tmp = device.createRfcommSocketToServiceRecord(uuid);
 			            } catch (IOException e) { }
-
-			        	
-//		        		Method m = null;
-//						try {
-//							m = device.getClass().getMethod(
-//									 "createRfcosocket", new Class[] {int.class});
-//						} catch (NoSuchMethodException e) {
-//							e.printStackTrace();
-//						}
-//						
-//		                 try {
-//							tmp = (BluetoothSocket) m.invoke(device, 1);
-//						} catch (IllegalArgumentException e) {
-//							e.printStackTrace();
-//						} catch (IllegalAccessException e) {
-//							e.printStackTrace();
-//						} catch (InvocationTargetException e) {
-//							e.printStackTrace();
-//						}
 
 			        	socket = tmp;
 			        }
@@ -173,7 +155,6 @@ public class Truck extends Thread {
 	    	
 	    	lostContact = false;
 	    	initialized = false;
-	    	configStatus = 0;
 	    	
 	    	while(result == true)
 	    	{
@@ -193,185 +174,166 @@ public class Truck extends Thread {
 	   		
 	    		while(!lostContact)
 	    		{
-// get battery voltage
-	    			beacon[0] = (byte) 0xff;
-	    			beacon[1] = (byte) 0x2d;
-	    			beacon[2] = (byte) 0xd4;
-	    			beacon[3] = (byte) 0xe5;
-	    			
-	    			
-	    			int chksum = Math.getChecksum(beacon, 
-	    					Settings.HEADER_SIZE, 
-	    					Settings.GROUND_RADIO_OUT_SIZE - 2);
-	    			Math.write_int16(beacon, 
-	    					Settings.HEADER_SIZE + Settings.GROUND_RADIO_OUT_SIZE - 2, 
-	    					chksum);
-	
-	    			Calendar cal = Calendar.getInstance();
-	    			long nextSentTime = cal.getTimeInMillis();
-	    			if(nextSentTime - lastSentTime < 1000 / Settings.BEACON_HZ)
+	    			int offset = 0;
+	    			beacon[offset++] = (byte) 0xff;
+	    			beacon[offset++] = (byte) 0x2d;
+	    			beacon[offset++] = (byte) 0xd4;
+	    			beacon[offset++] = (byte) 0xe5;
+
+	    			if(needReset)
 	    			{
-	    				long difference = lastSentTime + 1000 / Settings.BEACON_HZ - nextSentTime;
-	//    				Log.v("Copter", "run difference=" + difference);
-	    				
-	    				try {
-	    					Thread.sleep(difference);
-	    				} catch (InterruptedException e) {
-	    					return;
-	    				}
-	
+	    				// reset gyro
+	    				// size
+		    			Math.write_int16(beacon, offset, 10);
+		    			offset += 2;
+		    			// command
+		    			beacon[offset++] = (byte) 1;
+		    			beacon[offset++] = (byte) 0;
+		    			needReset = false;
 	    			}
-	    			lastSentTime = nextSentTime;
-	    			
-	    			// send beacon
-	    			try {
-	    				ostream.write(beacon, 
-	    					0, 
-	    					Settings.HEADER_SIZE + Settings.GROUND_RADIO_OUT_SIZE);
-	    				ostream.flush();
-	    			} catch (IOException e) {
-	    				e.printStackTrace();
-	    			}
-	    			
-	    			
-	    			// receive beacon
-	    		    Callable<Integer> readTask = new Callable<Integer>() {
-	    		        @Override
-	    		        public Integer call() throws Exception {
-	    		            return istream.read(receive_buf, 0, receive_buf.length);
-	    		        }
-	    		    };
-	    		    
-	    			int bytes = 0;
-	    		    Future<Integer> future = executor.submit(readTask);
-	    		    try {
-						bytes = future.get(1000 / Settings.BEACON_HZ, TimeUnit.MILLISECONDS);
-					} catch (Exception e) {
-					}
-	    			
-	    		    if(bytes == 0)
-	    		    {
-						droppedPackets++;
-						if(droppedPackets >= Settings.BEACON_HZ &&
-							initialized)
-						{
-							droppedPackets = 0;
-							lostContact = true;
-							printAlert("Lost contact");
-						}
-	    		    }
-	    		    else
-	    		    {
-						droppedPackets = 0;
-						if(lostContact)
-						{
-							lostContact = false;
-							printAlert("Regained contact");
-						}
-	    		    }
-	    		    
-	//				Log.v("Copter", "run 2 bytes=" + bytes);
-	    			int offset = Settings.HEADER_SIZE;
-	    			int chksum2 = 0;
-	    			while(offset < bytes)
+	    			else
+	    			if(needConfig)
 	    			{
-	    				byte c = receive_buf[offset];
-	    				if(c == Settings.SYNC_CODE)
+	    				// send config
+	    				// size
+		    			offset += 2;
+		    			// command
+		    			beacon[offset++] = (byte) 2;
+		    			beacon[offset++] = (byte) 0;
+		    			
+		    			
+		    			beacon[offset++] = (byte) (Settings.headlights ? 1 :0);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
+		    			
+						Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
+		    			offset += 2;
+						
+		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
+		    			offset += 4;
+						
+						float pid[] = Settings.getFileFloat("STEERING_PID");
+		    			for(int i = 0; i < 5; i++)
+						{
+							Math.write_float32(beacon, offset, pid[i]);
+		    				offset += 4;
+						}
+						
+						Math.write_int16(beacon, 4, offset + 2);
+
+		    			needConfig = false;
+	    			}
+	    			else
+	    			{
+	    				// get battery voltage
+	    				// size
+		    			Math.write_int16(beacon, offset, 10);
+		    			offset += 2;
+		    			// command
+
+		    			beacon[offset++] = (byte) 0;
+		    			beacon[offset++] = (byte) 0;
+	    			}
+	    			
+	    			
+	    			
+	    			int checksum = Math.getChecksum(beacon, 0, offset);
+	    			Math.write_int16(beacon, offset, checksum);
+	    			offset += 2;
+
+	    			sendBeacon(offset);
+
+	    			
+	    			
+	    			
+	    			
+	    			readPacket();
+//	    			printBuffer("run 1", receive_buf, 0, totalReceived);
+	    			
+	    			int drop_bytes = 0;
+	    			for(offset = 0; offset < totalReceived - 4; )
+	    			{
+	    				drop_bytes = 0;
+// got a packet
+	    				if(receive_buf[offset] == (byte)0xff &&
+	    					receive_buf[offset + 1] == (byte)0x2d &&
+	    					receive_buf[offset + 2] == (byte)0xd4 &&
+	    					receive_buf[offset + 3] == (byte)0xe5)
 	    				{
-	    					byte packetType = (byte) (receive_buf[offset + 1] & 0xf0);
-	    					
-	//    					Log.v("Copter", "run packetType=" + packetType);
-	    					
-	    					switch(packetType)
+	    					drop_bytes = offset;
+// get size
+	    					if(offset < totalReceived - 8)
 	    					{
-	    					case Settings.PACKET_CONFIG:
-	    						chksum = Math.getChecksum(receive_buf, offset, Settings.CONFIG_PACKET_SIZE - 2);
-	    						chksum2 = Math.read_uint16(receive_buf, offset + Settings.CONFIG_PACKET_SIZE - 2);
-	    						if(chksum == chksum2)
+	    						int size = Math.read_uint16(receive_buf, offset + 4);
+	    						if(offset <= totalReceived - size)
 	    						{
-	    							configStatus = receive_buf[offset + 2];
-	    							offset += Settings.CONFIG_PACKET_SIZE;
-	    						}
-	    						else
-	    						{
-	    							offset = bytes;
-	    						}
-	    						break;
-	    						
-	    						
-	    					case Settings.PACKET_AZIMUTH:
-	    						chksum = Math.getChecksum(receive_buf, offset, Settings.AZIMUTH_PACKET_SIZE - 2);
-	    						chksum2 = Math.read_uint16(receive_buf, offset + Settings.AZIMUTH_PACKET_SIZE - 2);
-	    						if(chksum == chksum2)
-	    						{
-	    							azimuth_period = Math.read_uint16(receive_buf, offset + 2);
-	    							
-	    							int accum = 0;
-	    							for(int i = 0; i < Settings.AZIMUTH_SEND_SAMPLES; i++)
+	    							checksum = Math.getChecksum(receive_buf, offset, size - 2);
+	    							if(checksum == Math.read_uint16(receive_buf, size - 2))
 	    							{
-	    								int value = Math.read_uint16(receive_buf, offset + 2 + 4 + i * 2);
-	    								accum += value;
+// packet is intact
+		    							switch(receive_buf[offset + 6])
+		    							{
+		    							case 0:
+		    								battery_analog = Math.read_int32(receive_buf, offset + 8);
+		    								battery_voltage = Math.read_float32(receive_buf, offset + 12);
+		    								gyro_center = Math.read_uint16(receive_buf, offset + 16);
+		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
+		    								current_heading = Math.read_float32(receive_buf, offset + 20);
+//		    			    				Log.v("run 1", "battery_analog=" + battery_analog + " battery_voltage=" + battery_voltage);
+		    								break;
+		    							}
+		    							
+		    							offset += size;
+		    							drop_bytes = offset;
 	    							}
-	    							accum /= Settings.AZIMUTH_SEND_SAMPLES;
-	    							
-	    							azimuth_history[azimuth_ptr] = accum;
-	    							azimuth_ptr++;
-	    							azimuth_ptr &= AZIMUTH_HISTORY_SIZE - 1;
-	    								
-	    							accum = 0;
-	    							for(int i = 0; i < AZIMUTH_HISTORY_SIZE; i++)
-	    								accum += azimuth_history[azimuth_ptr];
-	    							accum /= AZIMUTH_HISTORY_SIZE;
-	    							azimuth_threshold = accum;
-	    							
-	    							
-	    							offset += Settings.AZIMUTH_PACKET_SIZE;
-	    						}
-	    						else
-	    						{
-	    							offset = bytes;
-	    						}
-	    						break;
-	    						
-	    					case Settings.PACKET_ANALOG:
-	    						chksum = Math.getChecksum(receive_buf, offset, Settings.ANALOG_PACKET_SIZE - 2);
-	    						chksum2 = Math.read_uint16(receive_buf, offset + Settings.ANALOG_PACKET_SIZE - 2);
-	    						if(chksum == chksum2)
-	    						{
-	    							battery_accum += Math.read_uint16(receive_buf, offset + 2);
-	    							total_battery++;
-	    							if(total_battery >= Settings.BATTERY_OVERSAMPLE)
+	    							else
 	    							{
-	    								battery_analog = battery_accum / total_battery;
-	    								total_battery = 0;
-	    								battery_accum = 0;
-	        							if(Settings.battery_analog1 != 0)
-	        							{
-	        								battery_voltage = (float)battery_analog * 
-	        										Settings.battery_v1 /
-	        										Settings.battery_analog1;
-	        							}
+// skip the sync code
+	    								offset += 4;
+	    								drop_bytes = offset;
 	    							}
-	    							
-	    							
-	    							offset += Settings.ANALOG_PACKET_SIZE;
 	    						}
 	    						else
 	    						{
-	    							offset = bytes;
+// get more data
+	    							offset = totalReceived;
 	    						}
-	    						break;
-	    						
-	    						
-	    					default:
-	    						offset = bytes;
-	    						break;
+	    					}
+	    					else
+	    					{
+// get more data
+	    						offset = totalReceived;
 	    					}
 	    				}
 	    				else
 	    				{
-	    					break;
+	    					drop_bytes++;
+	    					offset++;
 	    				}
+
+//	    				Log.v("run 2", "drop_bytes=" + drop_bytes + " offset=" + offset);
+	    				for(int i = 0; i < totalReceived - drop_bytes; i++)
+	    				{
+	    					receive_buf[i] = receive_buf[i + drop_bytes];
+	    				}
+	    				totalReceived -= drop_bytes;
+	    				offset -= drop_bytes;
+
 	    			}
 	    		}
 	    		
@@ -393,33 +355,95 @@ public class Truck extends Thread {
 	    }
     }
 
-    
-    void sendConfig()
-    {
-//    	Log.v("Copter", "sendConfig section=" + currentConfig);
-    	
-    	int offset = Settings.HEADER_SIZE;
-    	beacon[offset++] = Settings.SYNC_CODE;
-    	beacon[offset++] = (1 << Settings.CONFIG_VALID_BIT);
-    	// next vehicle/packet counter
-    	beacon[offset++] = 0;
-    	// padding/POV panel
-    	beacon[offset++] = 0;
-    	beacon[offset++] = (byte) currentConfig;
-    	beacon[offset++] = 0;
 
-    	switch(currentConfig)
+	private void sendBeacon(int offset) {
+		Calendar cal = Calendar.getInstance();
+		long nextSentTime = cal.getTimeInMillis();
+		if(nextSentTime - lastSentTime < 1000 / Settings.BEACON_HZ)
 		{
-    	case 1:
-    		offset = Math.write_int16(beacon, offset, Settings.MIN_THROTTLE);
-    		offset = Math.write_int16(beacon, offset, Settings.MAX_THROTTLE);
-    		break;
+			long difference = lastSentTime + 1000 / Settings.BEACON_HZ - nextSentTime;
+//    				Log.v("Copter", "run difference=" + difference);
+			
+			try {
+				Thread.sleep(difference);
+			} catch (InterruptedException e) {
+				return;
+			}
+
 		}
-    	
-    	currentConfig++;
-    	if(currentConfig >= Settings.CONFIG_SECTIONS)
-    		currentConfig = 0;
-    }
+		lastSentTime = nextSentTime;
+		
+		// send beacon
+		try {
+			ostream.write(beacon, 
+				0, 
+				offset);
+			ostream.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	private int readPacket() 
+	{
+		if(totalReceived >= receive_buf.length)
+		{
+			printAlert("Receive buffer full");
+			return 0;
+		}
+		
+		// receive response
+		Callable<Integer> readTask = new Callable<Integer>() {
+		    @Override
+		    public Integer call() throws Exception {
+		        return istream.read(receive_buf, totalReceived, receive_buf.length - totalReceived);
+		    }
+		};
+		
+		int bytes = 0;
+		Future<Integer> future = executor.submit(readTask);
+		try {
+			bytes = future.get(1000 / Settings.BEACON_HZ, TimeUnit.MILLISECONDS);
+		} catch (Exception e) {
+		}
+		
+		if(bytes == 0)
+		{
+			droppedPackets++;
+			if(droppedPackets >= Settings.BEACON_HZ &&
+				initialized)
+			{
+				droppedPackets = 0;
+				lostContact = true;
+				printAlert("Lost contact");
+			}
+		}
+		else
+		{
+			totalReceived += bytes;
+			droppedPackets = 0;
+			if(lostContact)
+			{
+				lostContact = false;
+				printAlert("Regained contact");
+			}
+		}
+		return bytes;
+	}
+
+	static public void printBuffer(String string, byte[] buffer, int offset, int bytes)
+	{
+		StringBuilder sb = new StringBuilder();
+		Formatter formatter = new Formatter(sb);
+		for(int i = 0; i < bytes; i++) 
+		{
+		formatter.format("%02x ", buffer[i + offset]);
+		}
+		Log.v(string, sb.toString());
+	}
+
+    
 
     void printAlert(String string)
     {
@@ -443,28 +467,23 @@ public class Truck extends Thread {
 	OutputStream ostream = null;
     InputStream istream = null;
     
-    byte configStatus = 0;
-    int currentConfig = 0;
-    int mane_throttle = Settings.MIN_THROTTLE;
-    int azimuth_period;
-    int azimuth_threshold;
-    int azimuth_on;
-    int azimuth_off;
-    int azimuth_level;
-    int azimuth_ptr;
-    int battery_accum;
-    int total_battery;
-    int battery_analog;
-    float battery_voltage;
+    static int battery_analog;
+    static float battery_voltage;
+    static int gyro_center;
+    static int gyro_range;
+    static float current_heading;
+    
+    static boolean needReset = false;
+    static boolean needConfig = false;
+    
     long lastSentTime;
     boolean initialized = false;
     int droppedPackets = 0;
     boolean lostContact = false;
-    
-    static final int AZIMUTH_HISTORY_SIZE = 16;
-    int [] azimuth_history = new int[AZIMUTH_HISTORY_SIZE];
-	byte[] beacon = new byte[Settings.HEADER_SIZE + Settings.GROUND_RADIO_OUT_SIZE];
+
+	byte[] beacon = new byte[Settings.RADIO_BUFSIZE];
 	byte[] receive_buf = new byte[Settings.RADIO_BUFSIZE];
+	int totalReceived = 0;
 	ExecutorService executor = Executors.newFixedThreadPool(2);
 //	UUID uuid = UUID.randomUUID();
 	UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");

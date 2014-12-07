@@ -36,6 +36,8 @@ typedef struct
 	unsigned char receive_buf[BLUE_BUFSIZE];
 	unsigned char receive_buf2[BLUE_BUFSIZE];
 	unsigned char send_buf[BLUE_BUFSIZE];
+	int receive_offset;
+	int receive_size;
 	int send_offset;
 	int send_size;
 	int counter;
@@ -54,6 +56,7 @@ typedef struct
 	int throttle;
 	int throttle2;
 	int steering;
+	int steering2;
 
 // PWM values
 	int throttle_pwm;
@@ -65,6 +68,7 @@ typedef struct
 	int battery;
 	int battery_accum;
 	int battery_count;
+	float battery_voltage;
 	
 	int motor_timer;
 	int shutdown_timeout;
@@ -76,12 +80,40 @@ typedef struct
 	int gyro_count;
 	int gyro_min;
 	int gyro_max;
-// maximum amount gyros can move while calculating center
+// the analog gyro reading
+	int gyro;
+// maximum analog amount gyros can move while calculating center
 	int gyro_center_max;
 	float gyro_center;
 	float angle_to_gyro;
+// throttle magnitude 0 - 100
+	int max_throttle;
+// throttle magnitude with only steering input
+	int min_throttle;
+// steering magnitude 0 - 100
+	int max_steering;
+	int min_steering;
+// center position 0 - 100
+	int mid_steering;
+// center position 0 - 100
+	int mid_throttle;
+// number of PWM cycles for each throttle step
+	int throttle_ramp_delay;
+	int throttle_ramp_counter;
+	int throttle_ramp_step;
+// PWM cycles between I steps
+	int pid_downsample;
 // in radians
 	float current_heading;
+// steering with throttle
+// number of PWM cycles for each steering step
+	int steering_step_delay;
+	int steering_step_counter;
+// radians to increment heading after every step delay
+	float steering_step;
+// enable heading hold
+	int auto_steering;
+	int headlights_on;
 	int debug_counter;
 	
 	bluetooth_t bluetooth;

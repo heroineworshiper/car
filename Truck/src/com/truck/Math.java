@@ -168,12 +168,56 @@ public class Math {
 	}
 	
 
+	public static int write_int32(byte[] data, int offset, int value) {
+		data[offset++] = (byte)(value & 0xff);
+		data[offset++] = (byte)((value >> 8) & 0xff);
+		data[offset++] = (byte)((value >> 16) & 0xff);
+		data[offset++] = (byte)((value >> 24) & 0xff);
+		return offset;
+	}
+
     static public int read_uint16(byte[] data, int offset)
 	{
     	return ((int)(data[offset] & 0xff)) | ((((int)data[offset + 1]) << 8) & 0xff00);
 	}
 
 
+	static public int read_int32(byte[] data, int offset)
+	{
+		return (data[offset] & 0xff) | 
+			((data[offset + 1] & 0xff) << 8) | 
+			((data[offset + 2] & 0xff) << 16) | 
+			((data[offset + 3]) << 24);
+	}
+
+
+	// from http://www.captain.at/howto-java-convert-binary-data.php
+	static public float read_float32(byte[] data, int offset)
+	{
+		int i = 0;
+		int len = 4;
+		int out = 0;
+		int in = 0;
+		byte[] tmp = new byte[len];
+		for (in = offset; in < (offset + len); in++) 
+		{
+			tmp[out] = data[in];
+			out++;
+		}
+		int accum = 0;
+		i = 0;
+		for ( int shiftBy = 0; shiftBy < 32; shiftBy += 8 ) 
+		{
+			accum |= ( (long)( tmp[i] & 0xff ) ) << shiftBy;
+			i++;
+		}
+		return Float.intBitsToFloat(accum);
+	}
+
+	static public int write_float32(byte[] data, int offset, float value)
+	{
+		return write_int32(data, offset, Float.floatToIntBits(value));
+	}
 
 	static public double max(double x, double y)
 	{

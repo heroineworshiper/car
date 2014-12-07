@@ -40,12 +40,14 @@ public class Settings {
 	}
 
 	
-	void loadFile()
+	static void loadFile()
 	{
 // load internal guidance parameters from file
-		File dir = new File(Environment.getExternalStorageDirectory() + DIR);
-		File file = new File(Environment.getExternalStorageDirectory() + DIR + FILENAME);
+		File dir = new File(DIR);
+		File file = new File(DIR + FILENAME);
 
+		keys.clear();
+		stringValues.clear();
 		
 		
 // make the directory if it doesn't exist
@@ -53,7 +55,7 @@ public class Settings {
             boolean result = dir.mkdirs();
         }
         catch(SecurityException e) {
-            Log.v("Settings", "loadInternal " + e.toString());
+            Log.v("Settings", "loadInternal 1 " + e.toString());
         }
 
         
@@ -109,22 +111,23 @@ public class Settings {
 	{
 		SharedPreferences file = null;
 		file = context.getSharedPreferences("truck", 0);
-
+		headlights = file.getInt("headlights", 0) == 0 ? false : true;
 	}
 	
-	void save()
+	static void save()
 	{
 		SharedPreferences file2 = null;
 		SharedPreferences.Editor file = null;
 		file2 = context.getSharedPreferences("truck", 0);
 		file = file2.edit();
-
+		
+		file.putInt("headlights", headlights ? 1 : 0);
 
 		file.commit();
 	}
 	
-	// get value to be uploaded
-	public float[] getFileFloat(String key)
+	// get value from user file
+	static public float[] getFileFloat(String key)
 	{
 		for(int i = 0; i < keys.size(); i++)
 		{
@@ -142,12 +145,11 @@ public class Settings {
 		}
 		
 		Log.v("Settings", "getInternal " + key + " not found total=" + keys.size());
-		float[] dummy = new float[1];
-		dummy[0] = 0;
+		float[] dummy = new float[] { 0, 0, 0, 0, 0, 0, 0, 0 };
 		return dummy;
 	}
 
-	public String getFileString(String key, String default_)
+	static public String getFileString(String key, String default_)
 	{
 		for(int i = 0; i < keys.size(); i++)
 		{
@@ -162,7 +164,7 @@ public class Settings {
 	}
 
 	
-	public void dumpFile()
+	static public void dumpFile()
 	{
 		Log.v("Settings", "dumpFile total=" + keys.size());			
 		for(int i = 0; i < keys.size(); i++)
@@ -180,12 +182,12 @@ public class Settings {
 	
 	
 	
-	static final String DIR = "//truck//";
+	static final String DIR = "//sdcard//truck//";
 	static final String FILENAME = "settings.conf";
-	static String bluetooth_id = "Truck";
+	static String bluetooth_id = "truck";
+	static boolean headlights = false;
 	
-	
-	Context context;
+	static Context context;
 	
 
 	// period in milliseconds to update GUI
@@ -196,34 +198,11 @@ public class Settings {
 	static int margin = 0;
 	// distance from edge of screen
 	static int border = 0;
-	static int stickW;
-	static int screenW;
 	
 
 	// constants
-	// largest return packet
-	static final int RADIO_BUFSIZE = 128;
-	// ground beacon for copter
-	static final int GROUND_RADIO_OUT_SIZE = 0x20;
-	static final byte SYNC_CODE = (byte) 0xe5;
-	static final int CONFIG_SECTIONS = 4;
-	
-	static final int ENABLE_POV_BIT = 3;
-	static final int ENGINE_ON_BIT = 4;
-	static final int RADIO_VALID_BIT = 5;
-	static final int CONFIG_VALID_BIT = 6;
-	
-	static final byte PACKET_CONFIG = 3 << 4;
-	static final byte PACKET_AZIMUTH = (byte) (9 << 4);
-	static final byte PACKET_ANALOG = 0;
-	
-	static final int CONFIG_PACKET_SIZE = 6;
-	static final int AZIMUTH_SEND_SAMPLES = 8;
-	static final int AZIMUTH_SAMPLE_BYTES = 2;
-	static final int AZIMUTH_PACKET_SIZE = 1 + 1 + 2 + 2 + AZIMUTH_SEND_SAMPLES * AZIMUTH_SAMPLE_BYTES + 2;
-	static final int ANALOG_PACKET_SIZE = 4 + 4 * 2;
-	// 0xff, 0x2d, 0xd4, packet size from mrf49xa usage
-	static final int HEADER_SIZE = 4;
+	// largest packet
+	static final int RADIO_BUFSIZE = 1024;
 	static final int BEACON_HZ = 10;
 
 	
@@ -233,10 +212,10 @@ public class Settings {
 	static int small_font_size;
 	static int foreground;
 	static int background;
-	static int waypointColor = Color.RED;
-	
+	static int screenW;
+	static int screenH;
 	
 
-	Vector<String> keys = new Vector<String>();
-	Vector<String[]> stringValues = new Vector<String[]>();
+	static Vector<String> keys = new Vector<String>();
+	static Vector<String[]> stringValues = new Vector<String[]>();
 }

@@ -83,26 +83,53 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				initialized = true;
 
 				// set up extents
-				Settings.border = canvas.getHeight() / 20;
-				Settings.margin = canvas.getHeight() / 20;
+				Settings.border = canvas.getHeight() / 40;
+				Settings.margin = canvas.getHeight() / 40;
 				int x = Settings.border;
 				int y = Settings.border;
 				
 				Settings.big_font_size = canvas.getHeight() / 6;
-				Settings.small_font_size = canvas.getHeight() / 12;
+				Settings.small_font_size = canvas.getHeight() / 18;
 				Settings.screenW = canvas.getWidth();
+				Settings.screenH = canvas.getHeight();
 				
 				
 				
 				readouts.add(battery = new LargeReadout(x, y, "BATTERY:", "0.00"));
 				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
-				y += battery.getH(paint) + Settings.margin;
+				y += battery.getH(paint);
+				
+
+				SmallReadout gyroTitle = null;
+				readouts.add(gyroTitle = new SmallReadout(x, y, 2));
+				int positions[] = new int[] { Settings.screenW * 1 / 3, Settings.screenW * 2 / 3 };
+				gyroTitle.setPositions(positions);
+				gyroTitle.setTitle("Gyro");
+				gyroTitle.update(0, "Center");
+				gyroTitle.update(1, "Range");
+				y += gyroTitle.getH(paint);
+				
+				readouts.add(gyro = new SmallReadout(x, y, 2));
+				gyro.setPositions(positions);
+				gyro.update(0, "0");
+				gyro.update(1, "0");
+				y += gyro.getH(paint);
+
+				readouts.add(heading = new SmallReadout(x, y, 2));
+				heading.setTitle("Heading");
+				heading.setPositions(positions);
+				heading.update(0, "0.0");
+				y += heading.getH(paint);
 			}
 			
 			
-			
 			battery.setValue(Truck.truck.battery_voltage);
-			
+			gyro.update(0, Integer.toString(Truck.truck.gyro_center));
+			gyro.update(1, Integer.toString(Truck.truck.gyro_range));
+			Formatter formatter = new Formatter(new StringBuilder());
+			formatter.format("%.02f", Math.fromRad(Truck.current_heading));
+			heading.update(0, formatter.toString());
+
 			
 				
 			
@@ -122,6 +149,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;
+	SmallReadout gyro, heading;
     boolean initialized = false;
     private Paint paint;
  }
