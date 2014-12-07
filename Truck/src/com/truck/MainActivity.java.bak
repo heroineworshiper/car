@@ -1,0 +1,359 @@
+package com.marcy1;
+
+import java.util.Calendar;
+import java.util.Formatter;
+import java.util.Vector;
+
+import com.example.marcy1.R;
+
+import android.os.Bundle;
+import android.os.Message;
+import android.app.Activity;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.view.View;
+import android.view.View.OnTouchListener;
+import android.widget.TextView;
+import android.graphics.PorterDuff;
+
+public class MainActivity extends WindowBase implements OnTouchListener {
+
+
+	@Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+		Copter.createObjects(this);
+ 
+		SurfaceView canvas = (SurfaceView) findViewById(R.id.canvas);
+		SurfaceHolder mSurfaceHolder = canvas.getHolder();
+		canvas.setOnTouchListener(this);
+
+		paint = new Paint();
+		paint.setDither(true);
+		paint.setColor(Color.WHITE);
+		paint.setStyle(Paint.Style.STROKE);
+		paint.setStrokeJoin(Paint.Join.ROUND);
+		paint.setStrokeCap(Paint.Cap.ROUND);
+		paint.setStrokeWidth(8);
+
+		for(int i = 0; i < TOTAL_ZONES; i++)
+			touchZones[i] = new TouchPoint();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.activity_main, menu);
+        return true;
+    }
+    public boolean onOptionsItemSelected(MenuItem item) 
+    {
+    	switch (item.getItemId()) 
+    	{
+        case R.id.menu_reset_time:
+			Calendar c = Calendar.getInstance();
+			startTime = c.getTimeInMillis();
+        	timeAccum = 0;
+        	flightTime = 0;
+        	updateTime();
+        	return true;
+
+        default:
+        	return super.onOptionsItemSelected(item);
+    	}
+    }
+
+	@Override
+	public boolean onTouch(View view, MotionEvent motionEvent) 
+	{
+		boolean gotIt = false;
+		int threshold = Settings.screenW / 20;
+		int pointers = motionEvent.getPointerCount();
+		
+		for(int i = 0; i < TOTAL_ZONES; i++)
+			touchZones[i].newActive = false;
+
+//		Log.v("MainActivity", 
+//				"onTouch pointers=" + pointers + 
+//				" action=" + motionEvent.getAction());
+	
+		if(pointers == 1 && motionEvent.getAction() == MotionEvent.ACTION_UP)
+			pointers = 0;
+		
+		for(int i = 0; i < pointers; i++)
+		{
+			gotIt = false;
+			int x = (int) motionEvent.getX(i);
+			int y = (int) motionEvent.getY(i);
+
+			if(pointers > 1 && 
+					(motionEvent.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_POINTER_UP)
+			{
+				int pointerID = (motionEvent.getAction() & MotionEvent.ACTION_POINTER_ID_MASK) >>
+					MotionEvent.ACTION_POINTER_ID_SHIFT;
+// skip testing a touch point which was released
+					if(motionEvent.getPointerId(i) == pointerID) continue;
+			}
+			
+			// point belongs to existing active zone
+			TouchPoint zone = touchZones[LEFT_ZONE];
+			if(zone.active && 
+				!zone.newActive && 
+				java.lang.Math.abs(zone.x - x) < threshold)
+			{
+				throttle.handleMotion(x, y);
+				zone.newActive = true;
+				zone.x = x;
+				zone.y = y;
+				gotIt = true;
+			}
+			
+			zone = touchZones[RIGHT_ZONE];
+			if(!gotIt &&
+				zone.active && 
+				!zone.newActive &&
+				java.lang.Math.abs(zone.x - x) < threshold)
+			{
+				cyclic.handleMotion(x, y);
+				zone.newActive = true;
+				zone.x = x;
+				zone.y = y;
+				gotIt = true;
+			}
+			
+			
+		
+			if(!gotIt &&
+				!touchZones[LEFT_ZONE].active &&
+				throttle.handlePress(x,  y))
+			{
+				zone = touchZones[LEFT_ZONE];
+				zone.x = x;
+				zone.y = y;
+				zone.newActive = zone.active = true;
+				gotIt = true;
+			}
+
+			if(!gotIt &&
+				!touchZones[RIGHT_ZONE].active &&
+				cyclic.handlePress(x,  y))
+			{
+				zone = touchZones[RIGHT_ZONE];
+				zone.x = x;
+				zone.y = y;
+				zone.newActive = zone.active = true;
+			}
+		}
+		
+		if(!touchZones[LEFT_ZONE].newActive && 
+			touchZones[LEFT_ZONE].active)
+		{
+			throttle.handleRelease();
+			touchZones[LEFT_ZONE].active = false;
+		}
+
+		if(!touchZones[RIGHT_ZONE].newActive && 
+			touchZones[RIGHT_ZONE].active)
+		{
+			cyclic.handleRelease();
+			touchZones[RIGHT_ZONE].active = false;
+		}
+
+
+		return true;
+	}
+
+	public void updateGUI()
+	{
+		SurfaceView canvas1 = (SurfaceView) findViewById(R.id.canvas);
+		SurfaceHolder mSurfaceHolder = canvas1.getHolder();
+		Canvas canvas = mSurfaceHolder.lockCanvas(null);
+		if(canvas != null)
+		{
+			if(!initialized)
+			{
+				initialized = true;
+				
+				Settings.border = canvas.getHeight() / 20;
+				Settings.margin = canvas.getHeight() / 20;
+				int x = Settings.border;
+				int y = Settings.border;
+				
+				Settings.big_font_size = canvas.getHeight() / 6;
+				Settings.small_font_size = canvas.getHeight() / 12;
+				Settings.screenW = canvas.getWidth();
+				
+				
+				
+				readouts.add(battery = new LargeReadout(x, y, "BATTERY:", "0.00"));
+				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
+				y += battery.getH(paint) + Settings.margin;
+				readouts.add(flight_time = new LargeReadout(x, y, "TIME:", "00:00"));
+				flight_time.x = canvas.getWidth() / 2 - flight_time.getW(paint) / 2;
+				
+				Settings.stickW = (canvas.getWidth() - 
+						Math.max(flight_time.getW(paint), battery.getW(paint)) -
+						Settings.margin * 2) / 2;
+				int throttleW = Settings.stickW;
+
+				readouts.add(throttle = new SliderPanel(
+						0, 
+						0, 
+						throttleW,
+						canvas.getHeight(),
+						throttleW / 10));
+
+				readouts.add(cyclic = new StickPanel(
+						canvas.getWidth() - Settings.stickW, 
+						0, 
+						Settings.stickW,
+						canvas.getHeight()));
+
+//Log.v("MainActivity", "updateGUI " + touchZones[0]);
+				touchZones[LEFT_ZONE].minX = 0;
+				touchZones[LEFT_ZONE].maxX = throttle.x + throttle.w;
+				touchZones[RIGHT_ZONE].minX = cyclic.x;
+				touchZones[RIGHT_ZONE].maxX = cyclic.x + cyclic.w;
+
+				
+			}
+			
+			
+			
+			// update controls
+//			Log.v("MainActivity", "throttle=" + throttle.userValue);
+			if(throttle.userValue > Settings.throttleDead)
+			{
+				if(!timerOn)
+				{
+					Calendar c = Calendar.getInstance();
+					startTime = c.getTimeInMillis();
+					timerOn = true;
+				}
+				
+				Calendar c = Calendar.getInstance();
+				long currentTime = c.getTimeInMillis();
+				flightTime = timeAccum + currentTime - startTime;
+				updateTime();
+
+				
+				float heading;
+				synchronized(Copter.compass)
+				{
+					heading = Copter.compass.heading;
+				}
+				
+				
+				synchronized(Copter.copter)
+				{
+					Copter.copter.mane_throttle = (int) (Settings.MIN_THROTTLE +
+							(Settings.MAX_THROTTLE - Settings.MIN_THROTTLE) *
+							(throttle.userValue - Settings.throttleDead) /
+							(1.0 - Settings.throttleDead));
+					Copter.copter.mane_throttle = 
+							Math.clamp(Copter.copter.mane_throttle, 
+									Settings.MIN_THROTTLE, 
+									Settings.MAX_THROTTLE);
+//					Log.v("MainActivity", "mane_throttle=" + Copter.copter.mane_throttle);
+
+					float roll = cyclic.userX;
+					float pitch = cyclic.userY;
+				
+					float magnitude = (float) java.lang.Math.
+							sqrt(Math.sqr(roll) + Math.sqr(pitch));
+					if(magnitude > Settings.MAX_MAGNITUDE)
+						magnitude = Settings.MAX_MAGNITUDE;
+					
+//					Log.v("MainActivity", " roll=" + roll +
+//							" pitch=" + pitch +
+//							" magnitude=" + magnitude);
+					
+					// align azimuth with controller
+
+					float angle = (float) java.lang.Math.atan2(pitch, roll);
+					angle += heading + Settings.headingOffset;
+					while(angle < 0) angle += Math.PI * 2;
+					while(angle >= Math.PI * 2) angle -= Math.PI * 2;
+					
+					int max_cyclic_pwm = Copter.copter.mane_throttle - 
+							Settings.MIN_THROTTLE;
+					if(max_cyclic_pwm > Settings.MAX_THROTTLE - Copter.copter.mane_throttle)
+						max_cyclic_pwm = Settings.MAX_THROTTLE - Copter.copter.mane_throttle;
+					
+					Copter.copter.azimuth_on = (int) (Copter.copter.azimuth_period * 
+							angle / 
+							(Math.PI * 2));
+					// Deliberately shift timings off end of azimuth period
+					Copter.copter.azimuth_off = Copter.copter.azimuth_on +
+							Copter.copter.azimuth_period / 2;
+					Copter.copter.azimuth_level = (int) (magnitude * 
+							max_cyclic_pwm / 
+							Settings.MAX_MAGNITUDE);
+
+					// firmware only adds azimuth_level to throttle
+
+					Copter.copter.mane_throttle -= Copter.copter.azimuth_level;
+					Copter.copter.azimuth_level *= 2;
+					
+				}
+				
+				
+				
+				
+			}
+			else
+			{
+				if(timerOn)
+				{
+					timerOn = false;
+					timeAccum = flightTime;
+				}
+			}
+			
+			
+			canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+			for (int i = 0; i < readouts.size(); i++) {
+				((Container) readouts.get(i)).draw(canvas, paint);
+			}
+			mSurfaceHolder.unlockCanvasAndPost(canvas);
+		}
+	}
+
+	private void updateTime() {
+		StringBuilder sb = new StringBuilder();
+		Formatter formatter = new Formatter(sb);
+		formatter.format("%02d:%02d",
+				flightTime / 60000,
+				(flightTime % 60000) / 1000);
+		flight_time.update(formatter.toString());
+		formatter.close();
+	}
+
+    public void handleMessage(Message msg)
+    {
+		TextView text = (TextView)findViewById(R.id.messages);
+		if(text != null) text.setText(msg.getData().getString("text"));
+    }
+        
+    final int TOTAL_ZONES = 2; 
+    final int LEFT_ZONE = 0;
+    final int RIGHT_ZONE = 1;
+    TouchPoint [] touchZones = new TouchPoint[TOTAL_ZONES];
+    Vector<Container> readouts = new Vector<Container>();
+	LargeReadout battery, flight_time;
+	SliderPanel throttle;
+	StickPanel cyclic;
+    boolean initialized = false;
+    boolean timerOn = false;
+    long startTime;
+    long timeAccum = 0;
+    long flightTime = 0;
+    private Paint paint;
+ }
