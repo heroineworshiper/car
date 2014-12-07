@@ -87,9 +87,8 @@ typedef struct
 	float gyro_center;
 	float angle_to_gyro;
 // throttle magnitude 0 - 100
-	int max_throttle;
-// throttle magnitude with only steering input
-	int min_throttle;
+	int max_throttle_fwd;
+	int max_throttle_rev;
 // steering magnitude 0 - 100
 	int max_steering;
 	int min_steering;
