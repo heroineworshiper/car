@@ -226,6 +226,8 @@ public class Truck extends Thread {
 						
 		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
 		    			offset += 4;
+		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+		    			offset += 4;
 						
 						float pid[] = Settings.getFileFloat("STEERING_PID");
 		    			for(int i = 0; i < 5; i++)
@@ -233,7 +235,8 @@ public class Truck extends Thread {
 							Math.write_float32(beacon, offset, pid[i]);
 		    				offset += 4;
 						}
-						
+
+// write the size including the CRC
 						Math.write_int16(beacon, 4, offset + 2);
 
 		    			needConfig = false;
@@ -390,7 +393,8 @@ public class Truck extends Thread {
 		if(totalReceived >= receive_buf.length)
 		{
 			printAlert("Receive buffer full");
-			return 0;
+// reset the buffer
+			totalReceived = 0;
 		}
 		
 		// receive response

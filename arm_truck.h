@@ -114,6 +114,8 @@ typedef struct
 	int steering_step_counter;
 // radians to increment heading after every step delay
 	float steering_step;
+// radians to rewind heading after manual steering
+	float steering_overshoot;
 // enable heading hold
 	int auto_steering;
 	int headlights_on;

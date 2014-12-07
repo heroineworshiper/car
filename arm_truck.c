@@ -332,6 +332,8 @@ void dump_config()
 	print_number(truck.steering_step_delay);
 	print_text("\nsteering_step=");
 	print_float(TO_DEG(truck.steering_step));
+	print_text("\nsteering_overshoot=");
+	print_float(TO_DEG(truck.steering_overshoot));
 
 	print_text("\nsteering PID=");
 	print_float(truck.heading_pid.p_gain);
@@ -375,6 +377,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
 
 	truck.steering_step = READ_FLOAT32(buffer, offset);
+	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
 
 	float p = READ_FLOAT32(buffer, offset);
 	float i = READ_FLOAT32(buffer, offset);
@@ -525,64 +528,65 @@ void handle_beacon()
 //print_buffer(truck.bluetooth.receive_buf, truck.bluetooth.receive_size);
 
 				int bytes = read_config_packet(truck.bluetooth.receive_buf + offset);
-				if(truck.bluetooth.receive_buf[7])
+				int need_save = truck.bluetooth.receive_buf[7];
+
+				dump_config();
+
+				if(need_save)
 				{
 					save_config(truck.bluetooth.receive_buf + offset,
 						bytes);
-				}
-				
-				dump_config();
 
+					CLEAR_PIN(LED_GPIO1, LED_PIN1);
+					SET_PIN(LED_GPIO2, LED_PIN2);
+					int i;
+					int prev_timer_h = truck.timer_high;
+					int toggle = 0;
+					int mid_steering_pwm = MIN_PWM + 
+						(MAX_PWM - MIN_PWM) * 
+						truck.mid_steering /
+						100;
+					int steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
+						truck.min_steering / 
+						100;
+					truck.writing_settings = 1;
 
-				CLEAR_PIN(LED_GPIO1, LED_PIN1);
-				SET_PIN(LED_GPIO2, LED_PIN2);
-				int i;
-				int prev_timer_h = truck.timer_high;
-				int toggle = 0;
-				int mid_steering_pwm = MIN_PWM + 
-					(MAX_PWM - MIN_PWM) * 
-					truck.mid_steering /
-					100;
-				int steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
-					truck.min_steering / 
-					100;
-				truck.writing_settings = 1;
-
-				for(i = 0; i < 2; i++)
-				{
-					if(toggle == 0)
+					for(i = 0; i < 2; i++)
 					{
-						truck.steering_pwm = mid_steering_pwm - steering_magnitude;
-						write_pwm();
-					}
-					else
-					{
-						truck.steering_pwm = mid_steering_pwm + steering_magnitude;
-						write_pwm();
-					}
-					toggle ^= 1;
+						if(toggle == 0)
+						{
+							truck.steering_pwm = mid_steering_pwm - steering_magnitude;
+							write_pwm();
+						}
+						else
+						{
+							truck.steering_pwm = mid_steering_pwm + steering_magnitude;
+							write_pwm();
+						}
+						toggle ^= 1;
 
-					while(1)
-					{
+						while(1)
+						{
+							DISABLE_INTERRUPTS
+							int time_difference = truck.timer_high - prev_timer_h;
+							ENABLE_INTERRUPTS
+	// seems required because of a compiler error
+							flush_uart();
+							if(time_difference >= TIMER_HZ / 2) break;
+						}
+
 						DISABLE_INTERRUPTS
-						int time_difference = truck.timer_high - prev_timer_h;
+						prev_timer_h = truck.timer_high;
 						ENABLE_INTERRUPTS
-// seems required because of a compiler error
-						flush_uart();
-						if(time_difference >= TIMER_HZ / 2) break;
+
+						TOGGLE_PIN(LED_GPIO1, LED_PIN1);
+						TOGGLE_PIN(LED_GPIO2, LED_PIN2);
 					}
 
-					DISABLE_INTERRUPTS
-					prev_timer_h = truck.timer_high;
-					ENABLE_INTERRUPTS
-					
-					TOGGLE_PIN(LED_GPIO1, LED_PIN1);
-					TOGGLE_PIN(LED_GPIO2, LED_PIN2);
+					truck.writing_settings = 0;
+					CLEAR_PIN(LED_GPIO1, LED_PIN1);
+					SET_PIN(LED_GPIO2, LED_PIN2);
 				}
-
-				truck.writing_settings = 0;
-				CLEAR_PIN(LED_GPIO1, LED_PIN1);
-				SET_PIN(LED_GPIO2, LED_PIN2);
 				break;
 			}
 		}
@@ -962,23 +966,26 @@ void TIM2_IRQHandler()
 
 		if(truck.have_gyro_center)
 		{
-			int max_throttle_magnitude;
+			int throttle_magnitude;
 			int max_steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
 				truck.max_steering / 
 				100;
 			int min_steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
 				truck.min_steering / 
 				100;
+			int need_feedback = 1;
 			if(truck.throttle_reverse)
 			{
-				max_throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
-					truck.max_throttle_fwd / 
+				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
+					truck.max_throttle_rev / 
 					100;
+// don't use steering feedback in reverse
+				need_feedback = 0;
 			}
 			else
 			{
-				max_throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
-					truck.max_throttle_rev / 
+				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
+					truck.max_throttle_fwd / 
 					100;
 			}
 
@@ -993,20 +1000,20 @@ void TIM2_IRQHandler()
 						truck.throttle_pwm += throttle_ramp_step;
 
 						if(truck.throttle_pwm > mid_throttle_pwm +
-							max_throttle_magnitude)
+							throttle_magnitude)
 						{
 							truck.throttle_pwm = mid_throttle_pwm +
-								max_throttle_magnitude;
+								throttle_magnitude;
 						}
 					}
 					else
 					{
 						truck.throttle_pwm -= throttle_ramp_step;
 						if(truck.throttle_pwm < mid_throttle_pwm -
-							max_throttle_magnitude)
+							throttle_magnitude)
 						{
 							truck.throttle_pwm = mid_throttle_pwm -
-								max_throttle_magnitude;
+								throttle_magnitude;
 						}
 					}
 /*
@@ -1018,18 +1025,20 @@ void TIM2_IRQHandler()
 				}
 				
 // steering with throttle
-				int need_feedback = 1;
+				float steering_overshoot = 0;
 				switch(truck.steering)
 				{
 // full left
 					case 0:
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
+						steering_overshoot = truck.steering_overshoot;
 						need_feedback = 0;
 						break;
 // slow left
 					case 16384:
 						if(!truck.auto_steering ||
-							truck.steering_first)
+							truck.steering_first ||
+							truck.throttle_reverse)
 						{
 							need_feedback = 0;
 							truck.steering_pwm = mid_steering_pwm - min_steering_magnitude;
@@ -1047,7 +1056,8 @@ void TIM2_IRQHandler()
 // slow right
 					case 49152:
 						if(!truck.auto_steering ||
-							truck.steering_first)
+							truck.steering_first ||
+							truck.throttle_reverse)
 						{
 							need_feedback = 0;
 							truck.steering_pwm = mid_steering_pwm + min_steering_magnitude;
@@ -1065,6 +1075,7 @@ void TIM2_IRQHandler()
 // full right
 					case 65535:
 						truck.steering_pwm = mid_steering_pwm + max_steering_magnitude;
+						steering_overshoot = -truck.steering_overshoot;
 						need_feedback = 0;
 						break;
 					
@@ -1093,7 +1104,7 @@ void TIM2_IRQHandler()
 				else
 				{
 					reset_pid(&truck.heading_pid);
-					truck.current_heading = 0;
+					truck.current_heading = steering_overshoot;
 				}
 
 /*
@@ -1108,6 +1119,7 @@ void TIM2_IRQHandler()
 			else
 // steering with no throttle
 			{
+				truck.throttle_pwm = mid_throttle_pwm;
 				switch(truck.steering)
 				{
 // full left
@@ -1262,6 +1274,7 @@ int main(void)
 	truck.pid_downsample = 1;
 	truck.steering_step_delay = 0;
 	truck.steering_step = TO_RAD(30) / PWM_HZ;
+	truck.steering_overshoot = 0;
 	
 // heading error -> PWM
 	init_pid(&truck.heading_pid, 
