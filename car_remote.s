@@ -54,10 +54,8 @@ endc
 #define SYNC_CODE 0xe5
 
 
-#define THROTTLE0 0x4000
-#define THROTTLE1 0xc000
-#define SLOW_THROTTLE 0xc000
-#define FAST_THROTTLE 0xffff
+; code sent to receiver for full throttle
+#define FAST_THROTTLE 0x1
 
 ; voltages are
 ; 65408 - left
@@ -68,10 +66,11 @@ endc
 #define STEERING1 (16000 + 31936) / 2
 #define STEERING2 (31936 + 48512) / 2
 #define STEERING3 (65408 + 48512) / 2
-#define LEFT 0x0000
-#define SLOW_LEFT 0x4000
-#define SLOW_RIGHT 0xc000
-#define RIGHT 0xffff
+; codes sent to receiver
+#define LEFT 0x1
+#define SLOW_LEFT 0x2
+#define SLOW_RIGHT 0x3
+#define RIGHT 0x4
 
 	VARSTART H'00', H'100'
 	VARADD FLAGS, 1
@@ -196,20 +195,6 @@ handle_uart2:
 		COPY_BIT BUFFER + 5, 0, PORTA, 1
 
 
-; convert buttons to analog
-;		SKIP_LESS_LITERAL16 THROTTLE, THROTTLE0
-;		bra convert_throttle1
-;			SET_REGISTER16 BUFFER + 6, 0x0000
-;			bra convert_throttle3
-;convert_throttle1:
-;		SKIP_LESS_LITERAL16 THROTTLE, THROTTLE1
-;		bra convert_throttle2
-;			SET_REGISTER16 BUFFER + 6, FAST_THROTTLE
-;			bra convert_throttle3
-;convert_throttle2:
-;		SET_REGISTER16 BUFFER + 6, SLOW_THROTTLE
-;convert_throttle3:
-
 
 		CLEAR_REGISTER16 BUFFER + 6
 		SKIP_LESS_LITERAL16 THROTTLE, 0x8000
@@ -220,7 +205,7 @@ convert_throttle2:
 
 		SKIP_LESS_LITERAL16 STEERING, STEERING0
 		bra convert_steering1
-			SET_REGISTER16 BUFFER + 8, 0x8000
+			SET_REGISTER16 BUFFER + 8, 0x0
 			bra convert_steering_done
 convert_steering1:
 		SKIP_LESS_LITERAL16 STEERING, STEERING1

@@ -123,9 +123,12 @@ ARM_TRUCK_OBJS := \
 
 #all: speedo.hex interval.hex interval_rec.hex usb_download usb_programmer parse
 
-all: truck.bin
+all: truck.bin car_remote.hex
 
 car: car.bin
+
+car_remote.hex: car_remote.s
+	gpasm -I../copter/pic -o car_remote.hex car_remote.s
 
 car.bin: $(ARM_CAR_OBJS) $(ARM_OBJS)
 	$(GCC_ARM) -o car.elf \

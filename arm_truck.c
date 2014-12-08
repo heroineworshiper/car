@@ -71,10 +71,9 @@
 // packets per second
 #define PACKET_RATE 40
 
-#define THROTTLE_MIN 0x100
-#define THROTTLE_MAX 0xff00
+#define THROTTLE_MAX 0x1
 // analog range
-#define STEERING_MID 0x8000
+#define STEERING_MID 0x0
 
 
 #define BATTERY_OVERSAMPLE 1000
@@ -1029,13 +1028,13 @@ void TIM2_IRQHandler()
 				switch(truck.steering)
 				{
 // full left
-					case 0:
+					case 1:
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
 						steering_overshoot = truck.steering_overshoot;
 						need_feedback = 0;
 						break;
 // slow left
-					case 16384:
+					case 2:
 						if(!truck.auto_steering ||
 							truck.steering_first ||
 							truck.throttle_reverse)
@@ -1054,7 +1053,7 @@ void TIM2_IRQHandler()
 						}
 						break;
 // slow right
-					case 49152:
+					case 3:
 						if(!truck.auto_steering ||
 							truck.steering_first ||
 							truck.throttle_reverse)
@@ -1073,7 +1072,7 @@ void TIM2_IRQHandler()
 						}
 						break;
 // full right
-					case 65535:
+					case 4:
 						truck.steering_pwm = mid_steering_pwm + max_steering_magnitude;
 						steering_overshoot = -truck.steering_overshoot;
 						need_feedback = 0;
@@ -1123,22 +1122,22 @@ void TIM2_IRQHandler()
 				switch(truck.steering)
 				{
 // full left
-					case 0:
+					case 1:
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
 						truck.steering_first = 1;
 						break;
 // slow left
-					case 16384:
+					case 2:
 						truck.steering_pwm = mid_steering_pwm - min_steering_magnitude;
 						truck.steering_first = 1;
 						break;
 // slow right
-					case 49152:
+					case 3:
 						truck.steering_pwm = mid_steering_pwm + min_steering_magnitude;
 						truck.steering_first = 1;
 						break;
 // full right
-					case 65535:
+					case 4:
 						truck.steering_pwm = mid_steering_pwm + max_steering_magnitude;
 						truck.steering_first = 1;
 						break;
