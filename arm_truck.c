@@ -1049,6 +1049,8 @@ void TIM2_IRQHandler()
 							{
 								truck.steering_step_counter = 0;
 								truck.current_heading += truck.steering_step;
+TRACE2
+print_float(TO_DEG(truck.current_heading));
 							}
 						}
 						break;
@@ -1068,6 +1070,8 @@ void TIM2_IRQHandler()
 							{
 								truck.steering_step_counter = 0;
 								truck.current_heading -= truck.steering_step;
+TRACE2
+print_float(TO_DEG(truck.current_heading));
 							}
 						}
 						break;
