@@ -20,7 +20,11 @@ PROCESSOR 18f1220
 #include "chksum.inc"
 #include "cc1101.inc"
 
+#define THROTTLE_PIN 4
+#define THROTTLE_PORT PORTB
 
+#define STEERING_PIN 0
+#define STEERING_PORT PORTB
 
 #define SDO_PIN 2
 #define SDO_LAT LATA

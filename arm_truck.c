@@ -239,6 +239,11 @@ void handle_radio()
 		truck.steering = radio.packet[4] | (radio.packet[5] << 8);
 		ENABLE_INTERRUPTS
 
+if(truck.steering)
+{
+TRACE
+print_number(truck.steering);
+}
 /*
  * TRACE2
  * print_text("reverse=");
@@ -390,6 +395,12 @@ int read_config_packet(const unsigned char *buffer)
 		i_limit, // I limit
 		o_limit); // O limit
 	update_headlights();
+
+// debug
+truck.max_throttle_fwd = 0;
+truck.max_throttle_rev = 0;
+truck.auto_steering = 1;
+
 	return offset;
 }
 
@@ -962,7 +973,6 @@ void TIM2_IRQHandler()
 		int throttle_ramp_step = (MAX_PWM - MIN_PWM) *
 			truck.throttle_ramp_step / 
 			100;
-
 		if(truck.have_gyro_center)
 		{
 			int throttle_magnitude;
@@ -987,6 +997,7 @@ void TIM2_IRQHandler()
 					truck.max_throttle_fwd / 
 					100;
 			}
+
 
 			if(truck.throttle > 0)
 			{
@@ -1029,6 +1040,7 @@ void TIM2_IRQHandler()
 				{
 // full left
 					case 1:
+TRACE
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
 						steering_overshoot = truck.steering_overshoot;
 						need_feedback = 0;
@@ -1049,7 +1061,7 @@ void TIM2_IRQHandler()
 							{
 								truck.steering_step_counter = 0;
 								truck.current_heading += truck.steering_step;
-TRACE2
+//TRACE2
 print_float(TO_DEG(truck.current_heading));
 							}
 						}
@@ -1070,7 +1082,7 @@ print_float(TO_DEG(truck.current_heading));
 							{
 								truck.steering_step_counter = 0;
 								truck.current_heading -= truck.steering_step;
-TRACE2
+//TRACE2
 print_float(TO_DEG(truck.current_heading));
 							}
 						}
