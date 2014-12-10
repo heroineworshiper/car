@@ -233,10 +233,24 @@ void handle_radio()
 			}
 		}
 
+//TRACE2
+//print_hex2(radio.packet[2]);
 		DISABLE_INTERRUPTS
-		truck.throttle_reverse = radio.packet[1] & 0x1;
-		truck.throttle = radio.packet[2] | (radio.packet[3] << 8);
-		truck.steering = radio.packet[4] | (radio.packet[5] << 8);
+
+		truck.throttle_reverse = BIT_IS_CLEAR(radio.packet[2], 0) ? 0 : 1;
+		truck.throttle = BIT_IS_CLEAR(radio.packet[2], 1) ? THROTTLE_MAX : 0;
+		truck.steering = STEERING_MID;
+
+// low speed steering
+		if(BIT_IS_CLEAR(radio.packet[2], 3)) truck.steering = 2;
+		else
+		if(BIT_IS_CLEAR(radio.packet[2], 4)) truck.steering = 3;
+		else
+// high speed steering
+		if(BIT_IS_CLEAR(radio.packet[2], 2)) truck.steering = 1;
+		else
+		if(BIT_IS_CLEAR(radio.packet[2], 5)) truck.steering = 4;
+
 		ENABLE_INTERRUPTS
 
 if(truck.steering)
@@ -397,9 +411,9 @@ int read_config_packet(const unsigned char *buffer)
 	update_headlights();
 
 // debug
-truck.max_throttle_fwd = 0;
-truck.max_throttle_rev = 0;
-truck.auto_steering = 1;
+//truck.max_throttle_fwd = 0;
+//truck.max_throttle_rev = 0;
+//truck.auto_steering = 1;
 
 	return offset;
 }
@@ -1040,7 +1054,6 @@ void TIM2_IRQHandler()
 				{
 // full left
 					case 1:
-TRACE
 						truck.steering_pwm = mid_steering_pwm - max_steering_magnitude;
 						steering_overshoot = truck.steering_overshoot;
 						need_feedback = 0;

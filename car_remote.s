@@ -20,11 +20,28 @@ PROCESSOR 18f1220
 #include "chksum.inc"
 #include "cc1101.inc"
 
-#define THROTTLE_PIN 4
+; dead pins:
+; B4
+; A4
+
+
+#define DIRECTION_PIN 3
+#define DIRECTION_PORT PORTB
+
+#define THROTTLE_PIN 0
 #define THROTTLE_PORT PORTB
 
-#define STEERING_PIN 0
-#define STEERING_PORT PORTB
+#define STEERING_PIN0 5
+#define STEERING_PORT0 PORTB
+
+#define STEERING_PIN1 6
+#define STEERING_PORT1 PORTB
+
+#define STEERING_PIN2 7
+#define STEERING_PORT2 PORTB
+
+#define STEERING_PIN3 2
+#define STEERING_PORT3 PORTB
 
 #define SDO_PIN 2
 #define SDO_LAT LATA
@@ -34,9 +51,9 @@ PROCESSOR 18f1220
 #define SCK_LAT LATA
 #define SCK_TRIS TRISA
 
-#define CS0_PIN 5
-#define CS0_LAT LATB
-#define CS0_TRIS TRISB
+#define CS0_PIN 1
+#define CS0_LAT LATA
+#define CS0_TRIS TRISA
 
 #define DEBUG_PIN 0
 #define DEBUG_LAT LATA
@@ -45,11 +62,6 @@ PROCESSOR 18f1220
 
 
 
-; bits in FLAGS
-cblock 0x0
-	HAVE_ANALOG : 1
-	GET_THROTTLE : 1
-endc
 
 #define CLOCKSPEED 8000000
 #define BUFFER_SIZE 12
@@ -58,28 +70,8 @@ endc
 #define SYNC_CODE 0xe5
 
 
-; code sent to receiver for full throttle
-#define FAST_THROTTLE 0x1
-
-; voltages are
-; 65408 - left
-; 48512 - slow left
-; 31936 - slow right
-; 16000 - right
-#define STEERING0 16000 / 2
-#define STEERING1 (16000 + 31936) / 2
-#define STEERING2 (31936 + 48512) / 2
-#define STEERING3 (65408 + 48512) / 2
-; codes sent to receiver
-#define LEFT 0x1
-#define SLOW_LEFT 0x2
-#define SLOW_RIGHT 0x3
-#define RIGHT 0x4
-
 	VARSTART H'00', H'100'
 	VARADD FLAGS, 1
-	VARADD THROTTLE, 2
-	VARADD STEERING, 2
 	VARADD BUFFER, BUFFER_SIZE
 	VARADD BUFFER_PTR, 2
 	VARADD TEMP, 1
@@ -112,10 +104,7 @@ start:
 
 ; pin modes
 ; pin mode: 1 = digital  0 = analog
-	SET_REGISTER ADCON1, B'10101111'
-	SET_REGISTER ADCON0, B'00010001'
-;	SET_REGISTER ADCON0, B'00011001'
-	SET_REGISTER ADCON2, B'00111110'
+	SET_REGISTER ADCON1, B'11111111'
 
 	bcf DEBUG_TRIS, DEBUG_PIN
 	bcf DEBUG_LAT, DEBUG_PIN
@@ -128,13 +117,8 @@ start:
 
 
 
-	bsf ADCON0, 1
-	clrf FLAGS
-	CLEAR_REGISTER16 THROTTLE
-	SET_REGISTER16 STEERING, 0x8000
 	SET_REGISTER16 BUFFER_PTR, BUFFER + BUFFER_SIZE
-	bsf FLAGS, GET_THROTTLE
-
+	bcf INTCON2, RBPU
 
 
 	bcf SDO_LAT, SDO_PIN
@@ -167,9 +151,6 @@ loop:
 
 	btg DEBUG_LAT, DEBUG_PIN
 
-	btfsc PIR1, ADIF
-	call handle_analog
-	
 	btfsc PIR1, TXIF
 	call handle_uart
 	
@@ -186,49 +167,26 @@ handle_uart:
 		return
 
 handle_uart2:
-	btfss FLAGS, HAVE_ANALOG
-	return
-
 		SET_REGISTER BUFFER + 0, 0x00
 		SET_REGISTER BUFFER + 1, 0xff
 		SET_REGISTER BUFFER + 2, 0x2d
 		SET_REGISTER BUFFER + 3, 0xd4
 		SET_REGISTER BUFFER + 4, SYNC_CODE
-		SET_REGISTER BUFFER + 5, 0
-; reverse
-		COPY_BIT BUFFER + 5, 0, PORTA, 1
+		clrf BUFFER + 5
+		clrf BUFFER + 6
+		clrf BUFFER + 7
+		clrf BUFFER + 8
+		clrf BUFFER + 9
+		clrf BUFFER + 10
 
+; buttons
+		COPY_BIT BUFFER + 6, 0, DIRECTION_PORT, DIRECTION_PIN
+		COPY_BIT BUFFER + 6, 1, THROTTLE_PORT, THROTTLE_PIN
+		COPY_BIT BUFFER + 6, 2, STEERING_PORT0, STEERING_PIN0
+		COPY_BIT BUFFER + 6, 3, STEERING_PORT1, STEERING_PIN1
+		COPY_BIT BUFFER + 6, 4, STEERING_PORT2, STEERING_PIN2
+		COPY_BIT BUFFER + 6, 5, STEERING_PORT3, STEERING_PIN3
 
-
-		CLEAR_REGISTER16 BUFFER + 6
-		SKIP_LESS_LITERAL16 THROTTLE, 0x8000
-		bra convert_throttle2
-		SET_REGISTER16 BUFFER + 6, FAST_THROTTLE
-convert_throttle2:
-
-
-		SKIP_LESS_LITERAL16 STEERING, STEERING0
-		bra convert_steering1
-			SET_REGISTER16 BUFFER + 8, 0x0
-			bra convert_steering_done
-convert_steering1:
-		SKIP_LESS_LITERAL16 STEERING, STEERING1
-		bra convert_steering2
-			SET_REGISTER16 BUFFER + 8, RIGHT
-			bra convert_steering_done
-convert_steering2:
-		SKIP_LESS_LITERAL16 STEERING, STEERING2
-		bra convert_steering3
-			SET_REGISTER16 BUFFER + 8, SLOW_RIGHT
-			bra convert_steering_done
-convert_steering3:
-		SKIP_LESS_LITERAL16 STEERING, STEERING3
-		bra convert_steering4
-			SET_REGISTER16 BUFFER + 8, SLOW_LEFT
-			bra convert_steering_done
-convert_steering4:
-		SET_REGISTER16 BUFFER + 8, LEFT
-convert_steering_done:
 
 ; send the raw value to the receiver
 ;COPY_REGISTER16 BUFFER + 8, STEERING
@@ -239,28 +197,6 @@ convert_steering_done:
 		return
 
 
-handle_analog:
-	bcf PIR1, ADIF
-
-
-	btfss FLAGS, GET_THROTTLE
-	bra handle_analog2
-;		SET_REGISTER ADCON0, B'00010001'
-		SET_REGISTER ADCON0, B'00011001'
-		bcf FLAGS, GET_THROTTLE
-		COPY_REGISTER16 THROTTLE, ADRESL
-		bsf ADCON0, 1
-		return
-
-handle_analog2:
-;	SET_REGISTER ADCON0, B'00011001'
-	SET_REGISTER ADCON0, B'00010001'
-	bsf FLAGS, GET_THROTTLE
-	bsf FLAGS, HAVE_ANALOG
-	COPY_REGISTER16 STEERING, ADRESL
-	bsf ADCON0, 1
-	return
-	
 	
 	
 
