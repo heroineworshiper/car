@@ -99,6 +99,8 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
 				y += battery.getH(paint);
 				
+				SmallReadout batteryAnalog = new SmallReadout(x, y, 1));
+				
 
 				SmallReadout gyroTitle = null;
 				readouts.add(gyroTitle = new SmallReadout(x, y, 2));

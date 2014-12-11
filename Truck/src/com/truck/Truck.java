@@ -223,6 +223,10 @@ public class Truck extends Thread {
 		    			offset += 2;
 		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
 		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
+		    			offset += 2;
+		    			Math.write_float32(beacon, offset, (int) (Settings.getFileFloat("BATTERY_VOLTAGE")[0]));
+		    			offset += 4;
 						
 		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
 		    			offset += 4;
