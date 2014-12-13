@@ -57,6 +57,9 @@ typedef struct
 	int throttle2;
 	int steering;
 	int steering2;
+	int bt_throttle;
+	int bt_steering;
+	int have_bt_controls;
 
 // PWM values
 	int throttle_pwm;
@@ -69,6 +72,8 @@ typedef struct
 	int battery_accum;
 	int battery_count;
 	float battery_voltage;
+	int battery_analog;
+	float battery_v0;
 
 // steering was pressed before throttle
 	int steering_first;

@@ -14,6 +14,7 @@ import java.util.Vector;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Environment;
@@ -179,7 +180,26 @@ public class Settings {
 			Log.v("Settings", "dumpInternal " + sb.toString());			
 		}
 	}
+
+	static boolean initCanvas(Canvas canvas)
+	{
+		if(!canvasInitialized)
+		{
+			canvasInitialized = true;
 	
+			// set up extents
+			Settings.border = canvas.getHeight() / 40;
+			Settings.margin = canvas.getHeight() / 40;
+
+			Settings.big_font_size = canvas.getHeight() / 6;
+			Settings.small_font_size = canvas.getHeight() / 18;
+			Settings.screenW = canvas.getWidth();
+			Settings.screenH = canvas.getHeight();
+			return true;
+		}
+		
+		return false;
+	}
 	
 	
 	static final String DIR = "//sdcard//truck//";
@@ -205,7 +225,7 @@ public class Settings {
 	static final int RADIO_BUFSIZE = 1024;
 	static final int BEACON_HZ = 10;
 
-	
+	static boolean canvasInitialized = false;
 	static Typeface big_font;
 	static Typeface small_font;
 	static int big_font_size;
@@ -214,7 +234,8 @@ public class Settings {
 	static int background;
 	static int screenW;
 	static int screenH;
-	
+	static int stickW;
+
 
 	static Vector<String> keys = new Vector<String>();
 	static Vector<String[]> stringValues = new Vector<String[]>();

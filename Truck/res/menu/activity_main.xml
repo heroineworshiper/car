@@ -3,4 +3,8 @@
         android:title="Settings..."
         android:orderInCategory="100"
         android:showAsAction="never" />
+    <item android:id="@+id/menu_drive"
+        android:title="Drive..."
+        android:orderInCategory="100"
+        android:showAsAction="never" />
 </menu>

@@ -76,7 +76,7 @@
 #define STEERING_MID 0x0
 
 
-#define BATTERY_OVERSAMPLE 1000
+#define BATTERY_OVERSAMPLE 10000
 #define GYRO_OVERSAMPLE 20
 #define GYRO_CENTER_TOTAL 4096
 
@@ -95,6 +95,9 @@
 #define MAX_PWM 168000
 // 1ms
 #define MIN_PWM 84000
+
+// reference voltage for 100% throttle
+#define THROTTLE_V0 12.0f
 
 truck_t truck;
 
@@ -393,7 +396,9 @@ int read_config_packet(const unsigned char *buffer)
 	truck.throttle_ramp_step = READ_UINT16(buffer, offset);
 	truck.pid_downsample = READ_UINT16(buffer, offset);
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
-
+	truck.battery_analog = READ_UINT16(buffer, offset);
+	
+	truck.battery_v0 = READ_FLOAT32(buffer, offset);
 	truck.steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
 
@@ -495,27 +500,38 @@ static void bluetooth_passthrough()
 
 void handle_beacon()
 {
+	unsigned char *receive_buf = truck.bluetooth.receive_buf;
+	int receive_size = truck.bluetooth.receive_size;
+	uint16_t chksum = get_chksum(receive_buf, 
+		receive_size - 2);
 
-	uint16_t chksum = get_chksum(truck.bluetooth.receive_buf, 
-		truck.bluetooth.receive_size - 2);
-
-	if((chksum & 0xff) == truck.bluetooth.receive_buf[truck.bluetooth.receive_size - 2] &&
-		((chksum >> 8) & 0xff) == truck.bluetooth.receive_buf[truck.bluetooth.receive_size - 1])
+	if((chksum & 0xff) == receive_buf[receive_size - 2] &&
+		((chksum >> 8) & 0xff) == receive_buf[receive_size - 1])
 	{
 
-		switch(truck.bluetooth.receive_buf[6])
+		switch(receive_buf[6])
 		{
-	// battery voltage
+// battery voltage
 			case 0:
 			{
+// get controls
+				if(receive_buf[8])
+				{
+					truck.bt_throttle = receive_buf[9];
+					truck.bt_steering = receive_buf[10];
+					truck.have_bt_controls = 1;
+					truck.shutdown_timeout = TIMER_HZ * 5;
+				}
+
+// create return packet
 				int offset = 0;
 				truck.bluetooth.send_buf[offset++] = 0xff;
 				truck.bluetooth.send_buf[offset++] = 0x2d;
 				truck.bluetooth.send_buf[offset++] = 0xd4;
 				truck.bluetooth.send_buf[offset++] = 0xe5;
-	// size
+// size
 				WRITE_INT16(truck.bluetooth.send_buf, offset, 26);
-	// battery response
+// battery response
 				truck.bluetooth.send_buf[offset++] = 0;
 				truck.bluetooth.send_buf[offset++] = 0;
 				WRITE_INT32(truck.bluetooth.send_buf, offset, truck.battery);
@@ -551,14 +567,14 @@ void handle_beacon()
 //TRACE2
 //print_buffer(truck.bluetooth.receive_buf, truck.bluetooth.receive_size);
 
-				int bytes = read_config_packet(truck.bluetooth.receive_buf + offset);
-				int need_save = truck.bluetooth.receive_buf[7];
+				int bytes = read_config_packet(receive_buf + offset);
+				int need_save = receive_buf[7];
 
 				dump_config();
 
 				if(need_save)
 				{
-					save_config(truck.bluetooth.receive_buf + offset,
+					save_config(receive_buf + offset,
 						bytes);
 
 					CLEAR_PIN(LED_GPIO1, LED_PIN1);
@@ -814,13 +830,13 @@ void handle_analog()
 			truck.battery = truck.battery_accum / truck.battery_count;
 			truck.battery_accum = 0;
 			truck.battery_count = 0;
-			truck.battery_voltage = truck.battery * 8.67f / 965.0f;
+			truck.battery_voltage = (float)truck.battery * 
+				truck.battery_v0 / 
+				truck.battery_analog;
 
-/*
- * TRACE2
- * print_number(truck.battery);
- * print_float(voltage);
- */
+TRACE2
+print_number(truck.battery);
+print_float(truck.battery_voltage);
 
 
 		}
@@ -976,6 +992,7 @@ void TIM2_IRQHandler()
 		SET_PIN(GPIOA, GPIO_Pin_7);
 
 		if(truck.writing_settings) return;
+
 		int mid_steering_pwm = MIN_PWM + 
 			(MAX_PWM - MIN_PWM) * 
 			truck.mid_steering /
@@ -989,7 +1006,6 @@ void TIM2_IRQHandler()
 			100;
 		if(truck.have_gyro_center)
 		{
-			int throttle_magnitude;
 			int max_steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
 				truck.max_steering / 
 				100;
@@ -997,6 +1013,7 @@ void TIM2_IRQHandler()
 				truck.min_steering / 
 				100;
 			int need_feedback = 1;
+			int throttle_magnitude = 0;
 			if(truck.throttle_reverse)
 			{
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
@@ -1012,6 +1029,10 @@ void TIM2_IRQHandler()
 					100;
 			}
 
+// scale to current voltage
+			throttle_magnitude =(int)(throttle_magnitude * 
+				THROTTLE_V0 /
+				truck.battery_voltage);
 
 			if(truck.throttle > 0)
 			{
@@ -1140,7 +1161,6 @@ print_float(TO_DEG(truck.current_heading));
  * 				print_float(steering_feedback);
  */
 
-				CLAMP(truck.steering_pwm, MIN_PWM, MAX_PWM);
 
 				
 			}
@@ -1177,7 +1197,6 @@ print_float(TO_DEG(truck.current_heading));
 						break;
 				}
 
-				CLAMP(truck.steering_pwm, MIN_PWM, MAX_PWM);
 			}
 
 
@@ -1207,6 +1226,8 @@ print_float(TO_DEG(truck.current_heading));
 
 void write_pwm()
 {
+	CLAMP(truck.steering_pwm, MIN_PWM, MAX_PWM);
+	CLAMP(truck.throttle_pwm, MIN_PWM, MAX_PWM);
 	SET_COMPARE(TIM2, CCR1, truck.throttle_pwm);
 	SET_COMPARE(TIM2, CCR2, truck.steering_pwm);
 }
@@ -1303,6 +1324,8 @@ int main(void)
 	truck.steering_step_delay = 0;
 	truck.steering_step = TO_RAD(30) / PWM_HZ;
 	truck.steering_overshoot = 0;
+	truck.battery_analog = 965;
+	truck.battery_v0 = 8.67f;
 	
 // heading error -> PWM
 	init_pid(&truck.heading_pid, 

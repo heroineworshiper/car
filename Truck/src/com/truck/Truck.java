@@ -189,6 +189,7 @@ public class Truck extends Thread {
 		    			// command
 		    			beacon[offset++] = (byte) 1;
 		    			beacon[offset++] = (byte) 0;
+		    			
 		    			needReset = false;
 	    			}
 	    			else
@@ -225,9 +226,9 @@ public class Truck extends Thread {
 		    			offset += 2;
 		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 		    			offset += 2;
-		    			Math.write_float32(beacon, offset, (int) (Settings.getFileFloat("BATTERY_VOLTAGE")[0]));
+
+		    			Math.write_float32(beacon, offset, (int) (Settings.getFileFloat("BATTERY_V0")[0]));
 		    			offset += 4;
-						
 		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
 		    			offset += 4;
 		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
@@ -247,14 +248,20 @@ public class Truck extends Thread {
 	    			}
 	    			else
 	    			{
-	    				// get battery voltage
-	    				// size
-		    			Math.write_int16(beacon, offset, 10);
+// get battery voltage
+// size
+		    			Math.write_int16(beacon, offset, 16);
 		    			offset += 2;
-		    			// command
-
+// command
 		    			beacon[offset++] = (byte) 0;
 		    			beacon[offset++] = (byte) 0;
+// offset = 8
+		    			beacon[offset++] = (byte)(haveControls ? 1 : 0);
+		    			beacon[offset++] = (byte)throttleOut;
+		    			beacon[offset++] = (byte)steeringOut;
+		    			beacon[offset++] = 0;
+		    			beacon[offset++] = 0;
+		    			beacon[offset++] = 0;
 	    			}
 	    			
 	    			
@@ -301,6 +308,8 @@ public class Truck extends Thread {
 		    								gyro_center = Math.read_uint16(receive_buf, offset + 16);
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
 		    								current_heading = Math.read_float32(receive_buf, offset + 20);
+		    								throttleIn = receive_buf[offset + 24];
+		    								steeringIn = receive_buf[offset + 25];
 //		    			    				Log.v("run 1", "battery_analog=" + battery_analog + " battery_voltage=" + battery_voltage);
 		    								break;
 		    							}
@@ -484,6 +493,18 @@ public class Truck extends Thread {
     static boolean needReset = false;
     static boolean needConfig = false;
     static boolean needSaveConfig = false;
+   
+// throttle to send -127 - 127
+    static int throttleOut = 0;
+// throttle received -127 - 127
+    static int throttleIn = 0;
+// steering to send -127 - 127
+    static int steeringOut = 0;
+// steering to receive -127 - 127
+    static int steeringIn = 0;
+// have control values to send from the drive window
+    static boolean haveControls = false;
+    
     
     long lastSentTime;
     boolean initialized = false;

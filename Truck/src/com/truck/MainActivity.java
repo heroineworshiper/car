@@ -59,6 +59,9 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         case R.id.menu_settings:
         	startActivity(new Intent(this, SettingsWin.class));
         	return true;
+        case R.id.menu_drive:
+        	startActivity(new Intent(this, DriveWin.class));
+        	return true;
 
         default:
         	return super.onOptionsItemSelected(item);
@@ -78,33 +81,24 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 		Canvas canvas = mSurfaceHolder.lockCanvas(null);
 		if(canvas != null)
 		{
-			if(!initialized)
+			if(Settings.initCanvas(canvas))
 			{
-				initialized = true;
-
-				// set up extents
-				Settings.border = canvas.getHeight() / 40;
-				Settings.margin = canvas.getHeight() / 40;
 				int x = Settings.border;
 				int y = Settings.border;
-				
-				Settings.big_font_size = canvas.getHeight() / 6;
-				Settings.small_font_size = canvas.getHeight() / 18;
-				Settings.screenW = canvas.getWidth();
-				Settings.screenH = canvas.getHeight();
-				
-				
 				
 				readouts.add(battery = new LargeReadout(x, y, "BATTERY:", "0.00"));
 				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
 				y += battery.getH(paint);
 				
-				SmallReadout batteryAnalog = new SmallReadout(x, y, 1));
+				int positions[] = new int[] { Settings.screenW * 1 / 3, Settings.screenW * 2 / 3 };
+				batteryAnalog = new SmallReadout(x, y, 1);
+				batteryAnalog.setPositions(positions);
+				batteryAnalog.setTitle("Analog:");
+				y += batteryAnalog.getH(paint);
 				
 
 				SmallReadout gyroTitle = null;
 				readouts.add(gyroTitle = new SmallReadout(x, y, 2));
-				int positions[] = new int[] { Settings.screenW * 1 / 3, Settings.screenW * 2 / 3 };
 				gyroTitle.setPositions(positions);
 				gyroTitle.setTitle("Gyro");
 				gyroTitle.update(0, "Center");
@@ -126,11 +120,15 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 			
 			
 			battery.setValue(Truck.truck.battery_voltage);
+			batteryAnalog.update(0, Integer.toString(Truck.battery_analog));
+			
 			gyro.update(0, Integer.toString(Truck.truck.gyro_center));
 			gyro.update(1, Integer.toString(Truck.truck.gyro_range));
-			Formatter formatter = new Formatter(new StringBuilder());
-			formatter.format("%.02f", Math.fromRad(Truck.current_heading));
-			heading.update(0, formatter.toString());
+			heading.update(0, 
+				new Formatter(
+					new StringBuilder())
+						.format("%.02f", Math.fromRad(Truck.current_heading))
+						.toString());
 
 			
 				
@@ -152,6 +150,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;
 	SmallReadout gyro, heading;
+	SmallReadout batteryAnalog;
     boolean initialized = false;
     private Paint paint;
  }

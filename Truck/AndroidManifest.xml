@@ -26,6 +26,10 @@
             android:name="com.truck.SettingsWin"
             android:label="Settings" >
         </activity>
+        <activity
+            android:name="com.truck.DriveWin"
+            android:label="Drive" >
+        </activity>
     </application>
 
 </manifest>
