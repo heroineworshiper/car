@@ -205,6 +205,42 @@ uint16_t get_chksum(uint8_t *buffer, uint8_t size)
 	return result2;
 }
 
+void begin_gyro_calibration()
+{
+TRACE2
+print_text("Begin gyro calibration\n");
+			truck.need_gyro_center = 1;
+			truck.gyro_center_count = 0;
+			truck.gyro_center = 0;
+			truck.gyro_accum = 0;
+			truck.gyro_min = 0;
+			truck.gyro_max = 0;
+}
+
+void radio_led_toggle()
+{
+	if(!truck.need_gyro_center)
+	{
+		truck.led_counter++;
+		if(truck.led_counter >= LED_DELAY2)
+		{
+			if(truck.have_gyro_center)
+			{
+// flash green
+				TOGGLE_PIN(LED_GPIO1, LED_PIN1);
+				CLEAR_PIN(LED_GPIO2, LED_PIN2);
+			}
+			else
+			{
+// flash red
+				TOGGLE_PIN(LED_GPIO2, LED_PIN2);
+				CLEAR_PIN(LED_GPIO1, LED_PIN1);
+			}
+			truck.led_counter = 0;
+		}
+	}
+}
+
 void handle_radio()
 {
 	if(radio.packet[0] != SYNC_CODE) return;
@@ -215,26 +251,7 @@ void handle_radio()
 		((chksum >> 8) & 0xff) == radio.packet[PACKET_SIZE - 1])
 	{
 // packet good
-		if(!truck.need_gyro_center)
-		{
-			truck.led_counter++;
-			if(truck.led_counter >= LED_DELAY2)
-			{
-				if(truck.have_gyro_center)
-				{
-// flash green
-					TOGGLE_PIN(LED_GPIO1, LED_PIN1);
-					CLEAR_PIN(LED_GPIO2, LED_PIN2);
-				}
-				else
-				{
-// flash red
-					TOGGLE_PIN(LED_GPIO2, LED_PIN2);
-					CLEAR_PIN(LED_GPIO1, LED_PIN1);
-				}
-				truck.led_counter = 0;
-			}
-		}
+		radio_led_toggle();
 
 //TRACE2
 //print_hex2(radio.packet[2]);
@@ -277,37 +294,9 @@ print_number(truck.steering);
 			!truck.have_gyro_center && 
 			!truck.need_gyro_center)
 		{
-TRACE2
-print_text("Begin gyro calibration\n");
-			truck.need_gyro_center = 1;
-			truck.gyro_center_count = 0;
-			truck.gyro_center = 0;
-			truck.gyro_accum = 0;
-			truck.gyro_min = 0;
-			truck.gyro_max = 0;
+			begin_gyro_calibration();
 		}
 		
-		if(truck.have_gyro_center)
-		{
-			DISABLE_INTERRUPTS
-			if(truck.throttle > 0 && truck.throttle2 <= 0)
-			{
-				truck.current_heading = 0;
-				truck.throttle_ramp_counter = 0;
-				reset_pid(&truck.heading_pid);
-			}
-
-			if(truck.steering != truck.steering2)
-			{
-				truck.throttle_ramp_counter = 0;
-				truck.steering_step_counter = 0;
-			}
-			
-			truck.steering2 = truck.steering;
-			truck.throttle2 = truck.throttle;
-			truck.throttle_reverse2 = truck.throttle_reverse;
-			ENABLE_INTERRUPTS
-		}
 //TRACE2
 //print_text("mode=");
 //print_number(truck.mode);
@@ -497,7 +486,6 @@ static void bluetooth_passthrough()
 }
 #endif // BLUETOOTH_PASSTHROUGH
 
-
 void handle_beacon()
 {
 	unsigned char *receive_buf = truck.bluetooth.receive_buf;
@@ -517,10 +505,39 @@ void handle_beacon()
 // get controls
 				if(receive_buf[8])
 				{
+					DISABLE_INTERRUPTS
 					truck.bt_throttle = receive_buf[9];
+					if(truck.bt_throttle & 0x80) truck.bt_throttle = -256 + truck.bt_throttle;
 					truck.bt_steering = receive_buf[10];
+					if(truck.bt_steering & 0x80) truck.bt_steering = -256 + truck.bt_steering;
 					truck.have_bt_controls = 1;
 					truck.shutdown_timeout = TIMER_HZ * 5;
+					ENABLE_INTERRUPTS
+
+					radio_led_toggle();
+					
+// begin gyro calibration		
+					if(truck.bt_throttle != 0 && 
+						!truck.have_gyro_center && 
+						!truck.need_gyro_center)
+					{
+						begin_gyro_calibration();
+					}
+
+/*
+ * TRACE2
+ * print_text("bt_throttle=");
+ * print_number(truck.bt_throttle);
+ * print_text(" bt_steering=");
+ * print_number(truck.bt_steering);
+ */
+
+				}
+				else
+				{
+					DISABLE_INTERRUPTS
+					truck.have_bt_controls = 0;
+					ENABLE_INTERRUPTS
 				}
 
 // create return packet
@@ -1006,6 +1023,26 @@ void TIM2_IRQHandler()
 			100;
 		if(truck.have_gyro_center)
 		{
+// Change in throttle
+			if(truck.throttle > 0 && truck.throttle2 <= 0)
+			{
+				truck.current_heading = 0;
+				truck.throttle_ramp_counter = 0;
+				reset_pid(&truck.heading_pid);
+			}
+
+// change in steering
+			if(truck.steering != truck.steering2)
+			{
+				truck.throttle_ramp_counter = 0;
+				truck.steering_step_counter = 0;
+			}
+			
+			truck.steering2 = truck.steering;
+			truck.throttle2 = truck.throttle;
+			truck.throttle_reverse2 = truck.throttle_reverse;
+
+
 			int max_steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
 				truck.max_steering / 
 				100;
@@ -1034,6 +1071,17 @@ void TIM2_IRQHandler()
 				THROTTLE_V0 /
 				truck.battery_voltage);
 
+// process bluetooth controls
+			if(truck.have_bt_controls && truck.shutdown_timeout <= 0)
+			{
+				truck.have_bt_controls = 0;
+			}
+			
+			if(truck.have_bt_controls)
+			{
+				
+			}
+			else
 			if(truck.throttle > 0)
 			{
 				truck.throttle_ramp_counter++;
