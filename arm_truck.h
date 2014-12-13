@@ -80,7 +80,8 @@ typedef struct
 // Make the interrupt handler not copy the radio to the steering PWM
 	int writing_settings;
 	int motor_timer;
-	int shutdown_timeout;
+	int bt_timeout;
+	int radio_timeout;
 	int need_gyro_center;
 	int gyro_center_accum;
 	int gyro_center_count;

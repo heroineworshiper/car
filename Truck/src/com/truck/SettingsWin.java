@@ -66,7 +66,7 @@ public class SettingsWin  extends WindowBase
         	Settings.headlights = !Settings.headlights;
         	Settings.save();
         	Truck.needConfig = true;
-        	Truck.needSaveConfig = false;
+        	Truck.needSaveConfig = true;
         	break;
         case R.id.reset:
         	Truck.needReset = true;
