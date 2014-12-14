@@ -181,6 +181,11 @@ public class Math {
     	return ((int)(data[offset] & 0xff)) | ((((int)data[offset + 1]) << 8) & 0xff00);
 	}
 
+    static public int read_int16(byte[] data, int offset)
+	{
+    	return ((int)(data[offset] & 0xff)) | ((((int)data[offset + 1]) << 8));
+	}
+
 
 	static public int read_int32(byte[] data, int offset)
 	{

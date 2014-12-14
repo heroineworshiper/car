@@ -187,12 +187,17 @@ public class Settings {
 		{
 			canvasInitialized = true;
 	
+			int largeDimension = Math.max(canvas.getWidth(), canvas.getHeight());
 			// set up extents
-			Settings.border = canvas.getHeight() / 40;
-			Settings.margin = canvas.getHeight() / 40;
+			Settings.border = largeDimension / 40;
+			Settings.margin = largeDimension / 40;
 
-			Settings.big_font_size = canvas.getHeight() / 6;
-			Settings.small_font_size = canvas.getHeight() / 18;
+			if(Settings.big_font_size == 0)
+			{
+				Settings.big_font_size = largeDimension / 6;
+				Settings.small_font_size = largeDimension / 18;
+			}
+			
 			Settings.screenW = canvas.getWidth();
 			Settings.screenH = canvas.getHeight();
 			return true;
@@ -228,13 +233,16 @@ public class Settings {
 	static boolean canvasInitialized = false;
 	static Typeface big_font;
 	static Typeface small_font;
-	static int big_font_size;
-	static int small_font_size;
+	static int big_font_size = 0;
+	static int small_font_size = 0;
 	static int foreground;
 	static int background;
 	static int screenW;
 	static int screenH;
 	static int stickW;
+// message to display
+	static String message = null;
+	static boolean haveMessage = false;
 
 
 	static Vector<String> keys = new Vector<String>();

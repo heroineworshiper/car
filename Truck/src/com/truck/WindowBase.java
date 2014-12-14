@@ -63,11 +63,6 @@ public class WindowBase extends Activity implements Runnable {
 		
 	}
 
-	public void handleMessage(Message msg)
-	{
-	
-	}
-
 	public void run() {
 		while(true)
 		{
@@ -93,9 +88,6 @@ public class WindowBase extends Activity implements Runnable {
 				{
 				case 0:
 					((WindowBase) msg.obj).updateGUI();
-					break;
-				default:
-					((WindowBase) msg.obj).handleMessage(msg);
 					break;
 				}
 			}

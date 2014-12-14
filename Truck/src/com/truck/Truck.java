@@ -227,7 +227,9 @@ public class Truck extends Thread {
 		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 		    			offset += 2;
 
-		    			Math.write_float32(beacon, offset, (int) (Settings.getFileFloat("BATTERY_V0")[0]));
+		    			Math.write_float32(beacon, offset, Settings.getFileFloat("THROTTLE_V0")[0]);
+		    			offset += 4;
+		    			Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
 		    			offset += 4;
 		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
 		    			offset += 4;
@@ -294,10 +296,16 @@ public class Truck extends Thread {
 	    					if(offset < totalReceived - 8)
 	    					{
 	    						int size = Math.read_uint16(receive_buf, offset + 4);
+	    						if(size + offset > receive_buf.length ||
+	    							size < 8)
+	    						{
+	    							drop_bytes = offset + 6;
+	    						}
+	    						else
 	    						if(offset <= totalReceived - size)
 	    						{
 	    							checksum = Math.getChecksum(receive_buf, offset, size - 2);
-	    							if(checksum == Math.read_uint16(receive_buf, size - 2))
+	    							if(checksum == Math.read_uint16(receive_buf, offset + size - 2))
 	    							{
 // packet is intact
 		    							switch(receive_buf[offset + 6])
@@ -305,7 +313,7 @@ public class Truck extends Thread {
 		    							case 0:
 		    								battery_analog = Math.read_int32(receive_buf, offset + 8);
 		    								battery_voltage = Math.read_float32(receive_buf, offset + 12);
-		    								gyro_center = Math.read_uint16(receive_buf, offset + 16);
+		    								gyro_center = Math.read_int16(receive_buf, offset + 16);
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
 		    								current_heading = Math.read_float32(receive_buf, offset + 20);
 		    								throttleIn = receive_buf[offset + 24];
@@ -464,13 +472,11 @@ public class Truck extends Thread {
 
     void printAlert(String string)
     {
-		Message message = Message.obtain(
-				WindowBase.handler, 
-				2, 
-				activity);
-		message.getData().putString("text", string);
-		WindowBase.handler.sendMessage(message);
-	
+    	synchronized(this)
+    	{
+    		Settings.message = string;
+    		Settings.haveMessage = true;
+    	}
     }
     
     

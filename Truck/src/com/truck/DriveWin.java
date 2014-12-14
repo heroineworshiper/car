@@ -5,8 +5,10 @@ import java.util.Vector;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.os.Message;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -22,7 +24,7 @@ public class DriveWin extends WindowBase implements OnTouchListener
         super.onCreate(savedInstanceState);
         setContentView(R.layout.drive);
         Truck.createObjects(this);
- 
+
 		SurfaceView canvas = (SurfaceView) findViewById(R.id.canvas);
 		SurfaceHolder mSurfaceHolder = canvas.getHolder();
 		canvas.setOnTouchListener(this);
@@ -64,7 +66,8 @@ public class DriveWin extends WindowBase implements OnTouchListener
 		Canvas canvas = mSurfaceHolder.lockCanvas(null);
 		if(canvas != null)
 		{
-			if(Settings.initCanvas(canvas))
+			Settings.initCanvas(canvas);
+			if(throttle == null)
 			{
 				int x = Settings.border;
 				int y = Settings.border;
@@ -72,12 +75,11 @@ public class DriveWin extends WindowBase implements OnTouchListener
 						Settings.margin * 2) / 2;
 				int throttleW = Settings.stickW;
 
-				readouts.add(throttle = new SliderPanel(
+				readouts.add(throttle = new StickPanel(
 						0, 
 						0, 
-						throttleW,
-						canvas.getHeight(),
-						throttleW / 10));
+						Settings.stickW,
+						canvas.getHeight()));
 
 				readouts.add(cyclic = new StickPanel(
 						canvas.getWidth() - Settings.stickW, 
@@ -89,11 +91,26 @@ public class DriveWin extends WindowBase implements OnTouchListener
 			
 			synchronized(Truck.truck)
 			{
-				Truck.throttleOut = (int)(throttle.userValue * 127);
-				Truck.steeringOut = (int)(cyclic.userX * 127);
+				Truck.throttleOut = (int)(Math.clamp(throttle.userY * 127 * 2, -127, 127));
+				Truck.steeringOut = (int)(Math.clamp(cyclic.userX * 127 * 2, -127, 127));
 				Truck.haveControls = throttle.isActive ||
 						cyclic.isActive;
+				
+
+			    if(Settings.haveMessage)
+			    {
+					TextView text = (TextView)findViewById(R.id.messages2);
+					if(text != null) text.setText(Settings.message);
+					Settings.haveMessage = false;
+			    }
+			    
 			}
+			
+			canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+			for (int i = 0; i < readouts.size(); i++) {
+				((Container) readouts.get(i)).draw(canvas, paint);
+			}
+			mSurfaceHolder.unlockCanvasAndPost(canvas);
 		}
 	}
 	
@@ -211,18 +228,12 @@ public class DriveWin extends WindowBase implements OnTouchListener
 		return true;
 	}
 
-    public void handleMessage(Message msg)
-    {
-		TextView text = (TextView)findViewById(R.id.messages);
-		if(text != null) text.setText(msg.getData().getString("text"));
-    }
-    
     
 
     Vector<Container> readouts = new Vector<Container>();
     TouchPoint throttleTouch = new TouchPoint();
     TouchPoint cyclicTouch = new TouchPoint();
-	SliderPanel throttle;
+    StickPanel throttle;
 	StickPanel cyclic;
 	Paint paint;
 

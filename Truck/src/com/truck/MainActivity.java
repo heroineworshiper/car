@@ -81,17 +81,19 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 		Canvas canvas = mSurfaceHolder.lockCanvas(null);
 		if(canvas != null)
 		{
-			if(Settings.initCanvas(canvas))
+			Settings.initCanvas(canvas);
+			
+			if(battery == null)
 			{
 				int x = Settings.border;
 				int y = Settings.border;
-				
+				Log.v("MainActivity", "updateGUI");
 				readouts.add(battery = new LargeReadout(x, y, "BATTERY:", "0.00"));
 				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
 				y += battery.getH(paint);
 				
 				int positions[] = new int[] { Settings.screenW * 1 / 3, Settings.screenW * 2 / 3 };
-				batteryAnalog = new SmallReadout(x, y, 1);
+				readouts.add(batteryAnalog = new SmallReadout(x, y, 1));
 				batteryAnalog.setPositions(positions);
 				batteryAnalog.setTitle("Analog:");
 				y += batteryAnalog.getH(paint);
@@ -131,7 +133,15 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 						.toString());
 
 			
-				
+			synchronized(Truck.truck)
+			{
+			    if(Settings.haveMessage)
+			    {
+					TextView text = (TextView)findViewById(R.id.messages);
+					if(text != null) text.setText(Settings.message);
+					Settings.haveMessage = false;
+			    }
+			}
 			
 			canvas.drawColor(0, PorterDuff.Mode.CLEAR);
 			for (int i = 0; i < readouts.size(); i++) {
@@ -141,11 +151,6 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 		}
 	}
 
-    public void handleMessage(Message msg)
-    {
-		TextView text = (TextView)findViewById(R.id.messages);
-		if(text != null) text.setText(msg.getData().getString("text"));
-    }
         
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;

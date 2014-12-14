@@ -24,11 +24,13 @@
         </activity>
         <activity
             android:name="com.truck.SettingsWin"
-            android:label="Settings" >
+            android:label="Settings"
+            android:screenOrientation="portrait" >
         </activity>
         <activity
             android:name="com.truck.DriveWin"
-            android:label="Drive" >
+            android:label="Drive"
+            android:screenOrientation="landscape" >
         </activity>
     </application>
 

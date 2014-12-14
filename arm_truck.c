@@ -77,14 +77,14 @@
 
 
 #define BATTERY_OVERSAMPLE 10000
-#define GYRO_OVERSAMPLE 20
-#define GYRO_CENTER_TOTAL 4096
+#define GYRO_OVERSAMPLE 64
+#define GYRO_CENTER_TOTAL (NAV_HZ * 5)
 
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
 #define TIMEOUT_RELOAD TIMER_HZ * 5
 // gyro update rate
-#define NAV_HZ 1024
+#define NAV_HZ 320
 // PWM frequency
 #define PWM_HZ 50
 // timer for LED flashing
@@ -97,8 +97,6 @@
 // 1ms
 #define MIN_PWM 84000
 
-// reference voltage for 100% throttle
-#define THROTTLE_V0 12.0f
 
 truck_t truck;
 
@@ -210,12 +208,15 @@ void begin_gyro_calibration()
 {
 TRACE2
 print_text("Begin gyro calibration\n");
-			truck.need_gyro_center = 1;
-			truck.gyro_center_count = 0;
-			truck.gyro_center = 0;
-			truck.gyro_accum = 0;
-			truck.gyro_min = 0;
-			truck.gyro_max = 0;
+	DISABLE_INTERRUPTS
+	truck.need_gyro_center = 1;
+	truck.gyro_center_count = 0;
+	truck.gyro_center = 0;
+	truck.gyro_accum = 0;
+	truck.gyro_min = 0;
+	truck.gyro_max = 0;
+	truck.current_heading = 0;
+	ENABLE_INTERRUPTS
 }
 
 void radio_led_toggle()
@@ -346,6 +347,8 @@ void dump_config()
 	print_float(TO_DEG(truck.steering_step));
 	print_text("\nbattery_analog=");
 	print_number(truck.battery_analog);
+	print_text("\nthrottle_v0=");
+	print_float(truck.throttle_v0);
 	print_text("\nbattery_v0=");
 	print_float(truck.battery_v0);
 	print_text("\nsteering_overshoot=");
@@ -393,6 +396,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
 	truck.battery_analog = READ_UINT16(buffer, offset);
 	
+	truck.throttle_v0 = READ_FLOAT32(buffer, offset);
 	truck.battery_v0 = READ_FLOAT32(buffer, offset);
 	truck.steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
@@ -572,8 +576,9 @@ void handle_beacon()
 				break;
 			}
 
-	// reset gyro
+// reset gyro
 			case 1:
+				DISABLE_INTERRUPTS
 				truck.have_gyro_center = 0;
 				truck.need_gyro_center = 0;
 				truck.gyro_center_count = 0;
@@ -581,6 +586,11 @@ void handle_beacon()
 				truck.gyro_accum = 0;
 				truck.gyro_min = 0;
 				truck.gyro_max = 0;
+				truck.current_heading = 0;
+// red
+				SET_PIN(LED_GPIO2, LED_PIN2);
+				CLEAR_PIN(LED_GPIO1, LED_PIN1);
+				ENABLE_INTERRUPTS
 				break;
 
 // config file
@@ -848,22 +858,27 @@ void handle_analog()
 // battery
 	if((ADC1->SR & ADC_FLAG_EOC))
 	{
-
 		truck.battery_accum += ADC1->DR;
 		ADC_SoftwareStartConv(ADC1);
 		truck.battery_count++;
 		if(truck.battery_count >= BATTERY_OVERSAMPLE)
 		{
 			truck.battery = truck.battery_accum / truck.battery_count;
+/*
+ * TRACE2
+ * print_number(truck.battery_accum);
+ * print_number(truck.battery_count);
+ * print_number(truck.battery);
+ * print_float(truck.battery_voltage);
+ */
+
+
 			truck.battery_accum = 0;
 			truck.battery_count = 0;
 			truck.battery_voltage = (float)truck.battery * 
 				truck.battery_v0 / 
 				truck.battery_analog;
 
-TRACE2
-print_number(truck.battery);
-print_float(truck.battery_voltage);
 
 
 		}
@@ -879,15 +894,16 @@ print_float(truck.battery_voltage);
 		if(truck.gyro_count >= GYRO_OVERSAMPLE)
 		{
 			DISABLE_INTERRUPTS
-			truck.gyro = truck.gyro_accum / truck.gyro_count;
+			truck.gyro = (float)truck.gyro_accum / truck.gyro_count -
+				truck.ref;
 			ENABLE_INTERRUPTS
 			
 			truck.gyro_accum = 0;
 			truck.gyro_count = 0;
+TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 
 
 
-//			TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 
 
 //			TRACE2
@@ -922,8 +938,8 @@ print_float(truck.battery_voltage);
 					print_lf();
 					truck.gyro_center_count = 0;
 					truck.gyro_center_accum = 0;
-					truck.gyro_min = 65535;
-					truck.gyro_max = -65535;
+					truck.gyro_min = 0;
+					truck.gyro_max = 0;
 				}
 			}
 
@@ -953,16 +969,43 @@ print_float(truck.battery_voltage);
 				truck.current_heading = fix_angle(truck.current_heading);
 				ENABLE_INTERRUPTS
 				
-				truck.debug_counter++;
-				if(truck.debug_counter >= 128)
-				{
-					truck.debug_counter = 0;
+//				truck.debug_counter++;
+//				if(truck.debug_counter >= 128)
+//				{
+//					truck.debug_counter = 0;
 //					TRACE2
 //					print_float(TO_DEG(truck.current_heading));
-				}
+//				}
 			}
 		}
 	}
+	
+	
+	if((ADC3->SR & ADC_FLAG_EOC))
+	{
+		truck.ref_accum += ADC3->DR;
+		ADC_SoftwareStartConv(ADC3);
+		truck.ref_count++;
+		if(truck.ref_count >= GYRO_OVERSAMPLE)
+		{
+			DISABLE_INTERRUPTS
+			truck.ref = (float)truck.ref_accum / truck.ref_count;
+			ENABLE_INTERRUPTS
+
+			truck.ref_count = 0;
+			truck.ref_accum = 0;
+/*
+ * 			truck.debug_counter++;
+ * 			if(truck.debug_counter >= 128)
+ * 			{
+ * 				truck.debug_counter = 0;
+ * 				TRACE2
+ * 				print_float(truck.ref);
+ * 			}
+ */
+		}
+	}
+	
 }
 
 
@@ -973,6 +1016,7 @@ void init_analog()
 	ADC_CommonInitTypeDef ADC_CommonInitStructure;
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
 	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
 	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div8;
 	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
@@ -987,12 +1031,14 @@ void init_analog()
 	ADC_InitStructure.ADC_NbrOfConversion = 1;
 	ADC_Init(ADC1, &ADC_InitStructure);
 	ADC_Init(ADC2, &ADC_InitStructure);
+	ADC_Init(ADC3, &ADC_InitStructure);
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 |
-		GPIO_Pin_1;
+		GPIO_Pin_1 |
+		GPIO_Pin_2;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 // must call this before ENABLE
 	ADC_RegularChannelConfig(ADC1, 
@@ -1003,10 +1049,16 @@ void init_analog()
 		ADC_Channel_1, 
 		1, 
 		ADC_SampleTime_480Cycles);
+	ADC_RegularChannelConfig(ADC3, 
+		ADC_Channel_2, 
+		1, 
+		ADC_SampleTime_480Cycles);
 	ADC_Cmd(ADC1, ENABLE);
 	ADC_Cmd(ADC2, ENABLE);
+	ADC_Cmd(ADC3, ENABLE);
 	ADC_SoftwareStartConv(ADC1);
 	ADC_SoftwareStartConv(ADC2);
+	ADC_SoftwareStartConv(ADC3);
 
 }
 
@@ -1082,7 +1134,7 @@ void TIM2_IRQHandler()
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
 					truck.max_throttle_rev / 
 					100 * 
-					THROTTLE_V0 /
+					truck.throttle_v0 /
 					truck.battery_voltage;
 // don't use steering feedback in reverse
 				need_feedback = 0;
@@ -1092,14 +1144,67 @@ void TIM2_IRQHandler()
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
 					truck.max_throttle_fwd / 
 					100 * 
-					THROTTLE_V0 /
+					truck.throttle_v0 /
 					truck.battery_voltage;
 			}
 
 			if(truck.have_bt_controls)
 			{
 				need_feedback = 0;
-				truck.throttle_pwm = mid_throttle_pwm +
+				int target_throttle = mid_throttle_pwm -
+					throttle_magnitude * 
+					truck.bt_throttle / 
+					127;
+// forward
+				if(truck.bt_throttle > 0)
+				{
+// decrease PWM to target
+					if(truck.throttle_pwm > target_throttle)
+					{
+						truck.throttle_ramp_counter++;
+						if(truck.throttle_ramp_counter >= truck.throttle_ramp_delay)
+						{
+							truck.throttle_ramp_counter = 0;
+							truck.throttle_pwm -= throttle_ramp_step;
+							truck.throttle_pwm = MAX(truck.throttle_pwm, 
+								mid_throttle_pwm -
+								throttle_magnitude);
+						}
+					}
+					else
+					{
+						truck.throttle_pwm = target_throttle;
+					}
+				}
+				else
+// reverse
+				if(truck.bt_throttle < 0)
+				{
+// increase PWM to target
+					if(truck.throttle_pwm < target_throttle)
+					{
+						truck.throttle_ramp_counter++;
+						if(truck.throttle_ramp_counter >= truck.throttle_ramp_delay)
+						{
+							truck.throttle_ramp_counter = 0;
+							truck.throttle_pwm += throttle_ramp_step;
+							truck.throttle_pwm = MIN(truck.throttle_pwm, 
+								mid_throttle_pwm +
+								throttle_magnitude);
+						}
+					}
+					else
+					{
+						truck.throttle_pwm = target_throttle;
+					}
+				}
+				else
+				{
+// no bluetooth throttle
+					truck.throttle_pwm = mid_throttle_pwm;
+				}
+				
+				truck.throttle_pwm = mid_throttle_pwm -
 					throttle_magnitude * 
 					truck.bt_throttle / 
 					127;
@@ -1401,7 +1506,8 @@ int main(void)
 	truck.steering_overshoot = 0;
 	truck.battery_analog = 965;
 	truck.battery_v0 = 8.67f;
-	
+	truck.throttle_v0 = 7.4f;
+
 // heading error -> PWM
 	init_pid(&truck.heading_pid, 
 		30, // P gain

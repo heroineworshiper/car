@@ -74,6 +74,8 @@ typedef struct
 	float battery_voltage;
 	int battery_analog;
 	float battery_v0;
+// Maximum voltage to send to motor	
+	float throttle_v0;
 
 // steering was pressed before throttle
 	int steering_first;
@@ -90,12 +92,16 @@ typedef struct
 	int gyro_count;
 	int gyro_min;
 	int gyro_max;
+	int ref_accum;
+	int ref_count;
+// the voltage reference
+	float ref;
 // the analog gyro reading
-	int gyro;
+	float gyro;
 // maximum analog amount gyros can move while calculating center
 	int gyro_center_max;
 	float gyro_center;
-	float angle_to_gyro;
+	int angle_to_gyro;
 // throttle magnitude 0 - 100
 	int max_throttle_fwd;
 	int max_throttle_rev;
