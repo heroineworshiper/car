@@ -357,7 +357,8 @@ public class Truck extends Thread {
 	    				}
 	    				totalReceived -= drop_bytes;
 	    				offset -= drop_bytes;
-
+	    				if(offset < 0) offset = 0;
+	    				if(totalReceived < 0) totalReceived = 0;
 	    			}
 	    		}
 	    		

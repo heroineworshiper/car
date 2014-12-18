@@ -79,6 +79,7 @@
 #define BATTERY_OVERSAMPLE 10000
 #define GYRO_OVERSAMPLE 64
 #define GYRO_CENTER_TOTAL (NAV_HZ * 5)
+#define CURRENT_OVERSAMPLE 1000
 
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
@@ -89,6 +90,10 @@
 #define PWM_HZ 50
 // timer for LED flashing
 #define LED_DELAY (NAV_HZ / 2)
+// ADC for 0 current
+#define CURRENT_BASE 120.0f
+// scale factor for current
+#define CURRENT_SCALE 630.0f
 
 // 50hz
 #define PWM_PERIOD 1680000
@@ -979,30 +984,72 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 			}
 		}
 	}
-	
-	
+
+
 	if((ADC3->SR & ADC_FLAG_EOC))
 	{
-		truck.ref_accum += ADC3->DR;
-		ADC_SoftwareStartConv(ADC3);
-		truck.ref_count++;
-		if(truck.ref_count >= GYRO_OVERSAMPLE)
+		if(truck.sample_ref)
 		{
-			DISABLE_INTERRUPTS
-			truck.ref = (float)truck.ref_accum / truck.ref_count;
-			ENABLE_INTERRUPTS
+			truck.ref_accum += ADC3->DR;
 
-			truck.ref_count = 0;
-			truck.ref_accum = 0;
-/*
- * 			truck.debug_counter++;
- * 			if(truck.debug_counter >= 128)
- * 			{
- * 				truck.debug_counter = 0;
- * 				TRACE2
- * 				print_float(truck.ref);
- * 			}
- */
+			ADC_RegularChannelConfig(ADC3, 
+				ADC_Channel_13, 
+				1, 
+				ADC_SampleTime_480Cycles);
+			ADC_SoftwareStartConv(ADC3);
+
+			truck.sample_ref = 0;
+			truck.ref_count++;
+			if(truck.ref_count >= GYRO_OVERSAMPLE)
+			{
+				DISABLE_INTERRUPTS
+				truck.ref = (float)truck.ref_accum / truck.ref_count;
+				ENABLE_INTERRUPTS
+
+				truck.ref_count = 0;
+				truck.ref_accum = 0;
+
+
+	/*
+	 * 			truck.debug_counter++;
+	 * 			if(truck.debug_counter >= 128)
+	 * 			{
+	 * 				truck.debug_counter = 0;
+	 * 				TRACE2
+	 * 				print_float(truck.ref);
+	 * 			}
+	 */
+			}
+		}
+		else
+		{
+			truck.current_accum += ADC3->DR;
+			ADC_RegularChannelConfig(ADC3, 
+				ADC_Channel_2, 
+				1, 
+				ADC_SampleTime_480Cycles);
+			ADC_SoftwareStartConv(ADC3);
+			truck.sample_ref = 1;
+			truck.current_count++;
+			
+			if(truck.current_count >= CURRENT_OVERSAMPLE)
+			{
+				truck.raw_current = (float)truck.current_accum / truck.current_count;
+
+				DISABLE_INTERRUPTS
+				truck.current = (truck.raw_current - CURRENT_BASE) / CURRENT_SCALE;
+// battery_voltage is only a few hundreths off
+				truck.power = truck.current * truck.battery_voltage;
+				ENABLE_INTERRUPTS
+				
+				truck.current_accum = 0;
+				truck.current_count = 0;
+				
+				TRACE2
+				print_float(truck.current);
+				print_float(truck.battery_voltage);
+				print_float(truck.power);
+			}
 		}
 	}
 	
@@ -1040,6 +1087,8 @@ void init_analog()
 		GPIO_Pin_1 |
 		GPIO_Pin_2;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
 // must call this before ENABLE
 	ADC_RegularChannelConfig(ADC1, 
 		ADC_Channel_0, 
@@ -1059,6 +1108,8 @@ void init_analog()
 	ADC_SoftwareStartConv(ADC1);
 	ADC_SoftwareStartConv(ADC2);
 	ADC_SoftwareStartConv(ADC3);
+	
+	truck.sample_ref = 1;
 
 }
 
@@ -1513,6 +1564,14 @@ int main(void)
 		30, // P gain
 		0.5f, // I gain	
 		10, // D gain
+		100, // I limit
+		100); // O limit
+
+// power error -> throttle
+	init_pid(&truck.throttle_pid, 
+		0, // P gain
+		1.0f, // I gain	
+		0, // D gain
 		100, // I limit
 		100); // O limit
 

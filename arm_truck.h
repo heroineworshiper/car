@@ -67,11 +67,14 @@ typedef struct
 	int led_counter;
 	
 	pid_t heading_pid;
-	
+	pid_t throttle_pid;
+
 	int battery;
 	int battery_accum;
 	int battery_count;
+// voltage in V
 	float battery_voltage;
+// ADC value of battery voltage
 	int battery_analog;
 	float battery_v0;
 // Maximum voltage to send to motor	
@@ -94,6 +97,16 @@ typedef struct
 	int gyro_max;
 	int ref_accum;
 	int ref_count;
+	int current_accum;
+	int current_count;
+// ADC value of current based on voltage drop
+	float raw_current;
+// measured current in A
+	float current;
+// power in W based on battery voltage & current
+	float power;
+// currently sampling the ref pin
+	int sample_ref;
 // the voltage reference
 	float ref;
 // the analog gyro reading
@@ -131,6 +144,8 @@ typedef struct
 // enable heading hold
 	int auto_steering;
 	int headlights_on;
+
+	
 	int debug_counter;
 	
 	bluetooth_t bluetooth;
