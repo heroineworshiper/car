@@ -366,6 +366,14 @@ void dump_config()
 	print_float(truck.heading_pid.i_limit);
 	print_float(truck.heading_pid.o_limit);
 	print_lf();
+
+	print_text("\nthrottle PID=");
+	print_float(truck.throttle_pid.p_gain);
+	print_float(truck.throttle_pid.i_gain);
+	print_float(truck.throttle_pid.d_gain);
+	print_float(truck.throttle_pid.i_limit);
+	print_float(truck.throttle_pid.o_limit);
+	print_lf();
 }				
 
 void update_headlights()
@@ -1158,8 +1166,11 @@ void TIM2_IRQHandler()
 			}
 
 // Change in throttle
-			if(truck.throttle > 0 && truck.throttle2 <= 0)
+			if((truck.throttle > 0 && truck.throttle2 <= 0) ||
+				(truck.throttle < 0 && truck.throttle2 >= 0))
 			{
+				truck.throttle_state = THROTTLE_RAMP;
+				truck.throttle_pwm = mid_throttle_pwm;
 				truck.current_heading = 0;
 				truck.throttle_ramp_counter = 0;
 				reset_pid(&truck.heading_pid);
@@ -1184,9 +1195,7 @@ void TIM2_IRQHandler()
 			{
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
 					truck.max_throttle_rev / 
-					100 * 
-					truck.throttle_v0 /
-					truck.battery_voltage;
+					100;
 // don't use steering feedback in reverse
 				need_feedback = 0;
 			}
@@ -1194,9 +1203,7 @@ void TIM2_IRQHandler()
 			{
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
 					truck.max_throttle_fwd / 
-					100 * 
-					truck.throttle_v0 /
-					truck.battery_voltage;
+					100;
 			}
 
 			if(truck.have_bt_controls)
@@ -1292,6 +1299,7 @@ void TIM2_IRQHandler()
 								throttle_magnitude;
 						}
 					}
+
 /*
  * 		TRACE2
  * 		print_text("throttle_pwm=");

@@ -65,6 +65,10 @@ typedef struct
 	int throttle_pwm;
 	int steering_pwm;
 	int led_counter;
+	int throttle_state;
+#define THROTTLE_OFF 0 
+#define THROTTLE_RAMP 1
+#define THROTTLE_AUTO 2
 	
 	pid_t heading_pid;
 	pid_t throttle_pid;
@@ -77,8 +81,6 @@ typedef struct
 // ADC value of battery voltage
 	int battery_analog;
 	float battery_v0;
-// Maximum voltage to send to motor	
-	float throttle_v0;
 
 // steering was pressed before throttle
 	int steering_first;
