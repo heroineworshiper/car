@@ -330,6 +330,8 @@ void dump_config()
 	print_number(truck.max_throttle_fwd);
 	print_text("\nmax_throttle_rev=");
 	print_number(truck.max_throttle_rev);
+	print_text("\nthrottle_base=");
+	print_number(truck.throttle_base);
 	print_text("\nmax_steering=");
 	print_number(truck.max_steering);
 	print_text("\nmin_steering=");
@@ -367,7 +369,7 @@ void dump_config()
 	print_float(truck.heading_pid.o_limit);
 	print_lf();
 
-	print_text("\nthrottle PID=");
+	print_text("throttle PID=");
 	print_float(truck.throttle_pid.p_gain);
 	print_float(truck.throttle_pid.i_gain);
 	print_float(truck.throttle_pid.d_gain);
@@ -397,6 +399,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.mid_throttle = buffer[offset++];
 	truck.max_throttle_fwd = buffer[offset++];
 	truck.max_throttle_rev = buffer[offset++];
+	truck.throttle_base = buffer[offset++];
 	truck.max_steering = buffer[offset++];
 	truck.min_steering = buffer[offset++];
 	truck.auto_steering = buffer[offset++];
@@ -1070,6 +1073,7 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				print_float(truck.current);
 				print_float(truck.battery_voltage);
 				print_float(truck.power);
+				print_float(truck.throttle_feedback);
 			}
 		}
 	}
@@ -1291,14 +1295,15 @@ void TIM2_IRQHandler()
 			{
 				if(truck.throttle_reverse ||
 					truck.throttle_state == THROTTLE_RAMP)
-				{			
+				{
 					truck.throttle_ramp_counter++;
 					if(truck.throttle_ramp_counter >= truck.throttle_ramp_delay)
 					{
 						truck.throttle_ramp_counter = 0;
-// reverse ramp based on PWM target
+						
 						if(truck.throttle_reverse)
 						{
+// reverse ramp based on PWM target
 							truck.throttle_pwm += throttle_ramp_step;
 
 							if(truck.throttle_pwm > mid_throttle_pwm +
@@ -1310,21 +1315,17 @@ void TIM2_IRQHandler()
 						}
 						else
 						{
-// forward ramp based on power
-							if(truck.power < truck.target_power)
+							throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
+								truck.throttle_base / 
+								100;
+							if(/* truck.power < truck.target_power && */
+								truck.throttle_pwm > mid_throttle_pwm -
+									throttle_magnitude)
 							{
 								truck.throttle_pwm -= throttle_ramp_step;
-								if(truck.throttle_pwm < mid_throttle_pwm -
-									throttle_magnitude)
-								{
-									truck.throttle_pwm = mid_throttle_pwm -
-										throttle_magnitude;
-								}
 							}
 							else
-// ramp complete.  Switch to feedback.
 							{
-								truck.throttle_base = truck.throttle_pwm;
 								truck.throttle_state = THROTTLE_AUTO;
 							}
 						}
@@ -1340,15 +1341,14 @@ void TIM2_IRQHandler()
 				else
 // forward based on power feedback
 				{
-					float throttle_feedback = do_pid(&truck.throttle_pid,
+					truck.throttle_feedback = do_pid(&truck.throttle_pid,
 							truck.target_power - truck.power,
 							0);
-					
-					truck.throttle_pwm = truck.throttle_base -
-						throttle_feedback *
-						(MAX_PWM - MIN_PWM) / 2 / 
+
+					truck.throttle_pwm = mid_throttle_pwm - 
+						(MAX_PWM - MIN_PWM) / 2 *
+						(truck.throttle_base + truck.throttle_feedback) /
 						100;
-					
 				}
 				
 // steering with throttle
@@ -1450,7 +1450,6 @@ print_float(TO_DEG(truck.current_heading));
 			else
 // steering with no throttle
 			{
-				truck.throttle_state = THROTTLE_OFF;
 				truck.throttle_pwm = mid_throttle_pwm;
 				switch(truck.steering)
 				{

@@ -65,13 +65,13 @@ typedef struct
 	int throttle_pwm;
 	int steering_pwm;
 	int led_counter;
+// throttle starts at this level when using feedback
+	int throttle_base;
 	int throttle_state;
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
 #define THROTTLE_AUTO 2
-// throttle after finishing ramp
-	int throttle_base;
-	
+
 	pid_t heading_pid;
 	pid_t throttle_pid;
 
@@ -110,6 +110,8 @@ typedef struct
 // power in W based on battery voltage & current
 	float power;
 	float target_power;
+// result of PID controller
+	float throttle_feedback;
 // currently sampling the ref pin
 	int sample_ref;
 // the voltage reference

@@ -8,32 +8,44 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:shrinkColumns="*"
-        android:stretchColumns="*"
-        android:layout_alignParentBottom="true" >
-         
-        <TableRow
-            android:layout_width="wrap_content" >
-            <TextView
-                android:id="@+id/messages"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentLeft="true"
-                android:lines="1"
-                android:maxLines="1"
-                android:text=""
-                android:textAppearance="?android:attr/textAppearanceLarge" />
-            
-        </TableRow>
-    </TableLayout>
+        android:stretchColumns="*" >
 
+         <TableRow
+            android:layout_width="wrap_content" >
+            <Button
+                android:id="@+id/drive"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Drive" />
+            <Button
+                android:id="@+id/settings"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Settings" />
+            <Button
+                android:id="@+id/reset_gyro"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Reset" />
+        </TableRow>
+ 
       
-      	<SurfaceView
+          <TableRow
+            android:layout_width="wrap_content" >
+         <SurfaceView
           android:id="@+id/canvas"
           android:layout_width="match_parent"
           android:layout_height="fill_parent"
-		  android:layout_above="@+id/table"/>
-        
-        
-                  
+          android:layout_weight="3"/>
+          </TableRow>
+      
+    </TableLayout>
+
+    
 </RelativeLayout>

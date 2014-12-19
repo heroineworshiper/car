@@ -74,6 +74,22 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 		return true;
 	}
 
+    public void onClick(View view)
+    {
+        switch (view.getId())
+  		{
+        case R.id.drive:
+        	startActivity(new Intent(this, DriveWin.class));
+        	break;
+        case R.id.settings:
+        	startActivity(new Intent(this, SettingsWin.class));
+        	break;
+        case R.id.reset_gyro:
+        	Truck.needReset = true;
+        	break;
+  		}
+  	}
+    
 	public void updateGUI()
 	{
 		SurfaceView canvas1 = (SurfaceView) findViewById(R.id.canvas);
@@ -118,6 +134,9 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				heading.setPositions(positions);
 				heading.update(0, "0.0");
 				y += heading.getH(paint);
+				
+				readouts.add(messages = new SmallReadout(x, y, 1));
+				messages.update(0, "Hello world");
 			}
 			
 			
@@ -137,8 +156,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 			{
 			    if(Settings.haveMessage)
 			    {
-					TextView text = (TextView)findViewById(R.id.messages);
-					if(text != null) text.setText(Settings.message);
+					messages.update(0, Settings.message);
 					Settings.haveMessage = false;
 			    }
 			}
@@ -156,6 +174,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 	LargeReadout battery;
 	SmallReadout gyro, heading;
 	SmallReadout batteryAnalog;
+	SmallReadout messages;
     boolean initialized = false;
     private Paint paint;
  }
