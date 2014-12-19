@@ -69,6 +69,8 @@ typedef struct
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
 #define THROTTLE_AUTO 2
+// throttle after finishing ramp
+	int throttle_base;
 	
 	pid_t heading_pid;
 	pid_t throttle_pid;
@@ -107,6 +109,7 @@ typedef struct
 	float current;
 // power in W based on battery voltage & current
 	float power;
+	float target_power;
 // currently sampling the ref pin
 	int sample_ref;
 // the voltage reference

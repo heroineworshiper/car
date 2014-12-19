@@ -227,7 +227,7 @@ public class Truck extends Thread {
 		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 		    			offset += 2;
 
-		    			Math.write_float32(beacon, offset, Settings.getFileFloat("THROTTLE_V0")[0]);
+		    			Math.write_float32(beacon, offset, Settings.getFileFloat("TARGET_POWER")[0]);
 		    			offset += 4;
 		    			Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
 		    			offset += 4;
@@ -235,8 +235,15 @@ public class Truck extends Thread {
 		    			offset += 4;
 		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
 		    			offset += 4;
-						
+
 						float pid[] = Settings.getFileFloat("STEERING_PID");
+		    			for(int i = 0; i < 5; i++)
+						{
+							Math.write_float32(beacon, offset, pid[i]);
+		    				offset += 4;
+						}
+		    			
+						pid = Settings.getFileFloat("THROTTLE_PID");
 		    			for(int i = 0; i < 5; i++)
 						{
 							Math.write_float32(beacon, offset, pid[i]);
