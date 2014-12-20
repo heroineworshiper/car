@@ -65,18 +65,17 @@ typedef struct
 	int throttle_pwm;
 	int steering_pwm;
 	int led_counter;
-
+	
 	pid_t heading_pid;
-	pid_t throttle_pid;
-
+	
 	int battery;
 	int battery_accum;
 	int battery_count;
-// voltage in V
 	float battery_voltage;
-// ADC value of battery voltage
 	int battery_analog;
 	float battery_v0;
+// Maximum voltage to send to motor	
+	float throttle_v0;
 
 // steering was pressed before throttle
 	int steering_first;
@@ -132,12 +131,6 @@ typedef struct
 // enable heading hold
 	int auto_steering;
 	int headlights_on;
-	int rpm_time;
-	int rpm_status;
-	int rpm_counter;
-	int rpm;
-	int throttle_time;
-	
 	int debug_counter;
 	
 	bluetooth_t bluetooth;

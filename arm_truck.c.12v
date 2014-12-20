@@ -65,9 +65,6 @@
 #define DEBUG_PIN GPIO_Pin_4
 #define DEBUG_GPIO GPIOB
 
-#define RPM_PIN GPIO_Pin_3
-#define RPM_GPIO GPIOB
-
 #define HEADLIGHT_PIN GPIO_Pin_13
 #define HEADLIGHT_GPIO GPIOC
 
@@ -82,7 +79,6 @@
 #define BATTERY_OVERSAMPLE 10000
 #define GYRO_OVERSAMPLE 64
 #define GYRO_CENTER_TOTAL (NAV_HZ * 5)
-
 
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
@@ -101,54 +97,8 @@
 // 1ms
 #define MIN_PWM 84000
 
-#define DO_THROTTLE_TEST
-#define THROTTLE_PWM1 10
-#define THROTTLE_RPM2 350
-#define THROTTLE_STEP 5
-#define THROTTLE_DELAY 5
-
 
 truck_t truck;
-
-
-typedef struct
-{
-	float v;
-	int pwm;
-	int rpm;
-} throttle_entry_t;
-
-const throttle_entry_t throttle_table[] = 
-{
-	{ 8.85f, 10, 76 },
-	{ 8.67f, 15, 156 },
-	{ 8.48f, 20, 216 },
-	{ 8.30f, 25, 265 },
-	{ 8.04f, 30, 297 },
-	{ 7.52f, 35, 323 },
-	
-	{ 9.77f, 10, 107 },
-	{ 9.58f, 15, 186 },
-	{ 9.38f, 20, 251 },
-	{ 9.14f, 25, 305 },
-	{ 8.74f, 30, 338 },
-	{ 8.22f, 35, 362 },
-	
-	{ 10.80f, 10, 128 },
-	{ 10.59f, 15, 217 },
-	{ 10.38f, 20, 286 },
-	{ 10.03f, 25, 343 },
-	{ 9.53f, 30, 378 },
-	
-	{ 11.76f, 10, 148 },
-	{ 11.53f, 15, 246 },
-	{ 11.30f, 20, 321 },
-	{ 10.88f, 25, 384 },
-	
-	{ 12.77f, 10, 174 },
-	{ 12.48f, 15, 289 },
-	{ 12.26f, 20, 359 },
-};
 
 
 void write_pwm();
@@ -397,6 +347,8 @@ void dump_config()
 	print_float(TO_DEG(truck.steering_step));
 	print_text("\nbattery_analog=");
 	print_number(truck.battery_analog);
+	print_text("\nthrottle_v0=");
+	print_float(truck.throttle_v0);
 	print_text("\nbattery_v0=");
 	print_float(truck.battery_v0);
 	print_text("\nsteering_overshoot=");
@@ -443,6 +395,8 @@ int read_config_packet(const unsigned char *buffer)
 	truck.pid_downsample = READ_UINT16(buffer, offset);
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
 	truck.battery_analog = READ_UINT16(buffer, offset);
+	
+	truck.throttle_v0 = READ_FLOAT32(buffer, offset);
 	truck.battery_v0 = READ_FLOAT32(buffer, offset);
 	truck.steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
@@ -458,7 +412,6 @@ int read_config_packet(const unsigned char *buffer)
 		d, // D gain
 		i_limit, // I limit
 		o_limit); // O limit
-	reset_pid(&truck.heading_pid);
 	update_headlights();
 
 // debug
@@ -542,7 +495,6 @@ static void bluetooth_passthrough()
 	send_uart_binary(&truck.bluetooth.data, 1);
 }
 #endif // BLUETOOTH_PASSTHROUGH
-
 
 void handle_beacon()
 {
@@ -906,14 +858,12 @@ void handle_analog()
 // battery
 	if((ADC1->SR & ADC_FLAG_EOC))
 	{
-
 		truck.battery_accum += ADC1->DR;
 		ADC_SoftwareStartConv(ADC1);
 		truck.battery_count++;
 		if(truck.battery_count >= BATTERY_OVERSAMPLE)
 		{
 			truck.battery = truck.battery_accum / truck.battery_count;
-
 /*
  * TRACE2
  * print_number(truck.battery_accum);
@@ -950,10 +900,10 @@ void handle_analog()
 			
 			truck.gyro_accum = 0;
 			truck.gyro_count = 0;
+TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 
 
 
-//			TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 
 
 //			TRACE2
@@ -1029,34 +979,31 @@ void handle_analog()
 			}
 		}
 	}
-
-
+	
+	
 	if((ADC3->SR & ADC_FLAG_EOC))
 	{
-			truck.ref_accum += ADC3->DR;
-			ADC_SoftwareStartConv(ADC3);
+		truck.ref_accum += ADC3->DR;
+		ADC_SoftwareStartConv(ADC3);
+		truck.ref_count++;
+		if(truck.ref_count >= GYRO_OVERSAMPLE)
+		{
+			DISABLE_INTERRUPTS
+			truck.ref = (float)truck.ref_accum / truck.ref_count;
+			ENABLE_INTERRUPTS
 
-			truck.ref_count++;
-			if(truck.ref_count >= GYRO_OVERSAMPLE)
-			{
-				DISABLE_INTERRUPTS
-				truck.ref = (float)truck.ref_accum / truck.ref_count;
-				ENABLE_INTERRUPTS
-
-				truck.ref_count = 0;
-				truck.ref_accum = 0;
-
-
-	/*
-	 * 			truck.debug_counter++;
-	 * 			if(truck.debug_counter >= 128)
-	 * 			{
-	 * 				truck.debug_counter = 0;
-	 * 				TRACE2
-	 * 				print_float(truck.ref);
-	 * 			}
-	 */
-			}
+			truck.ref_count = 0;
+			truck.ref_accum = 0;
+/*
+ * 			truck.debug_counter++;
+ * 			if(truck.debug_counter >= 128)
+ * 			{
+ * 				truck.debug_counter = 0;
+ * 				TRACE2
+ * 				print_float(truck.ref);
+ * 			}
+ */
+		}
 	}
 	
 }
@@ -1124,6 +1071,7 @@ void TIM2_IRQHandler()
 		SET_PIN(GPIOA, GPIO_Pin_7);
 
 		if(truck.writing_settings) return;
+
 		int mid_steering_pwm = MIN_PWM + 
 			(MAX_PWM - MIN_PWM) * 
 			truck.mid_steering /
@@ -1141,6 +1089,8 @@ void TIM2_IRQHandler()
 		int throttle_ramp_step = (MAX_PWM - MIN_PWM) *
 			truck.throttle_ramp_step / 
 			100;
+
+
 		if(truck.have_gyro_center)
 		{
 // cancel bluetooth controls
@@ -1157,14 +1107,8 @@ void TIM2_IRQHandler()
 			}
 
 // Change in throttle
-			if((truck.throttle > 0 && truck.throttle2 <= 0) ||
-				(truck.throttle < 0 && truck.throttle2 >= 0))
+			if(truck.throttle > 0 && truck.throttle2 <= 0)
 			{
-#ifdef DO_THROTTLE_TEST
-				truck.max_throttle_fwd = THROTTLE_PWM1;
-				truck.throttle_time = truck.timer_high;
-#endif
-				truck.throttle_pwm = mid_throttle_pwm;
 				truck.current_heading = 0;
 				truck.throttle_ramp_counter = 0;
 				reset_pid(&truck.heading_pid);
@@ -1189,7 +1133,9 @@ void TIM2_IRQHandler()
 			{
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
 					truck.max_throttle_rev / 
-					100;
+					100 * 
+					truck.throttle_v0 /
+					truck.battery_voltage;
 // don't use steering feedback in reverse
 				need_feedback = 0;
 			}
@@ -1197,7 +1143,9 @@ void TIM2_IRQHandler()
 			{
 				throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
 					truck.max_throttle_fwd / 
-					100;
+					100 * 
+					truck.throttle_v0 /
+					truck.battery_voltage;
 			}
 
 			if(truck.have_bt_controls)
@@ -1256,64 +1204,50 @@ void TIM2_IRQHandler()
 					truck.throttle_pwm = mid_throttle_pwm;
 				}
 				
-// 				truck.throttle_pwm = mid_throttle_pwm -
-// 					throttle_magnitude * 
-// 					truck.bt_throttle / 
-// 					127;
+				truck.throttle_pwm = mid_throttle_pwm -
+					throttle_magnitude * 
+					truck.bt_throttle / 
+					127;
 				truck.steering_pwm = mid_steering_pwm +
 					max_steering_magnitude *
 					truck.bt_steering / 
 					127;
 			}
 			else
-// stick controller
 			if(truck.throttle > 0)
 			{
-#ifdef DO_THROTTLE_TEST
-				need_feedback = 0;
-				if(truck.timer_high - truck.throttle_time >= 
-					THROTTLE_DELAY * TIMER_HZ)
-				{
-					if(truck.rpm < THROTTLE_RPM2)
-					{
-						truck.max_throttle_fwd += THROTTLE_STEP;
-					}
-
-//					truck.max_throttle_fwd = MIN(truck.max_throttle_fwd,
-//						THROTTLE_PWM2);
-
-					truck.throttle_time = truck.timer_high;
-				}
-#endif
-
 				truck.throttle_ramp_counter++;
 				if(truck.throttle_ramp_counter >= truck.throttle_ramp_delay)
 				{
 					truck.throttle_ramp_counter = 0;
-
 					if(truck.throttle_reverse)
 					{
 						truck.throttle_pwm += throttle_ramp_step;
-						truck.throttle_pwm = MIN(truck.throttle_pwm, 
-							mid_throttle_pwm +
-							throttle_magnitude);
+
+						if(truck.throttle_pwm > mid_throttle_pwm +
+							throttle_magnitude)
+						{
+							truck.throttle_pwm = mid_throttle_pwm +
+								throttle_magnitude;
+						}
 					}
 					else
 					{
 						truck.throttle_pwm -= throttle_ramp_step;
-						truck.throttle_pwm = MAX(truck.throttle_pwm, 
-							mid_throttle_pwm -
-							throttle_magnitude);
+						if(truck.throttle_pwm < mid_throttle_pwm -
+							throttle_magnitude)
+						{
+							truck.throttle_pwm = mid_throttle_pwm -
+								throttle_magnitude;
+						}
 					}
-				}
-
 /*
  * 		TRACE2
  * 		print_text("throttle_pwm=");
  * 		print_number(truck.throttle_pwm);
  */
 
-
+				}
 				
 // steering with throttle
 				float steering_overshoot = 0;
@@ -1408,7 +1342,6 @@ print_float(TO_DEG(truck.current_heading));
  */
 
 
-
 				
 			}
 			else
@@ -1444,7 +1377,6 @@ print_float(TO_DEG(truck.current_heading));
 						break;
 				}
 
-				CLAMP(truck.steering_pwm, MIN_PWM, MAX_PWM);
 			}
 
 
@@ -1529,66 +1461,6 @@ void init_pwm()
 }
 
 
-
-void handle_rpm()
-{
-	if(truck.rpm_status)
-	{
-		if(!PIN_IS_SET(RPM_GPIO, RPM_PIN))
-		{
-			truck.rpm_status = 0;
-			truck.rpm_counter++;
-		}
-	}
-	else
-	{
-		if(PIN_IS_SET(RPM_GPIO, RPM_PIN))
-		{
-			truck.rpm_status = 1;
-			truck.rpm_counter++;
-		}
-	}
-	
-	DISABLE_INTERRUPTS
-	if(truck.timer_high - truck.rpm_time >= TIMER_HZ)
-	{
-		int pwm = truck.max_throttle_fwd;
-		truck.rpm_time = truck.timer_high;
-		truck.rpm = truck.rpm_counter;
-		truck.rpm_counter = 0;
-		ENABLE_INTERRUPTS
-		
-		if(truck.throttle > 0)
-		{
-			TRACE2
-			print_text("{ ");
-			print_number_nospace((int)truck.battery_voltage);
-			print_text(".");
-			int fraction = (int)(truck.battery_voltage * 100) % 100;
-			print_number_nospace(fraction / 10);
-			print_number_nospace(fraction % 10);
-			print_text("f, ");
-			print_number_nospace(pwm);
-			print_text(", ");
-			print_number_nospace(truck.rpm);
-			print_text(" },\n");
-
-/*
- * 			print_text("V=");
- * 			print_float(truck.battery_voltage);
- * 			print_text("PWM=");
- * 			print_number(pwm);
- * 			print_text("RPM=");
- * 			print_number(truck.rpm_counter);
- */
-		}
-	}
-	else
-	{
-		ENABLE_INTERRUPTS
-	}
-}
-
 int main(void)
 {
 	int i, j;
@@ -1634,6 +1506,7 @@ int main(void)
 	truck.steering_overshoot = 0;
 	truck.battery_analog = 965;
 	truck.battery_v0 = 8.67f;
+	truck.throttle_v0 = 7.4f;
 
 // heading error -> PWM
 	init_pid(&truck.heading_pid, 
@@ -1702,21 +1575,14 @@ int main(void)
 	GPIO_Init(LED_GPIO2, &GPIO_InitStructure);
 	SET_PIN(LED_GPIO2, LED_PIN2);
 
-	GPIO_InitStructure.GPIO_Pin = HEADLIGHT_PIN;
-	GPIO_Init(HEADLIGHT_GPIO, &GPIO_InitStructure);
-	
-	
 // debug pin
 	GPIO_InitStructure.GPIO_Pin = DEBUG_PIN;
 	GPIO_Init(DEBUG_GPIO, &GPIO_InitStructure);
 	CLEAR_PIN(DEBUG_GPIO, DEBUG_PIN);
 
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-	GPIO_InitStructure.GPIO_Pin = RPM_PIN;
-	GPIO_Init(RPM_GPIO, &GPIO_InitStructure);
-	truck.rpm_time = truck.timer_high;
-	truck.rpm_status = PIN_IS_SET(RPM_GPIO, RPM_PIN);
-
+	GPIO_InitStructure.GPIO_Pin = HEADLIGHT_PIN;
+	GPIO_Init(HEADLIGHT_GPIO, &GPIO_InitStructure);
+	
 	update_headlights();
 
 	init_bluetooth();
@@ -1746,7 +1612,6 @@ int main(void)
 		handle_uart();
 		handle_bluetooth();
 		handle_analog();
-		handle_rpm();
 		if(radio.got_packet)
 		{
 			radio.got_packet = 0;
