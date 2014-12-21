@@ -65,12 +65,6 @@ typedef struct
 	int throttle_pwm;
 	int steering_pwm;
 	int led_counter;
-// throttle starts at this level when using feedback
-	int throttle_base;
-	int throttle_state;
-#define THROTTLE_OFF 0 
-#define THROTTLE_RAMP 1
-#define THROTTLE_AUTO 2
 
 	pid_t heading_pid;
 	pid_t throttle_pid;
@@ -101,19 +95,6 @@ typedef struct
 	int gyro_max;
 	int ref_accum;
 	int ref_count;
-	int current_accum;
-	int current_count;
-// ADC value of current based on voltage drop
-	float raw_current;
-// measured current in A
-	float current;
-// power in W based on battery voltage & current
-	float power;
-	float target_power;
-// result of PID controller
-	float throttle_feedback;
-// currently sampling the ref pin
-	int sample_ref;
 // the voltage reference
 	float ref;
 // the analog gyro reading
@@ -151,13 +132,11 @@ typedef struct
 // enable heading hold
 	int auto_steering;
 	int headlights_on;
-
 	int rpm_time;
 	int rpm_status;
 	int rpm_counter;
 	int rpm;
 	int throttle_time;
-
 	
 	int debug_counter;
 	
