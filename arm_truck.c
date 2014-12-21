@@ -605,7 +605,7 @@ void handle_beacon()
 				truck.bluetooth.send_buf[offset++] = 0xd4;
 				truck.bluetooth.send_buf[offset++] = 0xe5;
 // size
-				WRITE_INT16(truck.bluetooth.send_buf, offset, 26);
+				WRITE_INT16(truck.bluetooth.send_buf, offset, 30);
 // battery response
 				truck.bluetooth.send_buf[offset++] = 0;
 				truck.bluetooth.send_buf[offset++] = 0;
@@ -614,6 +614,7 @@ void handle_beacon()
 				WRITE_INT16(truck.bluetooth.send_buf, offset, (int)truck.gyro_center);
 				WRITE_INT16(truck.bluetooth.send_buf, offset, truck.gyro_max - truck.gyro_min);
 				WRITE_FLOAT32(truck.bluetooth.send_buf, offset, truck.current_heading);
+				WRITE_FLOAT32(truck.bluetooth.send_buf, offset, truck.power);
 				chksum = get_chksum(truck.bluetooth.send_buf, offset);
 				WRITE_INT16(truck.bluetooth.send_buf, offset, chksum);
 				truck.bluetooth.send_offset = 0;
@@ -1380,6 +1381,7 @@ void TIM2_IRQHandler()
 				else
 // forward based on power feedback
 				{
+// scale target power based on voltage & target power
 					truck.throttle_feedback = do_pid(&truck.throttle_pid,
 							truck.target_power - truck.power,
 							0);

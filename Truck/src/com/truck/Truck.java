@@ -324,8 +324,9 @@ public class Truck extends Thread {
 		    								gyro_center = Math.read_int16(receive_buf, offset + 16);
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
 		    								current_heading = Math.read_float32(receive_buf, offset + 20);
-		    								throttleIn = receive_buf[offset + 24];
-		    								steeringIn = receive_buf[offset + 25];
+		    								power = Math.read_float32(receive_buf, offset + 24);
+		    								throttleIn = receive_buf[offset + 28];
+		    								steeringIn = receive_buf[offset + 29];
 //		    			    				Log.v("run 1", "battery_analog=" + battery_analog + " battery_voltage=" + battery_voltage);
 		    								break;
 		    							}
@@ -504,6 +505,7 @@ public class Truck extends Thread {
     static int gyro_center;
     static int gyro_range;
     static float current_heading;
+	static float power;
     
     static boolean needReset = false;
     static boolean needConfig = false;
