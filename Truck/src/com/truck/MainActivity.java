@@ -140,6 +140,12 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				power.setPositions(positions);
 				power.update(0, "0.0");
 				y += power.getH(paint);
+
+				readouts.add(rpm = new SmallReadout(x, y, 2));
+				rpm.setTitle("RPM");
+				rpm.setPositions(positions);
+				rpm.update(0, "0.0");
+				y += rpm.getH(paint);
 				
 				readouts.add(messages = new SmallReadout(x, y, 1));
 				messages.update(0, "Hello world");
@@ -159,8 +165,13 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 			power.update(0, 
 				new Formatter(
 					new StringBuilder())
-						.format("%.02fW", Math.fromRad(Truck.power))
+						.format("%.02fW", Truck.power)
 						.toString());
+			rpm.update(0, 
+					new Formatter(
+						new StringBuilder())
+							.format("%d", Truck.rpm)
+							.toString());
 
 			
 			synchronized(Truck.truck)
@@ -183,7 +194,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;
-	SmallReadout gyro, heading, power;
+	SmallReadout gyro, heading, power, rpm;
 	SmallReadout batteryAnalog;
 	SmallReadout messages;
     boolean initialized = false;

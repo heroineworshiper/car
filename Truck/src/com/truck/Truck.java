@@ -227,6 +227,8 @@ public class Truck extends Thread {
 		    			offset += 2;
 		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
+		    			offset += 2;
 
 		    			Math.write_float32(beacon, offset, Settings.getFileFloat("TARGET_POWER")[0]);
 		    			offset += 4;
@@ -238,18 +240,13 @@ public class Truck extends Thread {
 		    			offset += 4;
 
 						float pid[] = Settings.getFileFloat("STEERING_PID");
-		    			for(int i = 0; i < 5; i++)
-						{
-							Math.write_float32(beacon, offset, pid[i]);
-		    				offset += 4;
-						}
+		    			offset = writePid(offset, pid);
 		    			
 						pid = Settings.getFileFloat("THROTTLE_PID");
-		    			for(int i = 0; i < 5; i++)
-						{
-							Math.write_float32(beacon, offset, pid[i]);
-		    				offset += 4;
-						}
+		    			offset = writePid(offset, pid);
+
+						pid = Settings.getFileFloat("RPM_PID");
+		    			offset = writePid(offset, pid);
 
 // write the size including the CRC
 						Math.write_int16(beacon, 4, offset + 2);
@@ -323,10 +320,9 @@ public class Truck extends Thread {
 		    								battery_voltage = Math.read_float32(receive_buf, offset + 12);
 		    								gyro_center = Math.read_int16(receive_buf, offset + 16);
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
-		    								current_heading = Math.read_float32(receive_buf, offset + 20);
-		    								power = Math.read_float32(receive_buf, offset + 24);
-		    								throttleIn = receive_buf[offset + 28];
-		    								steeringIn = receive_buf[offset + 29];
+		    								rpm = Math.read_uint16(receive_buf, offset + 20);
+		    								current_heading = Math.read_float32(receive_buf, offset + 22);
+		    								power = Math.read_float32(receive_buf, offset + 26);
 //		    			    				Log.v("run 1", "battery_analog=" + battery_analog + " battery_voltage=" + battery_voltage);
 		    								break;
 		    							}
@@ -388,6 +384,16 @@ public class Truck extends Thread {
 	    	
 	    }
     }
+
+
+	private int writePid(int offset, float[] pid) {
+		for(int i = 0; i < 5; i++)
+		{
+			Math.write_float32(beacon, offset, pid[i]);
+			offset += 4;
+		}
+		return offset;
+	}
 
 
 	private void sendBeacon(int offset) {
@@ -506,6 +512,7 @@ public class Truck extends Thread {
     static int gyro_range;
     static float current_heading;
 	static float power;
+	static int rpm;
     
     static boolean needReset = false;
     static boolean needConfig = false;

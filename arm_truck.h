@@ -74,6 +74,7 @@ typedef struct
 
 	pid_t heading_pid;
 	pid_t throttle_pid;
+	pid_t rpm_pid;
 
 	int battery;
 	int battery_accum;
@@ -110,6 +111,7 @@ typedef struct
 // power in W based on battery voltage & current
 	float power;
 	float target_power;
+	int target_rpm;
 // result of PID controller
 	float throttle_feedback;
 // currently sampling the ref pin
