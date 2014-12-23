@@ -113,6 +113,7 @@
 
 //#define POWER_FEEDBACK
 #define RPM_FEEDBACK
+#define POWER_CURVE
 
 truck_t truck;
 
@@ -155,6 +156,31 @@ float init_pid(pid_t *pid,
 	pid->o_limit = o_limit;
 }
 
+void reset_pid(pid_t *pid)
+{
+	pid->error_accum = 0;
+	pid->accum = 0;
+	pid->counter = 0;
+}
+
+
+int read_pid(pid_t *pid, const unsigned char *buffer, int offset)
+{
+	float p = READ_FLOAT32(buffer, offset);
+	float i = READ_FLOAT32(buffer, offset);
+	float d = READ_FLOAT32(buffer, offset);
+	float i_limit = READ_FLOAT32(buffer, offset);
+	float o_limit = READ_FLOAT32(buffer, offset);
+	init_pid(pid, 
+		p, // P gain
+		i, // I gain	
+		d, // D gain
+		i_limit, // I limit
+		o_limit); // O limit
+	reset_pid(pid);
+	return offset;
+}
+
 float do_pid(pid_t *pid, float p_error, float d_error)
 {
 	float p_result = p_error * pid->p_gain;
@@ -176,13 +202,6 @@ float do_pid(pid_t *pid, float p_error, float d_error)
 	float result = p_result + d_result + pid->accum;
 	CLAMP(result, -pid->o_limit, pid->o_limit);
 	return result;
-}
-
-void reset_pid(pid_t *pid)
-{
-	pid->error_accum = 0;
-	pid->accum = 0;
-	pid->counter = 0;
 }
 
 
@@ -450,44 +469,17 @@ int read_config_packet(const unsigned char *buffer)
 	truck.steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
 
-	float p = READ_FLOAT32(buffer, offset);
-	float i = READ_FLOAT32(buffer, offset);
-	float d = READ_FLOAT32(buffer, offset);
-	float i_limit = READ_FLOAT32(buffer, offset);
-	float o_limit = READ_FLOAT32(buffer, offset);
-	init_pid(&truck.heading_pid, 
-		p, // P gain
-		i, // I gain	
-		d, // D gain
-		i_limit, // I limit
-		o_limit); // O limit
-	reset_pid(&truck.heading_pid);
+	truck.power_base = READ_FLOAT32(buffer, offset);
+	truck.rpm_slope = READ_FLOAT32(buffer, offset);
 
-	p = READ_FLOAT32(buffer, offset);
-	i = READ_FLOAT32(buffer, offset);
-	d = READ_FLOAT32(buffer, offset);
-	i_limit = READ_FLOAT32(buffer, offset);
-	o_limit = READ_FLOAT32(buffer, offset);
-	init_pid(&truck.throttle_pid, 
-		p, // P gain
-		i, // I gain	
-		d, // D gain
-		i_limit, // I limit
-		o_limit); // O limit
-	reset_pid(&truck.throttle_pid);
+	offset = read_pid(&truck.heading_pid, buffer, offset);
+	offset = read_pid(&truck.throttle_pid, buffer, offset);
+	offset = read_pid(&truck.rpm_pid, buffer, offset);
 
-	p = READ_FLOAT32(buffer, offset);
-	i = READ_FLOAT32(buffer, offset);
-	d = READ_FLOAT32(buffer, offset);
-	i_limit = READ_FLOAT32(buffer, offset);
-	o_limit = READ_FLOAT32(buffer, offset);
-	init_pid(&truck.rpm_pid, 
-		p, // P gain
-		i, // I gain	
-		d, // D gain
-		i_limit, // I limit
-		o_limit); // O limit
-	reset_pid(&truck.rpm_pid);
+TRACE
+print_text("offset=");
+print_number(offset);
+
 
 	update_headlights();
 
@@ -1761,6 +1753,8 @@ int main(void)
 	truck.throttle_ramp_delay = 0;
 	truck.throttle_ramp_step = 1;
 	truck.target_power = 15.0f;
+	truck.power_base = 20.0f;
+	truck.rpm_slope = 0;
 	truck.target_rpm = 500;
 	truck.pid_downsample = 1;
 	truck.steering_step_delay = 0;

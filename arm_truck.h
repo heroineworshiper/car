@@ -110,7 +110,13 @@ typedef struct
 	float current;
 // power in W based on battery voltage & current
 	float power;
+// power feedback mode only
 	float target_power;
+// wattage of no rpm_slope
+	float power_base;
+// power above & below power_base makes the RPM rise & fall by this amount per watt
+	float rpm_slope;
+// RPM feedback mode only
 	int target_rpm;
 // result of PID controller
 	float throttle_feedback;

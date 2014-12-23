@@ -184,8 +184,7 @@ public class Truck extends Thread {
 	    			{
 	    				// reset gyro
 	    				// size
-		    			Math.write_int16(beacon, offset, 10);
-		    			offset += 2;
+		    			offset = Math.write_int16(beacon, offset, 10);
 		    			// command
 		    			beacon[offset++] = (byte) 1;
 		    			beacon[offset++] = (byte) 0;
@@ -213,31 +212,24 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
 		    			
-						Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
-		    			offset += 2;
-		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
-		    			offset += 2;
+						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
+		    			
 
-		    			Math.write_float32(beacon, offset, Settings.getFileFloat("TARGET_POWER")[0]);
-		    			offset += 4;
-		    			Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
-		    			offset += 4;
-		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
-		    			offset += 4;
-		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
-		    			offset += 4;
+		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("TARGET_POWER")[0]);
+		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
+		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
+		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+		    			
+
+		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("POWER_BASE")[0]));
+		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("RPM_SLOPE")[0]));
 
 						float pid[] = Settings.getFileFloat("STEERING_PID");
 		    			offset = writePid(offset, pid);
