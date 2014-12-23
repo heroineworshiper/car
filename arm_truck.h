@@ -114,10 +114,12 @@ typedef struct
 	float target_power;
 // wattage of no rpm_slope
 	float power_base;
-// power above & below power_base makes the RPM rise & fall by this amount per watt
+// power above & below power_base makes the RPM fall & rise by this amount per watt
 	float rpm_slope;
 // RPM feedback mode only
 	int target_rpm;
+// RPM feedback after rolling back for power
+	int target_rpm2;
 // result of PID controller
 	float throttle_feedback;
 // currently sampling the ref pin

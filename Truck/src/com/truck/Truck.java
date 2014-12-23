@@ -228,8 +228,8 @@ public class Truck extends Thread {
 		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
 		    			
 
-		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("POWER_BASE")[0]));
-		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("RPM_SLOPE")[0]));
+		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("POWER_BASE")[0]);
+		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("RPM_SLOPE")[0]);
 
 						float pid[] = Settings.getFileFloat("STEERING_PID");
 		    			offset = writePid(offset, pid);

@@ -82,7 +82,7 @@
 #define BATTERY_OVERSAMPLE 10000
 #define GYRO_OVERSAMPLE 64
 #define GYRO_CENTER_TOTAL (NAV_HZ * 5)
-#define CURRENT_OVERSAMPLE 1000
+#define CURRENT_OVERSAMPLE 5000
 
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
@@ -398,6 +398,10 @@ void dump_config()
 	print_float(truck.target_power);
 	print_text("\ntarget_rpm=");
 	print_float(truck.target_rpm);
+	print_text("\npower_base=");
+	print_float(truck.power_base);
+	print_text("\nrpm_slope=");
+	print_float(truck.rpm_slope);
 	print_text("\nbattery_v0=");
 	print_float(truck.battery_v0);
 	print_text("\nsteering_overshoot=");
@@ -1099,7 +1103,7 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 			ADC_SoftwareStartConv(ADC3);
 			truck.sample_ref = 1;
 			truck.current_count++;
-			
+
 			if(truck.current_count >= CURRENT_OVERSAMPLE)
 			{
 				truck.raw_current = (float)truck.current_accum / truck.current_count;
@@ -1109,17 +1113,16 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 // battery_voltage is only a few hundreths off
 				truck.power = truck.current * truck.battery_voltage;
 				ENABLE_INTERRUPTS
-				
+
 				truck.current_accum = 0;
 				truck.current_count = 0;
-				
-/*
- * 				TRACE2
- * 				print_float(truck.current);
- * 				print_float(truck.battery_voltage);
- * 				print_float(truck.power);
- * 				print_float(truck.throttle_feedback);
- */
+
+				TRACE2
+//				print_float(truck.current);
+//				print_float(truck.battery_voltage);
+				print_float(truck.power);
+				print_number(truck.target_rpm2);
+//				print_float(truck.throttle_feedback);
 			}
 		}
 	}
@@ -1410,9 +1413,17 @@ void TIM2_IRQHandler()
 						100;
 #else // POWER_FEEDBACK
 	#ifdef RPM_FEEDBACK
-
+					
+					truck.target_rpm2 = truck.target_rpm;
+					if(truck.power > truck.power_base)
+					{
+						truck.target_rpm2 += (truck.power - truck.power_base) *
+							truck.rpm_slope;
+						truck.target_rpm2 = MAX(0, truck.target_rpm2);
+					}
+					
 					truck.throttle_feedback = do_pid(&truck.rpm_pid,
-						(float)(truck.target_rpm - truck.rpm) / 1000,
+						(float)(truck.target_rpm2 - truck.rpm) / 1000,
 						0);
 					truck.throttle_pwm = mid_throttle_pwm - 
 						(MAX_PWM - MIN_PWM) / 2 *
@@ -1677,11 +1688,13 @@ void handle_rpm()
 		
 //		if(truck.throttle > 0)
 		{
-			TRACE2
-			print_text("rpm=");
-			print_number(truck.rpm);
-			print_text("pwm=");
-			print_number(truck.throttle_pwm);
+/*
+ * 			TRACE2
+ * 			print_text("rpm=");
+ * 			print_number(truck.rpm);
+ * 			print_text("pwm=");
+ * 			print_number(truck.throttle_pwm);
+ */
 
 /*
  * 			print_text("{ ");
