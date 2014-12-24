@@ -166,6 +166,7 @@ typedef struct
 	int rpm_status;
 	int rpm_counter;
 	int rpm;
+	int prev_rpm;
 	int throttle_time;
 
 	

@@ -1424,7 +1424,7 @@ void TIM2_IRQHandler()
 					
 					truck.throttle_feedback = do_pid(&truck.rpm_pid,
 						(float)(truck.target_rpm2 - truck.rpm) / 1000,
-						0);
+						truck.prev_rpm - truck.rpm);
 					truck.throttle_pwm = mid_throttle_pwm - 
 						(MAX_PWM - MIN_PWM) / 2 *
 						(truck.throttle_base + truck.throttle_feedback) /
@@ -1682,6 +1682,7 @@ void handle_rpm()
 	{
 //		int pwm = truck.max_throttle_fwd;
 		truck.rpm_time = truck.timer_high;
+		truck.prev_rpm = truck.rpm;
 		truck.rpm = truck.rpm_counter * 60;
 		truck.rpm_counter = 0;
 		ENABLE_INTERRUPTS
