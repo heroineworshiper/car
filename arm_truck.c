@@ -378,6 +378,8 @@ void dump_config()
 	print_number(truck.min_steering);
 	print_text("\nauto_steering=");
 	print_number(truck.auto_steering);
+	print_text("\nauto_throttle=");
+	print_number(truck.auto_throttle);
 	print_text("\ngyro_center_max=");
 	print_number(truck.gyro_center_max);
 	print_text("\nangle_to_gyro=");
@@ -457,6 +459,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.max_steering = buffer[offset++];
 	truck.min_steering = buffer[offset++];
 	truck.auto_steering = buffer[offset++];
+	truck.auto_throttle = buffer[offset++];
 
 	truck.gyro_center_max = READ_UINT16(buffer, offset);
 	truck.angle_to_gyro = READ_UINT16(buffer, offset);
@@ -1117,11 +1120,11 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				truck.current_accum = 0;
 				truck.current_count = 0;
 
-				TRACE2
+//				TRACE2
 //				print_float(truck.current);
 //				print_float(truck.battery_voltage);
-				print_float(truck.power);
-				print_number(truck.target_rpm2);
+//				print_float(truck.power);
+//				print_number(truck.target_rpm2);
 //				print_float(truck.throttle_feedback);
 			}
 		}
@@ -1376,9 +1379,13 @@ void TIM2_IRQHandler()
 						}
 						else
 						{
-							throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
-								truck.throttle_base / 
-								100;
+							if(truck.auto_throttle)
+							{
+								throttle_magnitude = (MAX_PWM - MIN_PWM) / 2 *
+									truck.throttle_base / 
+									100;
+							}
+
 							if(truck.throttle_pwm > mid_throttle_pwm -
 									throttle_magnitude)
 							{
@@ -1412,31 +1419,32 @@ void TIM2_IRQHandler()
 						(truck.throttle_base + truck.throttle_feedback) /
 						100;
 #else // POWER_FEEDBACK
-	#ifdef RPM_FEEDBACK
-					
-					truck.target_rpm2 = truck.target_rpm;
-					if(truck.power > truck.power_base)
+					if(truck.auto_throttle)
 					{
-						truck.target_rpm2 += (truck.power - truck.power_base) *
-							truck.rpm_slope;
-						truck.target_rpm2 = MAX(0, truck.target_rpm2);
-					}
-					
-					truck.throttle_feedback = do_pid(&truck.rpm_pid,
-						(float)(truck.target_rpm2 - truck.rpm) / 1000,
-						truck.prev_rpm - truck.rpm);
-					truck.throttle_pwm = mid_throttle_pwm - 
-						(MAX_PWM - MIN_PWM) / 2 *
-						(truck.throttle_base + truck.throttle_feedback) /
-						100;
+						truck.target_rpm2 = truck.target_rpm;
+						if(truck.power > truck.power_base)
+						{
+							truck.target_rpm2 += (truck.power - truck.power_base) *
+								truck.rpm_slope;
+							truck.target_rpm2 = MAX(0, truck.target_rpm2);
+						}
 
-	#else // RPM_FEEDBACK
-					truck.throttle_pwm = mid_throttle_pwm - 
-						(MAX_PWM - MIN_PWM) / 2 *
-						truck.max_throttle_fwd /
-						100;
-	#endif // no feedback
-#endif
+						truck.throttle_feedback = do_pid(&truck.rpm_pid,
+							(float)(truck.target_rpm2 - truck.rpm) / 1000,
+							(float)(truck.prev_rpm - truck.rpm) / 1000);
+						truck.throttle_pwm = mid_throttle_pwm - 
+							(MAX_PWM - MIN_PWM) / 2 *
+							(truck.throttle_base + truck.throttle_feedback) /
+							100;
+					}
+					else
+					{
+						truck.throttle_pwm = mid_throttle_pwm - 
+							(MAX_PWM - MIN_PWM) / 2 *
+							truck.max_throttle_fwd /
+							100;
+					}
+#endif // !POWER_FEEDBACK
 				}
 
 // steering with throttle
@@ -1522,9 +1530,9 @@ print_float(TO_DEG(truck.current_heading));
 				}
 				else
 				{
-					reset_pid(&truck.throttle_pid);
+//					reset_pid(&truck.throttle_pid);
+//					reset_pid(&truck.rpm_pid);
 					reset_pid(&truck.heading_pid);
-					reset_pid(&truck.rpm_pid);
 					truck.current_heading = steering_overshoot;
 				}
 
@@ -1761,6 +1769,7 @@ int main(void)
 	truck.max_steering = 100;
 	truck.min_steering = 25;
 	truck.auto_steering = 1;
+	truck.auto_throttle = 1;
 	
 	truck.gyro_center_max = 100;
 	truck.angle_to_gyro = 450;

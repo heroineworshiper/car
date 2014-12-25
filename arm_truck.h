@@ -160,6 +160,8 @@ typedef struct
 	float steering_overshoot;
 // enable heading hold
 	int auto_steering;
+// enable RPM feedback
+	int auto_throttle;
 	int headlights_on;
 
 	int rpm_time;
