@@ -212,6 +212,7 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_THROTTLE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("RPM_DV_SIZE")[0]);
 		    			
 						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));

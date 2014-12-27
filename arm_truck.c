@@ -39,7 +39,6 @@
 
 
 #include "arm_truck.h"
-#include "arm_math.h"
 #include "cc1101.h"
 #include "linux.h"
 #include "uart.h"
@@ -50,7 +49,6 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_flash.h"
-#include <math.h>
 
 
 // pass bluetooth to debug port
@@ -400,6 +398,8 @@ void dump_config()
 	print_float(truck.target_power);
 	print_text("\ntarget_rpm=");
 	print_float(truck.target_rpm);
+	print_text("\nrpm_dv_size=");
+	print_float(truck.rpm_dv_size);
 	print_text("\npower_base=");
 	print_float(truck.power_base);
 	print_text("\nrpm_slope=");
@@ -460,6 +460,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.min_steering = buffer[offset++];
 	truck.auto_steering = buffer[offset++];
 	truck.auto_throttle = buffer[offset++];
+	truck.rpm_dv_size = buffer[offset++];
 
 	truck.gyro_center_max = READ_UINT16(buffer, offset);
 	truck.angle_to_gyro = READ_UINT16(buffer, offset);
@@ -482,6 +483,8 @@ int read_config_packet(const unsigned char *buffer)
 	offset = read_pid(&truck.heading_pid, buffer, offset);
 	offset = read_pid(&truck.throttle_pid, buffer, offset);
 	offset = read_pid(&truck.rpm_pid, buffer, offset);
+
+	resize_derivative(&truck.rpm_dv, truck.rpm_dv_size);
 
 TRACE
 print_text("offset=");
@@ -1431,7 +1434,7 @@ void TIM2_IRQHandler()
 
 						truck.throttle_feedback = do_pid(&truck.rpm_pid,
 							(float)(truck.target_rpm2 - truck.rpm) / 1000,
-							(float)(truck.prev_rpm - truck.rpm) / 1000);
+							-get_derivative(&truck.rpm_dv) / 1000);
 						truck.throttle_pwm = mid_throttle_pwm - 
 							(MAX_PWM - MIN_PWM) / 2 *
 							(truck.throttle_base + truck.throttle_feedback) /
@@ -1686,15 +1689,16 @@ void handle_rpm()
 	}
 	
 	DISABLE_INTERRUPTS
-	if(truck.timer_high - truck.rpm_time >= TIMER_HZ / 2)
+	if(truck.timer_high - truck.rpm_time >= TIMER_HZ / 10)
 	{
 //		int pwm = truck.max_throttle_fwd;
 		truck.rpm_time = truck.timer_high;
-		truck.prev_rpm = truck.rpm;
-		truck.rpm = truck.rpm_counter * 60;
+		truck.rpm = truck.rpm_counter * 300 / 8 / 2;
 		truck.rpm_counter = 0;
 		ENABLE_INTERRUPTS
-		
+
+		update_derivative(&truck.rpm_dv, truck.rpm);
+
 //		if(truck.throttle > 0)
 		{
 /*
@@ -1810,6 +1814,8 @@ int main(void)
 		100, // I limit
 		100); // O limit
 
+	truck.rpm_dv_size = 10;
+	init_derivative(&truck.rpm_dv, truck.rpm_dv_size);
 
 	load_config();
 	dump_config();

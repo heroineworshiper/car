@@ -4,6 +4,7 @@
 #include "stm32f4xx_adc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
+#include "arm_math.h"
 
 
 // timer for packet flashing
@@ -168,10 +169,12 @@ typedef struct
 	int rpm_status;
 	int rpm_counter;
 	int rpm;
-	int prev_rpm;
-	int throttle_time;
+	derivative_t rpm_dv;
+	int rpm_dv_size;
+
 
 	
+	int throttle_time;
 	int debug_counter;
 	
 	bluetooth_t bluetooth;
