@@ -1693,7 +1693,7 @@ void handle_rpm()
 	{
 //		int pwm = truck.max_throttle_fwd;
 		truck.rpm_time = truck.timer_high;
-		truck.rpm = truck.rpm_counter * 300 / 8 / 2;
+		truck.rpm = truck.rpm_counter * 300 / 16;
 		truck.rpm_counter = 0;
 		ENABLE_INTERRUPTS
 
