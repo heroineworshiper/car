@@ -42,6 +42,9 @@ ARM_LFLAGS := -mcpu=cortex-m4 \
 	-nostdlib \
 	-nostdinc \
 	$(ARM_LIBM) $(ARM_LIBC)
+GCC_PI := /opt/pi/bin/bcm2708hardfp-gcc
+PI_CFLAGS := -O2
+PI_LFLAGS := -lm -lpthread -lrt -lpng -lz
 
 
 $(shell echo $(SDCC_CFLAGS) > sdcc_cflags)
@@ -119,7 +122,8 @@ ARM_CAR_OBJS := \
 ARM_TRUCK_OBJS := \
 	arm_truck.o \
 
-
+PI_OBJS := \
+	vision.o
 
 #all: speedo.hex interval.hex interval_rec.hex usb_download usb_programmer parse
 
