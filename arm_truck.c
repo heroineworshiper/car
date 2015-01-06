@@ -103,15 +103,26 @@
 // 1ms
 #define MIN_PWM 84000
 
+#define MAX_PERIOD 65535
+
 //#define DO_THROTTLE_TEST
 #define THROTTLE_POWER1 10
 #define THROTTLE_RPM2 350
 #define POWER_STEP 5
 #define THROTTLE_DELAY 5
 
+//#define DO_RPM_TEST
+#define RPM1 300
+#define RPM2 700
+
 //#define POWER_FEEDBACK
 #define RPM_FEEDBACK
 #define POWER_CURVE
+
+//#define DO_PWM_TEST
+#define PWM1 0
+#define PWM2 20
+#define TEST_TIME (5 * TIMER_HZ * 60)
 
 truck_t truck;
 
@@ -255,6 +266,7 @@ print_text("Begin gyro calibration\n");
 	truck.need_gyro_center = 1;
 	truck.gyro_center_count = 0;
 	truck.gyro_center = 0;
+	truck.prev_gyro_center = 0;
 	truck.gyro_accum = 0;
 	truck.gyro_min = 0;
 	truck.gyro_max = 0;
@@ -380,6 +392,8 @@ void dump_config()
 	print_number(truck.auto_throttle);
 	print_text("\ngyro_center_max=");
 	print_number(truck.gyro_center_max);
+	print_text("\nmax_gyro_drift=");
+	print_number(truck.max_gyro_drift);
 	print_text("\nangle_to_gyro=");
 	print_number(truck.angle_to_gyro);
 	print_text("\nthrottle_ramp_delay=");
@@ -463,6 +477,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.rpm_dv_size = buffer[offset++];
 
 	truck.gyro_center_max = READ_UINT16(buffer, offset);
+	truck.max_gyro_drift = READ_UINT16(buffer, offset);
 	truck.angle_to_gyro = READ_UINT16(buffer, offset);
 	truck.throttle_ramp_delay = READ_UINT16(buffer, offset);
 	truck.throttle_ramp_step = READ_UINT16(buffer, offset);
@@ -1030,6 +1045,7 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				!truck.have_gyro_center && 
 				truck.gyro_center_count >= GYRO_CENTER_TOTAL)
 			{
+				truck.prev_gyro_center = truck.gyro_center;
 				truck.gyro_center = (float)truck.gyro_center_accum / 
 					truck.gyro_center_count;
 
@@ -1039,8 +1055,25 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				print_text("center=");
 				print_float(truck.gyro_center);
 
-				truck.have_gyro_center = 1;
-				truck.need_gyro_center = 0;
+// test if calculation didn't drift
+				if(truck.prev_gyro_center > 0 &&
+					fabs(truck.prev_gyro_center - truck.gyro_center) <
+						truck.max_gyro_drift)
+				{
+					TRACE2
+					print_text("done");
+					truck.have_gyro_center = 1;
+					truck.need_gyro_center = 0;
+				}
+				else
+// do another calculation
+				{
+					truck.gyro_center_count = 0;
+					truck.gyro_center = 0;
+					truck.gyro_accum = 0;
+					truck.gyro_min = 0;
+					truck.gyro_max = 0;
+				}
 			}
 			
 			if(truck.have_gyro_center)
@@ -1198,7 +1231,7 @@ void TIM2_IRQHandler()
 	if(TIM2->SR & TIM_FLAG_Update)
 	{
 		TIM2->SR = ~TIM_FLAG_Update;
-		SET_PIN(GPIOA, GPIO_Pin_6);
+//		SET_PIN(GPIOA, GPIO_Pin_6);
 		SET_PIN(GPIOA, GPIO_Pin_7);
 
 		if(truck.writing_settings) return;
@@ -1397,6 +1430,10 @@ void TIM2_IRQHandler()
 							else
 							{
 								truck.throttle_state = THROTTLE_AUTO;
+								truck.start_time = truck.timer_high;
+#ifdef DO_RPM_TEST
+								truck.target_rpm = RPM1;
+#endif
 							}
 						}
 					}
@@ -1424,6 +1461,14 @@ void TIM2_IRQHandler()
 #else // POWER_FEEDBACK
 					if(truck.auto_throttle)
 					{
+
+
+#ifdef DO_RPM_TEST
+						truck.target_rpm = RPM1 + 
+							(RPM2 - RPM1) *
+							(truck.timer_high - truck.start_time) /
+							(60 * TIMER_HZ);
+#endif
 						truck.target_rpm2 = truck.target_rpm;
 						if(truck.power > truck.power_base)
 						{
@@ -1439,6 +1484,14 @@ void TIM2_IRQHandler()
 							(MAX_PWM - MIN_PWM) / 2 *
 							(truck.throttle_base + truck.throttle_feedback) /
 							100;
+#ifdef DO_PWM_TEST
+						truck.throttle_pwm = mid_throttle_pwm - 
+							(MAX_PWM - MIN_PWM) / 2 *
+							(PWM2 - PWM1) *
+							(truck.timer_high - truck.start_time) /
+							TEST_TIME / 
+							100;
+#endif
 					}
 					else
 					{
@@ -1597,7 +1650,7 @@ print_float(TO_DEG(truck.current_heading));
 	if(TIM2->SR & TIM_FLAG_CC1)
 	{
 		TIM2->SR = ~TIM_FLAG_CC1;
-		CLEAR_PIN(GPIOA, GPIO_Pin_6);
+//		CLEAR_PIN(GPIOA, GPIO_Pin_6);
 	}
 
 	if(TIM2->SR & TIM_FLAG_CC2)
@@ -1613,22 +1666,55 @@ void write_pwm()
 	CLAMP(truck.throttle_pwm, MIN_PWM, MAX_PWM);
 	SET_COMPARE(TIM2, CCR1, truck.throttle_pwm);
 	SET_COMPARE(TIM2, CCR2, truck.steering_pwm);
+	
+	int mid_throttle_pwm = MIN_PWM + 
+		(MAX_PWM - MIN_PWM) * 
+		truck.mid_throttle / 
+		100;
+	if(truck.throttle_pwm > mid_throttle_pwm)
+	{
+		int pwm = (truck.throttle_pwm - mid_throttle_pwm) * 
+			MAX_PERIOD /
+			((MAX_PWM - MIN_PWM) / 2);
+// strange artifact makes it die if below a certain amount
+		pwm = MAX(pwm, 4000);
+		SET_COMPARE(TIM3, CCR3, MAX_PERIOD - pwm);
+		SET_COMPARE(TIM3, CCR1, MAX_PERIOD);
+	}
+	else
+	if(truck.throttle_pwm < mid_throttle_pwm)
+	{
+		int pwm = (mid_throttle_pwm - truck.throttle_pwm) * 
+			MAX_PERIOD /
+			((MAX_PWM - MIN_PWM) / 2);
+		pwm = MAX(pwm, 4000);
+		SET_COMPARE(TIM3, CCR3, MAX_PERIOD);
+		SET_COMPARE(TIM3, CCR1, MAX_PERIOD - pwm);
+	}
+	else
+	{
+		SET_COMPARE(TIM3, CCR3, MAX_PERIOD);
+		SET_COMPARE(TIM3, CCR1, MAX_PERIOD);
+	}
+	
 }
 
 void init_pwm()
 {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-	
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
 	
 	GPIO_InitTypeDef  GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | 
-		GPIO_Pin_7;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
 	GPIO_ResetBits(GPIOA, GPIO_InitStructure.GPIO_Pin);
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -1648,6 +1734,26 @@ void init_pwm()
 	TIM_OCInitStructure.TIM_Pulse = truck.steering_pwm;
 	TIM_OC2Init(TIM2, &TIM_OCInitStructure);
   	TIM_Cmd(TIM2, ENABLE);
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource6,  GPIO_AF_TIM3);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource0, GPIO_AF_TIM3);
+
+	TIM_OCInitStructure.TIM_Pulse = 0;
+	TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+	TIM_TimeBaseStructure.TIM_Period = MAX_PERIOD;
+// Seems to be a power of 2
+	TIM_TimeBaseStructure.TIM_Prescaler = 2;
+	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  	TIM_Cmd(TIM3, ENABLE);
+ 	TIM_CtrlPWMOutputs(TIM3, ENABLE);
+
+
 
  	NVIC_InitTypeDef NVIC_InitStructure;
  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
@@ -1691,11 +1797,28 @@ void handle_rpm()
 	DISABLE_INTERRUPTS
 	if(truck.timer_high - truck.rpm_time >= TIMER_HZ / 10)
 	{
-//		int pwm = truck.max_throttle_fwd;
 		truck.rpm_time = truck.timer_high;
 		truck.rpm = truck.rpm_counter * 300 / 16;
 		truck.rpm_counter = 0;
 		ENABLE_INTERRUPTS
+
+#ifdef DO_RPM_TEST
+		TRACE
+		print_number(truck.target_rpm);
+		print_number(truck.rpm);
+		if(truck.rpm > 10)
+			print_float((float)60 * 1609363 / (float)(truck.rpm * 110 * 3.141 * 60));
+		else
+			print_float(0);
+#endif
+
+#ifdef DO_PWM_TEST
+		TRACE
+		print_number(TIM3->CCR1);
+		print_number(TIM3->CCR3);
+		print_number(truck.throttle_pwm);
+		print_number(truck.rpm);
+#endif
 
 		update_derivative(&truck.rpm_dv, truck.rpm);
 

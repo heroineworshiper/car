@@ -25,18 +25,9 @@
 
 
 
-#include "settings.h"
-#include "util.h"
-
-#include "vision_common.h"
-
-
-
-
-#ifdef USE_VISION
-
 
 #include <linux/videodev2.h>
+#include <pthread.h>
 
 // makes no difference in latency because we always consume faster than it 
 // produces
@@ -46,69 +37,18 @@
 
 
 
+// General purpose timer
 typedef struct
 {
-	int fd;
-
-// device read buffers
-	unsigned char *frame_buffer[DEVICE_BUFFERS];
-// compressed image from camera
-	unsigned char *picture_data;
-	int picture_size;
-
-
-	unsigned char *y_buffer;
-	unsigned char *u_buffer;
-	unsigned char *v_buffer;
-	unsigned char *mask;
-	blobs_t blobs;
-
-// History
-// dimensions of largest blobs
-	blob_t *blob_history;
-	int **fill_x_history;
-	int **fill_y_history;
-	int *total_fill_x;
-	int *total_fill_y;
-
-// accumulation buffer
-//	unsigned char *accum;
-// accumulated blob size
-	blob_t accum_blob;
-// Next slot to fill
-	int history_slot;
-
-// Position of object in frame
-	double center_x;
-	double center_y;
-
-// attitude result
-	double roll;
-	double pitch;
-
-// position result
-	double x, y, z;
-
-// Total frames read or written
-	int total_frames;
-// last frame had object
-	int got_it;
-// last frame had object entirely in frame
-	int in_frame;
-} vision_eye_t;
-
+	struct timeval start_time;
+} cartimer_t;
 
 
 typedef struct 
 {
+// device read buffers
 	int buffer_size;
-
-// packets from left camera
-	unsigned char *left_buffer;
-	int left_bytes;
-// current function for parsing left camera data
-	void (*current_function)(unsigned char data);
-
+	unsigned char *frame_buffer[DEVICE_BUFFERS];
 
 	unsigned char **jpeg_rows;
 	unsigned char *jpeg_bitmap;
@@ -117,10 +57,6 @@ typedef struct
 	int image_w, image_h;
 // processed size (may be chroma only)
 	int mask_w, mask_h;
-	int window_x, window_y, window_w, window_h;
-	pthread_mutex_t display_lock;
-	pthread_mutex_t display_lock2;
-
 
 	int max;
 	int min;
@@ -130,102 +66,39 @@ typedef struct
 	int preview_size;
 	int preview_allocated;
 
-// Copy of mask to display asynchronously
-//	unsigned char *display_mask;
-// ready to display next frame
-//	int display_ready;
+
+	int fd;
+	struct v4l2_format v4l2_params;
+
+// compressed image from camera
+	unsigned char *picture_data;
+	int picture_size;
+// image for web server
+	unsigned char *latest_image;
+	int latest_size;
+	pthread_mutex_t latest_lock;
 
 
-	vision_eye_t left;
-	vision_eye_t right;
+	unsigned char *y_buffer;
+	unsigned char *u_buffer;
+	unsigned char *v_buffer;
+	unsigned char *mask;
 
-
-
-
-// Total output frames written
-	int total_output_frames;
-// Total frames sent to GUI
-	int total_gui_frames;
-
-
-	int peak_x;
-	int peak_y;
-// Relative to peak
-// Negative if above or left of peak
-	int top_border;
-	int bottom_border;
-	int left_border;
-	int right_border;
-// Vertical position on sides of peak
-	int left_peak;
-	int right_peak;
-// Minor axis, relative to left & right peak
-	int top_peak;
-	int bottom_peak;
-// 0 if top is closer
-	int closer;
+// Total frames read or written
+	int total_frames;
 	int fps;
-
-
-
-	int turret_fd;
-	int initialize_count;
-	double tilt_x;
-	double tilt_y;
-	int x_pwm;
-	int y_pwm;
-	pthread_mutex_t turret_lock;
-
-
-// Spherical coordinates
-	float x_angle;
-	float y_angle;
-	float dist;
-
-// Final result
-	derivative_t dx;
-	derivative_t dy;
-	derivative_t dz;
-	
-	
-//	double *dx_history;
-//	double *dy_history;
-//	int v_slot;
-	
-	
-	double x, y, z;
-
-	derivative_t roll_rate;
-	derivative_t pitch_rate;
-
-// Euler camera angle from ground IMU
-	vector_t camera_angle;
-
-// Amount of time throttle has been above minimum
-	coptertimer_t throttle_time;
-	coptertimer_t fps_timer;
-	int fps_counter;
-// Have enough revolutions for the position information to be useful
-	int vision_ready;
-// Got frame for each eye
-	int got_left;
-	int got_right;
-// Found object in each eye
-	int have_left;
-	int have_right;
+	int frames_written;
+	cartimer_t timer;
+	cartimer_t timer2;
+	int led_on;
 } vision_t;
 
 
-
-void reset_turret();
-
 void init_vision();
-
-void write_vision(unsigned char *data, int size, int is_left);
-void handle_left_byte(unsigned char data);
-
-
-#endif // USE_VISION
+// Reset the timer.  This is not reentrant.
+void reset_timer(cartimer_t *ptr);
+// Get difference since last reset in ms.  This is reentrant.
+int get_timer_difference(cartimer_t *ptr);
 
 
 #endif // VISION_H

@@ -43,8 +43,7 @@ ARM_LFLAGS := -mcpu=cortex-m4 \
 	-nostdinc \
 	$(ARM_LIBM) $(ARM_LIBC)
 GCC_PI := /opt/pi/bin/bcm2708hardfp-gcc
-PI_CFLAGS := -O2
-PI_LFLAGS := -lm -lpthread -lrt -lpng -lz
+PI_CFLAGS := -O2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 
 
 $(shell echo $(SDCC_CFLAGS) > sdcc_cflags)
@@ -128,6 +127,12 @@ PI_OBJS := \
 #all: speedo.hex interval.hex interval_rec.hex usb_download usb_programmer parse
 
 all: truck.bin car_remote.hex
+
+vision: vision.c
+	$(GCC_PI) $(PI_CFLAGS) -lpthread vision.c -o vision
+
+vision_x86: vision.c
+	$(GCC) -O2 -lpthread vision.c -o vision_x86
 
 car: car.bin
 

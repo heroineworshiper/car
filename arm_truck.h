@@ -51,6 +51,7 @@ typedef struct
 typedef struct
 {
 	int timer_high;
+	int start_time;
 // data from radio	
 	int throttle_reverse;
 	int throttle_reverse2;
@@ -101,6 +102,7 @@ typedef struct
 	int gyro_count;
 	int gyro_min;
 	int gyro_max;
+	int max_gyro_drift;
 	int ref_accum;
 	int ref_count;
 	int current_accum;
@@ -132,6 +134,7 @@ typedef struct
 // maximum analog amount gyros can move while calculating center
 	int gyro_center_max;
 	float gyro_center;
+	float prev_gyro_center;
 	int angle_to_gyro;
 // throttle magnitude 0 - 100
 	int max_throttle_fwd;
