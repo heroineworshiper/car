@@ -10,11 +10,11 @@
 // timer for packet flashing
 #define LED_DELAY2 2
 // green pin when high
-#define LED_PIN1 GPIO_Pin_4
-#define LED_GPIO1 GPIOC
+#define LED_PIN1 GPIO_Pin_1
+#define LED_GPIO1 GPIOB
 // red pin when high
-#define LED_PIN2 GPIO_Pin_5
-#define LED_GPIO2 GPIOC
+#define LED_PIN2 GPIO_Pin_2
+#define LED_GPIO2 GPIOB
 
 typedef struct
 {
@@ -102,7 +102,7 @@ typedef struct
 	int gyro_count;
 	int gyro_min;
 	int gyro_max;
-	int max_gyro_drift;
+	float max_gyro_drift;
 	int ref_accum;
 	int ref_count;
 	int current_accum;

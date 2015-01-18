@@ -1,6 +1,6 @@
 /*
  * 1 handed truck
- * Copyright (C) 2012-2014 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2012-2015 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,11 +63,11 @@
 #define DEBUG_PIN GPIO_Pin_4
 #define DEBUG_GPIO GPIOB
 
-#define RPM_PIN GPIO_Pin_3
+#define RPM_PIN GPIO_Pin_0
 #define RPM_GPIO GPIOB
 
-#define HEADLIGHT_PIN GPIO_Pin_13
-#define HEADLIGHT_GPIO GPIOC
+//#define HEADLIGHT_PIN GPIO_Pin_13
+//#define HEADLIGHT_GPIO GPIOC
 
 // packets per second
 #define PACKET_RATE 40
@@ -393,7 +393,7 @@ void dump_config()
 	print_text("\ngyro_center_max=");
 	print_number(truck.gyro_center_max);
 	print_text("\nmax_gyro_drift=");
-	print_number(truck.max_gyro_drift);
+	print_float(truck.max_gyro_drift);
 	print_text("\nangle_to_gyro=");
 	print_number(truck.angle_to_gyro);
 	print_text("\nthrottle_ramp_delay=");
@@ -448,18 +448,20 @@ void dump_config()
 	print_lf();
 }
 
-void update_headlights()
-{
-	if(truck.headlights_on)
-	{
-		SET_PIN(HEADLIGHT_GPIO, HEADLIGHT_PIN);
-	}
-	else
-	{
-		CLEAR_PIN(HEADLIGHT_GPIO, HEADLIGHT_PIN);
-	}
-}
-
+/*
+ * void update_headlights()
+ * {
+ * 	if(truck.headlights_on)
+ * 	{
+ * 		SET_PIN(HEADLIGHT_GPIO, HEADLIGHT_PIN);
+ * 	}
+ * 	else
+ * 	{
+ * 		CLEAR_PIN(HEADLIGHT_GPIO, HEADLIGHT_PIN);
+ * 	}
+ * }
+ * 
+ */
 
 int read_config_packet(const unsigned char *buffer)
 {
@@ -477,7 +479,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.rpm_dv_size = buffer[offset++];
 
 	truck.gyro_center_max = READ_UINT16(buffer, offset);
-	truck.max_gyro_drift = READ_UINT16(buffer, offset);
+	truck.max_gyro_drift = (float)READ_UINT16(buffer, offset) / 256;
 	truck.angle_to_gyro = READ_UINT16(buffer, offset);
 	truck.throttle_ramp_delay = READ_UINT16(buffer, offset);
 	truck.throttle_ramp_step = READ_UINT16(buffer, offset);
@@ -506,7 +508,7 @@ print_text("offset=");
 print_number(offset);
 
 
-	update_headlights();
+//	update_headlights();
 
 // debug
 //truck.max_throttle_fwd = 0;
@@ -1054,11 +1056,13 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				print_number(truck.gyro_center_count);
 				print_text("center=");
 				print_float(truck.gyro_center);
+				print_text("drift=");
+				print_float(truck.prev_gyro_center - truck.gyro_center);
 
 // test if calculation didn't drift
-				if(truck.prev_gyro_center > 0 &&
+				if(fabs(truck.prev_gyro_center) > 0 &&
 					fabs(truck.prev_gyro_center - truck.gyro_center) <
-						truck.max_gyro_drift)
+						(float)truck.max_gyro_drift)
 				{
 					TRACE2
 					print_text("done");
@@ -1068,8 +1072,8 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				else
 // do another calculation
 				{
+					truck.gyro_center_accum = 0;
 					truck.gyro_center_count = 0;
-					truck.gyro_center = 0;
 					truck.gyro_accum = 0;
 					truck.gyro_min = 0;
 					truck.gyro_max = 0;
@@ -1148,9 +1152,12 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 				truck.raw_current = (float)truck.current_accum / truck.current_count;
 
 				DISABLE_INTERRUPTS
-				truck.current = (truck.raw_current - CURRENT_BASE) / CURRENT_SCALE;
+//				truck.current = (truck.raw_current - CURRENT_BASE) / CURRENT_SCALE;
 // battery_voltage is only a few hundreths off
-				truck.power = truck.current * truck.battery_voltage;
+//				truck.power = truck.current * truck.battery_voltage;
+// Not connected
+				truck.current = 0;
+				truck.power = 0;
 				ENABLE_INTERRUPTS
 
 				truck.current_accum = 0;
@@ -1232,7 +1239,7 @@ void TIM2_IRQHandler()
 	{
 		TIM2->SR = ~TIM_FLAG_Update;
 //		SET_PIN(GPIOA, GPIO_Pin_6);
-		SET_PIN(GPIOA, GPIO_Pin_7);
+		SET_PIN(GPIOC, GPIO_Pin_4);
 
 		if(truck.writing_settings) return;
 
@@ -1563,6 +1570,8 @@ print_float(TO_DEG(truck.current_heading));
 						break;
 					
 					default:
+// Next steering press must use feedback
+						truck.steering_first = 0;
 						if(!truck.auto_steering)
 						{
 							need_feedback = 0;
@@ -1656,7 +1665,7 @@ print_float(TO_DEG(truck.current_heading));
 	if(TIM2->SR & TIM_FLAG_CC2)
 	{
 		TIM2->SR = ~TIM_FLAG_CC2;
-		CLEAR_PIN(GPIOA, GPIO_Pin_7);
+		CLEAR_PIN(GPIOC, GPIO_Pin_4);
 	}
 }
 
@@ -1678,7 +1687,7 @@ void write_pwm()
 			((MAX_PWM - MIN_PWM) / 2);
 // strange artifact makes it die if below a certain amount
 		pwm = MAX(pwm, 4000);
-		SET_COMPARE(TIM3, CCR3, MAX_PERIOD - pwm);
+		SET_COMPARE(TIM3, CCR2, MAX_PERIOD - pwm);
 		SET_COMPARE(TIM3, CCR1, MAX_PERIOD);
 	}
 	else
@@ -1688,12 +1697,12 @@ void write_pwm()
 			MAX_PERIOD /
 			((MAX_PWM - MIN_PWM) / 2);
 		pwm = MAX(pwm, 4000);
-		SET_COMPARE(TIM3, CCR3, MAX_PERIOD);
+		SET_COMPARE(TIM3, CCR2, MAX_PERIOD);
 		SET_COMPARE(TIM3, CCR1, MAX_PERIOD - pwm);
 	}
 	else
 	{
-		SET_COMPARE(TIM3, CCR3, MAX_PERIOD);
+		SET_COMPARE(TIM3, CCR2, MAX_PERIOD);
 		SET_COMPARE(TIM3, CCR1, MAX_PERIOD);
 	}
 	
@@ -1706,15 +1715,17 @@ void init_pwm()
 
 	
 	GPIO_InitTypeDef  GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-	GPIO_ResetBits(GPIOA, GPIO_InitStructure.GPIO_Pin);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
+	GPIO_ResetBits(GPIOC, GPIO_InitStructure.GPIO_Pin);
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+//	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -1735,17 +1746,15 @@ void init_pwm()
 	TIM_OC2Init(TIM2, &TIM_OCInitStructure);
   	TIM_Cmd(TIM2, ENABLE);
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource6,  GPIO_AF_TIM3);
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource0, GPIO_AF_TIM3);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_TIM3);
 
 	TIM_OCInitStructure.TIM_Pulse = 0;
 	TIM_OC1Init(TIM3, &TIM_OCInitStructure);
-	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+	TIM_OC2Init(TIM3, &TIM_OCInitStructure);
 	TIM_TimeBaseStructure.TIM_Period = MAX_PERIOD;
 // Seems to be a power of 2
 	TIM_TimeBaseStructure.TIM_Prescaler = 2;
@@ -1815,7 +1824,7 @@ void handle_rpm()
 #ifdef DO_PWM_TEST
 		TRACE
 		print_number(TIM3->CCR1);
-		print_number(TIM3->CCR3);
+		print_number(TIM3->CCR2);
 		print_number(truck.throttle_pwm);
 		print_number(truck.rpm);
 #endif
@@ -1899,6 +1908,7 @@ int main(void)
 	truck.auto_throttle = 1;
 	
 	truck.gyro_center_max = 100;
+	truck.max_gyro_drift = 0.1f;
 	truck.angle_to_gyro = 450;
 	truck.throttle_ramp_delay = 0;
 	truck.throttle_ramp_step = 1;
@@ -2003,8 +2013,8 @@ int main(void)
 	GPIO_Init(DEBUG_GPIO, &GPIO_InitStructure);
 	CLEAR_PIN(DEBUG_GPIO, DEBUG_PIN);
 
-	GPIO_InitStructure.GPIO_Pin = HEADLIGHT_PIN;
-	GPIO_Init(HEADLIGHT_GPIO, &GPIO_InitStructure);
+//	GPIO_InitStructure.GPIO_Pin = HEADLIGHT_PIN;
+//	GPIO_Init(HEADLIGHT_GPIO, &GPIO_InitStructure);
 	
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 	GPIO_InitStructure.GPIO_Pin = RPM_PIN;
@@ -2012,7 +2022,7 @@ int main(void)
 	truck.rpm_time = truck.timer_high;
 	truck.rpm_status = PIN_IS_SET(RPM_GPIO, RPM_PIN);
 
-	update_headlights();
+//	update_headlights();
 
 	init_bluetooth();
 	init_analog();
