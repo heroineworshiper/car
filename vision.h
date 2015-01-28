@@ -1,6 +1,6 @@
 /*
- * VICACOPTER
- * Copyright (C) 2012  Adam Williams <broadcast at earthling dot net>
+ * Truck vision
+ * Copyright (C) 2014-2015  Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +25,10 @@
 
 
 
-
+#include <stdio.h>
 #include <linux/videodev2.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 // makes no difference in latency because we always consume faster than it 
 // produces
@@ -53,13 +54,24 @@ typedef struct
 	unsigned char **jpeg_rows;
 	unsigned char *jpeg_bitmap;
 	int jpeg_shmid;
-// original image size
+// imported image size
+	int cam_w, cam_h;
+// working image size
 	int image_w, image_h;
-// processed size (may be chroma only)
-	int mask_w, mask_h;
+// coordinates from config file
+// range of top X for the line 0 - 100
+	int top_x1;
+	int top_x2;
+	int top_y;
+// range of bottom X for the line 0 - 100
+	int bottom_x1;
+	int bottom_x2;
+	int bottom_y;
+// pixels on each side of the line 0 - 100
+	int side_w;
+	int search_step;
 
-	int max;
-	int min;
+
 
 // compressed image for GUI
 	unsigned char *preview_data;
@@ -68,6 +80,7 @@ typedef struct
 
 
 	int fd;
+	FILE *playback_fd;
 	struct v4l2_format v4l2_params;
 
 // compressed image from camera
@@ -77,8 +90,13 @@ typedef struct
 	unsigned char *latest_image;
 	int latest_size;
 	pthread_mutex_t latest_lock;
+	sem_t spi_send_lock;
+	sem_t spi_complete_lock;
+	unsigned char spi_tx_data[1024];
+	unsigned char spi_rx_data[1024];
+	int spi_tx_size;
 
-
+// working image
 	unsigned char *y_buffer;
 	unsigned char *u_buffer;
 	unsigned char *v_buffer;
