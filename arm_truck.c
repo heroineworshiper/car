@@ -390,6 +390,8 @@ void dump_config()
 	print_number(truck.auto_steering);
 	print_text("\nauto_throttle=");
 	print_number(truck.auto_throttle);
+	print_text("\nrpm_dv_size=");
+	print_float(truck.rpm_dv_size);
 	print_text("\ngyro_center_max=");
 	print_number(truck.gyro_center_max);
 	print_text("\nmax_gyro_drift=");
@@ -404,24 +406,22 @@ void dump_config()
 	print_number(truck.pid_downsample);
 	print_text("\nsteering_step_delay=");
 	print_number(truck.steering_step_delay);
-	print_text("\nsteering_step=");
-	print_float(TO_DEG(truck.steering_step));
 	print_text("\nbattery_analog=");
 	print_number(truck.battery_analog);
-	print_text("\ntarget_power=");
-	print_float(truck.target_power);
 	print_text("\ntarget_rpm=");
 	print_float(truck.target_rpm);
-	print_text("\nrpm_dv_size=");
-	print_float(truck.rpm_dv_size);
+	print_text("\ntarget_power=");
+	print_float(truck.target_power);
+	print_text("\nbattery_v0=");
+	print_float(truck.battery_v0);
+	print_text("\nsteering_step=");
+	print_float(TO_DEG(truck.steering_step));
+	print_text("\nsteering_overshoot=");
+	print_float(TO_DEG(truck.steering_overshoot));
 	print_text("\npower_base=");
 	print_float(truck.power_base);
 	print_text("\nrpm_slope=");
 	print_float(truck.rpm_slope);
-	print_text("\nbattery_v0=");
-	print_float(truck.battery_v0);
-	print_text("\nsteering_overshoot=");
-	print_float(TO_DEG(truck.steering_overshoot));
 
 	print_text("\nsteering PID=");
 	print_float(truck.heading_pid.p_gain);
@@ -664,8 +664,9 @@ void handle_beacon()
 				WRITE_INT16(truck.bluetooth.send_buf, offset, truck.gyro_max - truck.gyro_min);
 				WRITE_INT16(truck.bluetooth.send_buf, offset, truck.rpm);
 				WRITE_FLOAT32(truck.bluetooth.send_buf, offset, truck.current_heading);
-				WRITE_FLOAT32(truck.bluetooth.send_buf, offset, truck.power);
-				
+//				WRITE_FLOAT32(truck.bluetooth.send_buf, offset, truck.power);
+				WRITE_INT16(truck.bluetooth.send_buf, offset, truck.path_x);
+
 				chksum = get_chksum(truck.bluetooth.send_buf, offset);
 				WRITE_INT16(truck.bluetooth.send_buf, offset, chksum);
 				truck.bluetooth.send_offset = 0;
