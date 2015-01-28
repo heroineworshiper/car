@@ -181,8 +181,9 @@ typedef struct
     uint32_t spi_buffer;
 #define SPI_SYNC_CODE 0
 #define SPI_PACKET 1
-    int path_x;
+    int path_center;
     float path_feedback;
+	int path_x;
 
 	
 	int throttle_time;

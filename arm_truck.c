@@ -419,8 +419,8 @@ void dump_config()
 	print_text("\ntarget_power=");
 	print_float(truck.target_power);
 
-	print_text("\npath_x=");
-	print_number(truck.path_x);
+	print_text("\npath_center=");
+	print_number(truck.path_center);
 	print_text("\npath_feedback=");
 	print_float(truck.path_feedback);
 
@@ -500,7 +500,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
 	truck.battery_analog = READ_UINT16(buffer, offset);
 	truck.target_rpm = READ_UINT16(buffer, offset);
-	truck.path_x = READ_UINT16(buffer, offset);
+	truck.path_center = READ_UINT16(buffer, offset);
 	
 	
 	truck.path_feedback = READ_FLOAT32(buffer, offset);
@@ -1603,7 +1603,9 @@ print_float(TO_DEG(truck.current_heading));
 								truck.steering_step_counter = 0;
 								if(truck.path_feedback != 0)
 								{
-									truck.current_heading += TO_RAD(truck.path_feedback);
+									truck.current_heading += 
+										TO_RAD(truck.path_feedback * 
+											(truck.path_center - truck.path_x));
 								}
 //TRACE2
 print_float(TO_DEG(truck.current_heading));
@@ -1967,11 +1969,12 @@ void handle_spi()
 {
 	if(truck.have_spi)
 	{
-		truck.path_x = truck.spi_buffer;
+		truck.path_x = ((truck.spi_buffer & 0xff) << 8) |
+			((truck.spi_buffer >> 8) & 0xff);
 		truck.have_spi = 0;
 		truck.spi_buffer = 0;
-		TRACE
-		print_number(truck.path_x);
+//		TRACE
+//		print_number(truck.path_x);
 	}
 }
 
