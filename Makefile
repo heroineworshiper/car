@@ -43,7 +43,7 @@ ARM_LFLAGS := -mcpu=cortex-m4 \
 	-nostdinc \
 	$(ARM_LIBM) $(ARM_LIBC)
 GCC_PI := /opt/pi/bin/bcm2708hardfp-gcc
-PI_CFLAGS := -O2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+PI_CFLAGS := -O2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Ijpeg
 
 
 $(shell echo $(SDCC_CFLAGS) > sdcc_cflags)
@@ -96,7 +96,6 @@ INTERVAL_SRCS := \
 ARM_OBJS := \
 	../copter/stm32f4/startup_main.o \
 	cc1101.o \
-	imu.o \
 	../copter/arm/arm_math.o \
 	../copter/arm/hardi2c.o \
 	../copter/arm/uart.o \
@@ -112,7 +111,76 @@ ARM_OBJS := \
 	../copter/stm32f4/stm32f4xx_iwdg.o \
 	../copter/stm32f4/stm32f4xx_tim.o \
 	../copter/stm32f4/stm32f4xx_adc.o \
-	../copter/stm32f4/stm32f4xx_flash.o
+	../copter/stm32f4/stm32f4xx_flash.o \
+	../copter/stm32f4/stm32f4xx_exti.o \
+	../copter/stm32f4/stm32f4xx_syscfg.o
+
+
+VISION_OBJS := \
+	vision.o \
+	jpeg/cdjpeg.o \
+	jpeg/jcapimin.o \
+	jpeg/jcapistd.o \
+	jpeg/jccoefct.o \
+	jpeg/jccolor.o \
+	jpeg/jcdctmgr.o \
+	jpeg/jchuff.o \
+	jpeg/jcinit.o \
+	jpeg/jcmainct.o \
+	jpeg/jcmarker.o \
+	jpeg/jcmaster.o \
+	jpeg/jcomapi.o \
+	jpeg/jcparam.o \
+	jpeg/jcphuff.o \
+	jpeg/jcprepct.o \
+	jpeg/jcsample.o \
+	jpeg/jctrans.o \
+	jpeg/jdapimin.o \
+	jpeg/jdapistd.o \
+	jpeg/jdatadst.o \
+	jpeg/jdatasrc.o \
+	jpeg/jdcoefct.o \
+	jpeg/jdcolor.o \
+	jpeg/jddctmgr.o \
+	jpeg/jdhuff.o \
+	jpeg/jdinput.o \
+	jpeg/jdmainct.o \
+	jpeg/jdmarker.o \
+	jpeg/jdmaster.o \
+	jpeg/jdmerge.o \
+	jpeg/jdphuff.o \
+	jpeg/jdpostct.o \
+	jpeg/jdsample.o \
+	jpeg/jdtrans.o \
+	jpeg/jerror.o \
+	jpeg/jfdctflt.o \
+	jpeg/jfdctfst.o \
+	jpeg/jfdctint.o \
+	jpeg/jidctflt.o \
+	jpeg/jidctfst.o \
+	jpeg/jidctint.o \
+	jpeg/jidctred.o \
+	jpeg/jmemmgr.o \
+	jpeg/jmemnobs.o \
+	jpeg/jquant1.o \
+	jpeg/jquant2.o \
+	jpeg/jutils.o \
+	jpeg/rdbmp.o \
+	jpeg/rdcolmap.o \
+	jpeg/rdgif.o \
+	jpeg/rdppm.o \
+	jpeg/rdrle.o \
+	jpeg/rdswitch.o \
+	jpeg/rdtarga.o \
+	jpeg/transupp.o \
+	jpeg/wrbmp.o \
+	jpeg/wrgif.o \
+	jpeg/wrppm.o \
+	jpeg/wrrle.o \
+	jpeg/wrtarga.o
+
+
+
 
 
 ARM_CAR_OBJS := \
@@ -128,11 +196,21 @@ PI_OBJS := \
 
 all: truck.bin car_remote.hex
 
-vision: vision.c
-	$(GCC_PI) $(PI_CFLAGS) -lpthread vision.c -o vision
+# PI version
+vision: $(VISION_OBJS)
+	$(GCC_PI) $(PI_CFLAGS) -o vision $(VISION_OBJS) -lpthread -lm
 
-vision_x86: vision.c
-	$(GCC) -O2 -lpthread vision.c -o vision_x86
+$(VISION_OBJS):
+	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
+
+#X86 version
+#vision: $(VISION_OBJS)
+#       $(GCC) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
+
+#$(VISION_OBJS):
+#       $(GCC) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
+
+
 
 car: car.bin
 
@@ -271,6 +349,7 @@ distance.hex: distance.s distance.inc
 
 clean:
 	rm -f $(ARM_OBJS) \
+		$(VISION_OBJS) \
 		*.o \
 		*.hex \
 		*.lst \
@@ -338,7 +417,7 @@ oscilloscope: oscilloscope.c
 ../copter/arm/arm_math.o: 	     ../copter/arm/arm_math.c
 ../copter/arm/hardi2c.o: 	     ../copter/arm/hardi2c.c
 ../copter/arm/uart.o: 		     ../copter/arm/uart.c
-../copter/arm/linux.o:               ../copter/arm/linux.c
+../copter/arm/linux.o:	       ../copter/arm/linux.c
 ../copter/stm32f4/startup_main.o:    ../copter/stm32f4/startup_main.s
 ../copter/stm32f4/misc.o: 	     ../copter/stm32f4/misc.c
 ../copter/stm32f4/stm32f4xx_rcc.o:   ../copter/stm32f4/stm32f4xx_rcc.c
@@ -352,10 +431,13 @@ oscilloscope: oscilloscope.c
 ../copter/stm32f4/stm32f4xx_tim.o:   ../copter/stm32f4/stm32f4xx_tim.c
 ../copter/stm32f4/stm32f4xx_adc.o:   ../copter/stm32f4/stm32f4xx_adc.c
 ../copter/stm32f4/stm32f4xx_flash.o: ../copter/stm32f4/stm32f4xx_flash.c
+../copter/stm32f4/stm32f4xx_exti.o: ../copter/stm32f4/stm32f4xx_exti.c
+../copter/stm32f4/stm32f4xx_syscfg.o: ../copter/stm32f4/stm32f4xx_syscfg.c
 arm_car.o: 			     arm_car.c
 arm_truck.o: 			     arm_truck.c
 cc1101.o: 			     cc1101.c
 imu.o: 			   	     imu.c
+vision.o: vision.c
 
 
 

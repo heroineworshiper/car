@@ -215,6 +215,7 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("RPM_DV_SIZE")[0]);
 		    			
 						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
@@ -222,8 +223,10 @@ public class Truck extends Thread {
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
-		    			
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PATH_X")[0]));
 
+
+						offset = Math.write_float32(beacon, offset, Settings.getFileFloat("PATH_FEEDBACK")[0]);
 		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("TARGET_POWER")[0]);
 		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
 		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
@@ -304,6 +307,7 @@ public class Truck extends Thread {
 	    						if(offset <= totalReceived - size)
 	    						{
 	    							checksum = Math.getChecksum(receive_buf, offset, size - 2);
+//    			    				Log.v("Truck.run 1", "checksum1=" + checksum + " checksum2=" + Math.read_uint16(receive_buf, offset + size - 2));
 	    							if(checksum == Math.read_uint16(receive_buf, offset + size - 2))
 	    							{
 // packet is intact
@@ -316,8 +320,9 @@ public class Truck extends Thread {
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
 		    								rpm = Math.read_uint16(receive_buf, offset + 20);
 		    								current_heading = Math.read_float32(receive_buf, offset + 22);
-		    								power = Math.read_float32(receive_buf, offset + 26);
-//		    			    				Log.v("run 1", "battery_analog=" + battery_analog + " battery_voltage=" + battery_voltage);
+//		    								power = Math.read_float32(receive_buf, offset + 26);
+		    								path_x = Math.read_int16(receive_buf, offset + 26);
+
 		    								break;
 		    							}
 		    							
@@ -507,6 +512,7 @@ public class Truck extends Thread {
     static float current_heading;
 	static float power;
 	static int rpm;
+	static int path_x;
     
     static boolean needReset = false;
     static boolean needConfig = false;

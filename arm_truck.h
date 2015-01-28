@@ -175,6 +175,14 @@ typedef struct
 	derivative_t rpm_dv;
 	int rpm_dv_size;
 
+    int spi_counter;
+    int spi_state;
+    int have_spi;
+    uint32_t spi_buffer;
+#define SPI_SYNC_CODE 0
+#define SPI_PACKET 1
+    int path_x;
+    float path_feedback;
 
 	
 	int throttle_time;

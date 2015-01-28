@@ -49,6 +49,8 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_flash.h"
+#include "stm32f4xx_exti.h"
+#include "stm32f4xx_syscfg.h"
 
 
 // pass bluetooth to debug port
@@ -65,6 +67,10 @@
 
 #define RPM_PIN GPIO_Pin_0
 #define RPM_GPIO GPIOB
+
+#define SPI_GPIO GPIOB
+#define MOSI_PIN GPIO_Pin_3
+#define CLK_PIN GPIO_Pin_4
 
 //#define HEADLIGHT_PIN GPIO_Pin_13
 //#define HEADLIGHT_GPIO GPIOC
@@ -412,6 +418,12 @@ void dump_config()
 	print_float(truck.target_rpm);
 	print_text("\ntarget_power=");
 	print_float(truck.target_power);
+
+	print_text("\npath_x=");
+	print_number(truck.path_x);
+	print_text("\npath_feedback=");
+	print_float(truck.path_feedback);
+
 	print_text("\nbattery_v0=");
 	print_float(truck.battery_v0);
 	print_text("\nsteering_step=");
@@ -446,6 +458,7 @@ void dump_config()
 	print_float(truck.rpm_pid.i_limit);
 	print_float(truck.rpm_pid.o_limit);
 	print_lf();
+
 }
 
 /*
@@ -487,8 +500,10 @@ int read_config_packet(const unsigned char *buffer)
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
 	truck.battery_analog = READ_UINT16(buffer, offset);
 	truck.target_rpm = READ_UINT16(buffer, offset);
+	truck.path_x = READ_UINT16(buffer, offset);
 	
 	
+	truck.path_feedback = READ_FLOAT32(buffer, offset);
 	truck.target_power = READ_FLOAT32(buffer, offset);
 	truck.battery_v0 = READ_FLOAT32(buffer, offset);
 	truck.steering_step = READ_FLOAT32(buffer, offset);
@@ -653,7 +668,7 @@ void handle_beacon()
 				truck.bluetooth.send_buf[offset++] = 0xd4;
 				truck.bluetooth.send_buf[offset++] = 0xe5;
 // size
-				WRITE_INT16(truck.bluetooth.send_buf, offset, 32);
+				WRITE_INT16(truck.bluetooth.send_buf, offset, 30);
 // battery response
 				truck.bluetooth.send_buf[offset++] = 0;
 				truck.bluetooth.send_buf[offset++] = 0;
@@ -698,8 +713,8 @@ void handle_beacon()
 			case 2:
 			{
 				int offset = 8;
-//TRACE2
-//print_buffer(truck.bluetooth.receive_buf, truck.bluetooth.receive_size);
+TRACE2
+print_buffer(truck.bluetooth.receive_buf, truck.bluetooth.receive_size);
 
 				int bytes = read_config_packet(receive_buf + offset);
 				int need_save = receive_buf[7];
@@ -1571,12 +1586,28 @@ print_float(TO_DEG(truck.current_heading));
 						break;
 					
 					default:
-// Next steering press must use feedback
+// Force next steering press to use heading hold
 						truck.steering_first = 0;
+
 						if(!truck.auto_steering)
 						{
 							need_feedback = 0;
 							truck.steering_pwm = mid_steering_pwm;
+						}
+						else
+						{
+// path following
+							truck.steering_step_counter++;
+							if(truck.steering_step_counter >= truck.steering_step_delay)
+							{
+								truck.steering_step_counter = 0;
+								if(truck.path_feedback != 0)
+								{
+									truck.current_heading += TO_RAD(truck.path_feedback);
+								}
+//TRACE2
+print_float(TO_DEG(truck.current_heading));
+							}
 						}
 						break;
 				}
@@ -1872,6 +1903,78 @@ void handle_rpm()
 	}
 }
 
+void init_spi()
+{
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	NVIC_InitTypeDef NVIC_InitStructure;
+
+  	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_Pin = MOSI_PIN | CLK_PIN;
+	GPIO_Init(SPI_GPIO, &GPIO_InitStructure);
+
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource4);
+	EXTI_InitTypeDef EXTI_InitStructure;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line4;
+  	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;  
+  	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  	EXTI_Init(&EXTI_InitStructure);
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI4_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x01;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x01;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+	
+	truck.spi_state = SPI_SYNC_CODE;
+}
+
+
+void EXTI4_IRQHandler(void)
+{
+  if(EXTI_GetITStatus(EXTI_Line4) != RESET)
+  {
+    EXTI_ClearITPendingBit(EXTI_Line4);
+	
+    switch(truck.spi_state)
+	{
+		case SPI_SYNC_CODE:
+			truck.spi_buffer <<= 1;
+			truck.spi_buffer |= PIN_IS_SET(SPI_GPIO, MOSI_PIN);
+			if(truck.spi_buffer == 0xff2dd4e5)
+			{
+				truck.spi_buffer = 0;
+				truck.spi_state = SPI_PACKET;
+				truck.spi_counter = 0;
+			}
+			break;
+
+		case SPI_PACKET:
+			truck.spi_buffer <<= 1;
+			truck.spi_buffer |= PIN_IS_SET(SPI_GPIO, MOSI_PIN);
+			truck.spi_counter++;
+			if(truck.spi_counter >= 16)
+			{
+				truck.have_spi = 1;
+				truck.spi_state = SPI_SYNC_CODE;
+			}
+			break;
+	}
+  }
+}
+
+void handle_spi()
+{
+	if(truck.have_spi)
+	{
+		truck.path_x = truck.spi_buffer;
+		truck.have_spi = 0;
+		truck.spi_buffer = 0;
+		TRACE
+		print_number(truck.path_x);
+	}
+}
+
 int main(void)
 {
 	int i, j;
@@ -2023,12 +2126,16 @@ int main(void)
 	truck.rpm_time = truck.timer_high;
 	truck.rpm_status = PIN_IS_SET(RPM_GPIO, RPM_PIN);
 
+
+
+
+
 //	update_headlights();
 
 	init_bluetooth();
 	init_analog();
 	init_pwm();
-
+	init_spi();
 
 	init_cc1101();
 	cc1101_receiver();
@@ -2053,6 +2160,8 @@ int main(void)
 		handle_bluetooth();
 		handle_analog();
 		handle_rpm();
+		handle_spi();
+		
 		if(radio.got_packet)
 		{
 			radio.got_packet = 0;
