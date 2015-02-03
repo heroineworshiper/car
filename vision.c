@@ -102,7 +102,7 @@ vision_t vision;
 // Save unprocessed frames to files.  Only good with JPEG input
 //#define RECORD_INPUT
 // Read JPEG from files instead of video device.
-//#define PLAYBACK
+#define PLAYBACK
 // Record the processed images.
 #define RECORD_OUTPUT
 // Starting frame for playback
@@ -307,7 +307,7 @@ void* spi_thread(void *ptr)
 	}
 
 /*
- * 	printf("write_spi %d: ", __LINE__);
+ * 	printf("spi_thread %d: ", __LINE__);
  * 	int i;
  * 	for(i = 0; i < sizeof(tx_data); i++)
  * 	{
@@ -1190,6 +1190,7 @@ int read_frame()
 						}
 					}
 				}
+				vision.total_frames++;
 				return;
 			}
 		}
@@ -1858,7 +1859,7 @@ void detect_path()
 	int side_w = vision.side_w * vision.image_w / 100;
 	int search_step = vision.search_step;
 	int prev_search_step = search_step;
-	
+
 	int best_top_x = -1;
 	int best_bottom_x = -1;
 	int worst_top_x = -1;
@@ -1886,16 +1887,22 @@ void detect_path()
 			top_x += search_step)
 		{
 			int bottom_x;
+			int prev_mid[vision.image_h];
+			int prev_left[vision.image_h];
+			int prev_right[vision.image_h];
+			int64_t left_accum[3];
+			int64_t right_accum[3];
+
+			int have_prev = 0;
+			int left_total = 0;
+			int right_total = 0;
+			left_accum[0] = left_accum[1] = left_accum[2] = 0;
+			right_accum[0] = right_accum[1] = right_accum[2] = 0;
+
 			for(bottom_x = bottom_x1; 
 				bottom_x < bottom_x2; 
 				bottom_x += search_step)
 			{
-				int64_t left_accum[3];
-				int64_t right_accum[3];
-				int left_total = 0;
-				int right_total = 0;
-				left_accum[0] = left_accum[1] = left_accum[2] = 0;
-				right_accum[0] = right_accum[1] = right_accum[2] = 0;
 				int y;
 				for(y = top_y; y < bottom_y; y++)
 				{
@@ -1907,42 +1914,63 @@ void detect_path()
 						(bottom_y - top_y) +
 						top_x;
 
-// accumulate pixels on left
 					int i;
-					for(i = mid_x - side_w; i < mid_x; i++)
+					if(have_prev)
 					{
-						if(i >= 0 && i < vision.image_w)
+//printf("main %d prev_mid=%d mid_x=%d\n", __LINE__, prev_mid[y], mid_x);
+// shift pixels from right to left
+						for(i = prev_mid[y]; i < mid_x; i++)
 						{
-							left_accum[0] += y_row[i];
-							left_accum[1] += u_row[i];
-							left_accum[2] += v_row[i];
-	// debug
-	// pixel[0] = 0xff;
-	// pixel[1] = 0x0;
-	// pixel[2] = 0x0;
-							left_total++;
+							if(i >= 0 && i < vision.image_w)
+							{
+								left_accum[0] += y_row[i];
+								right_accum[0] -= y_row[i];
+								left_accum[1] += u_row[i];
+								right_accum[1] -= u_row[i];
+								left_accum[2] += v_row[i];
+								right_accum[2] -= v_row[i];
+								left_total++;
+								right_total--;
+							}
+						}
+					}
+					else
+					{
+// accumulate pixels on left
+						for(i = mid_x - side_w; i < mid_x; i++)
+						{
+							if(i >= 0 && i < vision.image_w)
+							{
+								left_accum[0] += y_row[i];
+								left_accum[1] += u_row[i];
+								left_accum[2] += v_row[i];
+
+								left_total++;
+							}
+						}
+
+// accumulate pixels on right
+						for(i = mid_x; i < mid_x + side_w; i++)
+						{
+							if(i >= 0 && i < vision.image_w)
+							{
+								right_accum[0] += y_row[i];
+								right_accum[1] += u_row[i];
+								right_accum[2] += v_row[i];
+// debug
+// pixel[0] = 0;
+// pixel[1] = 0;
+// pixel[2] = 0xff;
+
+								right_total++;
+							}
 						}
 					}
 
-	// accumulate pixels on right
-					for(i = mid_x; i < mid_x + side_w; i++)
-					{
-						if(i >= 0 && i < vision.image_w)
-						{
-							right_accum[0] += y_row[i];
-							right_accum[1] += u_row[i];
-							right_accum[2] += v_row[i];
-	// debug
-	// pixel[0] = 0;
-	// pixel[1] = 0;
-	// pixel[2] = 0xff;
-
-							right_total++;
-						}
-					}
-
-
+					prev_mid[y] = mid_x;
 				}
+
+				have_prev = 1;
 
 				float left_avg[3];
 				float right_avg[3];
@@ -1957,17 +1985,19 @@ void detect_path()
 					SQR(left_avg[2] - right_avg[2]));
 
 
-	//			printf("%f\n", diff);
-	// 			printf("top_x=%d bottom_x=%d left_avg=%d,%d,%d right_avg=%d,%d,%d diff=%f\n",
-	// 				top_x,
-	// 				bottom_x,
-	// 				left_avg[0],
-	// 				left_avg[1],
-	// 				left_avg[2],
-	// 				right_avg[0],
-	// 				right_avg[1],
-	// 				right_avg[2],
-	// 				diff);
+// printf("main %d diff=%f\n", __LINE__, diff);
+// printf("top_x=%d bottom_x=%d left_total=%d right_total=%d left_avg=%.2f,%.2f,%.2f right_avg=%.2f,%.2f,%.2f diff=%f\n",
+// 	top_x,
+// 	bottom_x,
+// 	left_total,
+// 	right_total,
+// 	left_avg[0],
+// 	left_avg[1],
+// 	left_avg[2],
+// 	right_avg[0],
+// 	right_avg[1],
+// 	right_avg[2],
+// 	diff);
 
 
 				if(best_abs_diff < 0 ||
@@ -1985,6 +2015,7 @@ void detect_path()
 					worst_bottom_x = bottom_x;
 				}
 			}
+//exit(1);
 		}
 		
 
@@ -2028,15 +2059,16 @@ void detect_path()
 	draw_line(bottom_x1, bottom_y, bottom_x2, bottom_y);
 	draw_line(top_x1, top_y, bottom_x1, bottom_y);
 	draw_line(top_x2, top_y, bottom_x2, bottom_y);
-	printf("detect_path %d: best_top_x=%d best_bottom_x=%d best_abs_diff=%f worst_top_x=%d worst_bottom_x=%d worst_abs_diff=%f\n",
-		__LINE__,
-		best_top_x,
-		best_bottom_x,
-		best_abs_diff,
-		worst_top_x,
-		worst_bottom_x,
-		worst_abs_diff);
+// 	printf("detect_path %d: best_top_x=%d best_bottom_x=%d best_abs_diff=%f worst_top_x=%d worst_bottom_x=%d worst_abs_diff=%f\n",
+// 		__LINE__,
+// 		best_top_x,
+// 		best_bottom_x,
+// 		best_abs_diff,
+// 		worst_top_x,
+// 		worst_bottom_x,
+// 		worst_abs_diff);
 	
+#ifndef X86
 	unsigned char packet[16];
 	packet[0] = 0xff;
 	packet[1] = 0x2d;
@@ -2045,6 +2077,7 @@ void detect_path()
 	packet[4] = ((int)prev_bottom_x) & 0xff;
 	packet[5] = (((int)prev_bottom_x) >> 8) & 0xff;
 	write_spi(packet, 6);
+#endif
 }
 
 void push_to_server()
