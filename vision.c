@@ -102,7 +102,7 @@ vision_t vision;
 // Save unprocessed frames to files.  Only good with JPEG input
 //#define RECORD_INPUT
 // Read JPEG from files instead of video device.
-#define PLAYBACK
+//#define PLAYBACK
 // Record the processed images.
 #define RECORD_OUTPUT
 // Starting frame for playback
@@ -1245,31 +1245,58 @@ int read_frame()
 // Capture YUYV
 	if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
 	{
-		for(i = 0; i < vision.image_h; i++)
+		if(vision.cam_h == vision.image_h)
 		{
-			unsigned char *input_row1 = vision.frame_buffer[buffer.index] +
-				(i * 2) * vision.cam_w * 2;
-			unsigned char *input_row2 = vision.frame_buffer[buffer.index] +
-				(i * 2 + 1) * vision.cam_w * 2;
-			unsigned char *output_y = vision.y_buffer + i * vision.image_w;
-			unsigned char *output_u = vision.u_buffer + i * vision.image_w;
-			unsigned char *output_v = vision.v_buffer + i * vision.image_w;
-
-			for(j = 0; j < vision.image_w; j++)
+			for(i = 0; i < vision.image_h; i++)
 			{
-				*output_y++ = ((uint32_t)input_row1[0] + 
-					(uint32_t)input_row1[2] + 
-					(uint32_t)input_row2[0] +
-					(uint32_t)input_row2[2]) / 4;
-				*output_u++ = ((uint32_t)input_row1[1] + 
-					(uint32_t)input_row2[1]) / 2;
-				*output_v++ = ((uint32_t)input_row1[3] +
-					(uint32_t)input_row2[3]) / 2;
-				
-				input_row1 += 4;
-				input_row2 += 4;
+				unsigned char *input_row = vision.frame_buffer[buffer.index] +
+					i * vision.cam_w * 2;
+				unsigned char *output_y = vision.y_buffer + i * vision.image_w;
+				unsigned char *output_u = vision.u_buffer + i * vision.image_w;
+				unsigned char *output_v = vision.v_buffer + i * vision.image_w;
+
+				for(j = 0; j < vision.image_w; j++)
+				{
+					*output_y++ = input_row[0];
+					*output_y++ = input_row[2];
+					*output_u++ = input_row[1];
+					*output_u++ = input_row[1];
+					*output_v++ = input_row[3];
+					*output_v++ = input_row[3];
+
+					input_row += 4;
+				}
 			}
 		}
+		else
+		{
+			for(i = 0; i < vision.image_h; i++)
+			{
+				unsigned char *input_row1 = vision.frame_buffer[buffer.index] +
+					(i * 2) * vision.cam_w * 2;
+				unsigned char *input_row2 = vision.frame_buffer[buffer.index] +
+					(i * 2 + 1) * vision.cam_w * 2;
+				unsigned char *output_y = vision.y_buffer + i * vision.image_w;
+				unsigned char *output_u = vision.u_buffer + i * vision.image_w;
+				unsigned char *output_v = vision.v_buffer + i * vision.image_w;
+
+				for(j = 0; j < vision.image_w; j++)
+				{
+					*output_y++ = ((uint32_t)input_row1[0] + 
+						(uint32_t)input_row1[2] + 
+						(uint32_t)input_row2[0] +
+						(uint32_t)input_row2[2]) / 4;
+					*output_u++ = ((uint32_t)input_row1[1] + 
+						(uint32_t)input_row2[1]) / 2;
+					*output_v++ = ((uint32_t)input_row1[3] +
+						(uint32_t)input_row2[3]) / 2;
+
+					input_row1 += 4;
+					input_row2 += 4;
+				}
+			}
+		}
+
 		picture_size = vision.picture_size = buffer.bytesused;
 	}
 	else
@@ -1476,6 +1503,12 @@ void init_vision()
 		printf("Failed to open settings file %s\n", CONFIG_PATH);
 		exit(1);
 	}
+	
+	vision.cam_w = 640;
+	vision.cam_h = 480;
+	vision.image_w = 320;
+	vision.image_h = 240;
+
 
 	char key[TEXTLEN];
 	char value[TEXTLEN];
@@ -1507,6 +1540,10 @@ void init_vision()
 				if(!strcasecmp(ptr, "SIDE_W")) vision.side_w = atoi(value);
 				else
 				if(!strcasecmp(ptr, "SEARCH_STEP")) vision.search_step = atoi(value);
+				else
+				if(!strcasecmp(ptr, "IMAGE_W")) vision.image_w = atoi(value);
+				else
+				if(!strcasecmp(ptr, "IMAGE_H")) vision.image_h = atoi(value);
 			}
 			else
 			{
@@ -1527,11 +1564,8 @@ void init_vision()
 	printf("bottom_y=%d\n", vision.bottom_y);
 	printf("side_w=%d\n", vision.side_w);
 	printf("search_step=%d\n", vision.search_step);
-
-	vision.cam_w = 640;
-	vision.cam_h = 480;
-	vision.image_w = 320;
-	vision.image_h = 240;
+	printf("image_w=%d\n", vision.image_w);
+	printf("image_h=%d\n", vision.image_h);
 
 	vision.y_buffer = malloc(vision.image_w * vision.image_h);
 	vision.u_buffer = malloc(vision.image_w * vision.image_h);
@@ -1893,16 +1927,26 @@ void detect_path()
 			int64_t left_accum[3];
 			int64_t right_accum[3];
 
+#if 1
 			int have_prev = 0;
 			int left_total = 0;
 			int right_total = 0;
 			left_accum[0] = left_accum[1] = left_accum[2] = 0;
 			right_accum[0] = right_accum[1] = right_accum[2] = 0;
+#endif
 
 			for(bottom_x = bottom_x1; 
 				bottom_x < bottom_x2; 
 				bottom_x += search_step)
 			{
+#if 0
+				int have_prev = 0;
+				int left_total = 0;
+				int right_total = 0;
+				left_accum[0] = left_accum[1] = left_accum[2] = 0;
+				right_accum[0] = right_accum[1] = right_accum[2] = 0;
+#endif
+
 				int y;
 				for(y = top_y; y < bottom_y; y++)
 				{
@@ -1913,61 +1957,80 @@ void detect_path()
 						(bottom_x - top_x) / 
 						(bottom_y - top_y) +
 						top_x;
+					int left_start = mid_x - side_w;
+					int left_end = mid_x;
+					int right_start = mid_x;
+					int right_end = mid_x + side_w;
+					CLAMP(mid_x, 0, vision.image_w - 1);
+					CLAMP(left_start, 0, vision.image_w - 1);
+					CLAMP(left_end, 0, vision.image_w - 1);
+					CLAMP(right_start, 0, vision.image_w - 1);
+					CLAMP(right_end, 0, vision.image_w - 1);
+
 
 					int i;
 					if(have_prev)
 					{
 //printf("main %d prev_mid=%d mid_x=%d\n", __LINE__, prev_mid[y], mid_x);
+// subtract pixels from left
+						for(i = prev_left[y]; i < left_start; i++)
+						{
+							left_accum[0] -= y_row[i];
+							left_accum[1] -= u_row[i];
+							left_accum[2] -= v_row[i];
+							left_total--;
+						}
+
 // shift pixels from right to left
 						for(i = prev_mid[y]; i < mid_x; i++)
 						{
-							if(i >= 0 && i < vision.image_w)
-							{
-								left_accum[0] += y_row[i];
-								right_accum[0] -= y_row[i];
-								left_accum[1] += u_row[i];
-								right_accum[1] -= u_row[i];
-								left_accum[2] += v_row[i];
-								right_accum[2] -= v_row[i];
-								left_total++;
-								right_total--;
-							}
+							left_accum[0] += y_row[i];
+							right_accum[0] -= y_row[i];
+							left_accum[1] += u_row[i];
+							right_accum[1] -= u_row[i];
+							left_accum[2] += v_row[i];
+							right_accum[2] -= v_row[i];
+							left_total++;
+							right_total--;
+						}
+						
+// add pixels to right
+						for(i = prev_right[y]; i < right_end; i++)
+						{
+							right_accum[0] += y_row[i];
+							right_accum[1] += u_row[i];
+							right_accum[2] += v_row[i];
+							right_total++;
 						}
 					}
 					else
 					{
 // accumulate pixels on left
-						for(i = mid_x - side_w; i < mid_x; i++)
+						for(i = left_start; i < left_end; i++)
 						{
-							if(i >= 0 && i < vision.image_w)
-							{
-								left_accum[0] += y_row[i];
-								left_accum[1] += u_row[i];
-								left_accum[2] += v_row[i];
-
-								left_total++;
-							}
+							left_accum[0] += y_row[i];
+							left_accum[1] += u_row[i];
+							left_accum[2] += v_row[i];
+							left_total++;
 						}
 
 // accumulate pixels on right
-						for(i = mid_x; i < mid_x + side_w; i++)
+						for(i = right_start; i < right_end; i++)
 						{
-							if(i >= 0 && i < vision.image_w)
-							{
-								right_accum[0] += y_row[i];
-								right_accum[1] += u_row[i];
-								right_accum[2] += v_row[i];
+							right_accum[0] += y_row[i];
+							right_accum[1] += u_row[i];
+							right_accum[2] += v_row[i];
+							right_total++;
 // debug
 // pixel[0] = 0;
 // pixel[1] = 0;
 // pixel[2] = 0xff;
-
-								right_total++;
-							}
 						}
 					}
 
 					prev_mid[y] = mid_x;
+					prev_left[y] = left_start;
+					prev_right[y] = right_end;
 				}
 
 				have_prev = 1;
@@ -1986,18 +2049,20 @@ void detect_path()
 
 
 // printf("main %d diff=%f\n", __LINE__, diff);
-// printf("top_x=%d bottom_x=%d left_total=%d right_total=%d left_avg=%.2f,%.2f,%.2f right_avg=%.2f,%.2f,%.2f diff=%f\n",
-// 	top_x,
-// 	bottom_x,
-// 	left_total,
-// 	right_total,
-// 	left_avg[0],
-// 	left_avg[1],
-// 	left_avg[2],
-// 	right_avg[0],
-// 	right_avg[1],
-// 	right_avg[2],
-// 	diff);
+/*
+ * printf("top_x=%d bottom_x=%d left_total=%d right_total=%d left_avg=%.2f,%.2f,%.2f right_avg=%.2f,%.2f,%.2f diff=%f\n",
+ * top_x,
+ * bottom_x,
+ * left_total,
+ * right_total,
+ * left_avg[0],
+ * left_avg[1],
+ * left_avg[2],
+ * right_avg[0],
+ * right_avg[1],
+ * right_avg[2],
+ * diff);
+ */
 
 
 				if(best_abs_diff < 0 ||
