@@ -42,8 +42,25 @@ ARM_LFLAGS := -mcpu=cortex-m4 \
 	-nostdlib \
 	-nostdinc \
 	$(ARM_LIBM) $(ARM_LIBC)
-GCC_PI := /opt/pi/bin/bcm2708hardfp-gcc
+GCC_PI := /opt/pi/bin/bcm2708hardfp-g++
 PI_CFLAGS := -O2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Ijpeg
+
+OPENCV_DIR := ../opencv-2.4.11/bin/
+OPENCV_CFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --cflags opencv )
+OPENCV_LFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --libs opencv )
+
+
+#OPENCV_DIR := $(shell expr /root/hvirtual/thirdparty/OpenCV* )
+#OPENCV_LFLAGS := $(OPENCV_DIR)/libopencv.a
+#OPENCV_CFLAGS := -I$(OPENCV_DIR)/modules/core/include/ \
+#	-I$(OPENCV_DIR)/modules/features2d/include/ \
+#	-I$(OPENCV_DIR)/modules/calib3d/include/ \
+#	-I$(OPENCV_DIR)/modules/flann/include/ \
+#	-I$(OPENCV_DIR)/modules/imgproc/include/ \
+#	-I$(OPENCV_DIR)/modules/legacy/include/ \
+#	-I$(OPENCV_DIR)/modules/highgui/include/ \
+#	-I$(OPENCV_DIR)/modules/objdetect/include/ \
+#	-I$(OPENCV_DIR)/modules/video/include/
 
 
 $(shell echo $(SDCC_CFLAGS) > sdcc_cflags)
@@ -118,6 +135,7 @@ ARM_OBJS := \
 
 VISION_OBJS := \
 	vision.o \
+	vision_opencv.o \
 	jpeg/cdjpeg.o \
 	jpeg/jcapimin.o \
 	jpeg/jcapistd.o \
@@ -203,12 +221,12 @@ vision: $(VISION_OBJS)
 $(VISION_OBJS):
 	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
 
-#X86 version
+# X86 version
 #vision: $(VISION_OBJS)
-#	$(GCC) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
+#	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
 
 #$(VISION_OBJS):
-#	$(GCC) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
+#	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
 
 
 
@@ -347,6 +365,10 @@ sounds.hex: pcmtoasm
 distance.hex: distance.s distance.inc
 	gpasm -o $@ distance.s
 
+lidar_test: lidar_test.c
+	gcc -g lidar_test.c -o lidar_test -lm -lX11 -lXext -ljpeg
+
+
 clean:
 	rm -f $(ARM_OBJS) \
 		$(VISION_OBJS) \
@@ -438,7 +460,7 @@ arm_truck.o: 			     arm_truck.c
 cc1101.o: 			     cc1101.c
 imu.o: 			   	     imu.c
 vision.o: vision.c
-
+vision_opencv.o: vision_opencv.c
 
 
 

@@ -10,11 +10,11 @@
 // timer for packet flashing
 #define LED_DELAY2 2
 // green pin when high
-#define LED_PIN1 GPIO_Pin_1
-#define LED_GPIO1 GPIOB
+#define LED_PIN1 GPIO_Pin_4
+#define LED_GPIO1 GPIOC
 // red pin when high
-#define LED_PIN2 GPIO_Pin_2
-#define LED_GPIO2 GPIOB
+#define LED_PIN2 GPIO_Pin_5
+#define LED_GPIO2 GPIOC
 
 typedef struct
 {
@@ -72,13 +72,11 @@ typedef struct
 	int throttle_state;
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
-#define THROTTLE_WAIT 2
-#define THROTTLE_AUTO 3
+#define THROTTLE_AUTO 2
 
 	pid_t heading_pid;
 	pid_t throttle_pid;
 	pid_t rpm_pid;
-	pid_t path_pid;
 
 	int battery;
 	int battery_accum;
@@ -104,7 +102,6 @@ typedef struct
 	int gyro_count;
 	int gyro_min;
 	int gyro_max;
-	float max_gyro_drift;
 	int ref_accum;
 	int ref_count;
 	int current_accum;
@@ -136,7 +133,6 @@ typedef struct
 // maximum analog amount gyros can move while calculating center
 	int gyro_center_max;
 	float gyro_center;
-	float prev_gyro_center;
 	int angle_to_gyro;
 // throttle magnitude 0 - 100
 	int max_throttle_fwd;
@@ -178,16 +174,6 @@ typedef struct
 	int rpm_dv_size;
 
 
-    int spi_counter;
-    int spi_state;
-    int have_spi;
-    uint32_t spi_buffer;
-#define SPI_SYNC_CODE 0
-#define SPI_PACKET 1
-    int path_center;
-	int path_x;
-	derivative_t path_dx;
-	int path_dx_size;
 	
 	int throttle_time;
 	int debug_counter;

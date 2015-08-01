@@ -26,7 +26,6 @@
 
 
 #include <stdio.h>
-#include <stdint.h>
 #include <linux/videodev2.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -36,7 +35,7 @@
 //#define DEVICE_BUFFERS 8
 #define DEVICE_BUFFERS 2
 //#define USE_COLOR
-//#define USE_OPENCV
+
 
 
 // General purpose timer
@@ -58,9 +57,7 @@ typedef struct
 // imported image size
 	int cam_w, cam_h;
 // working image size
-	int working_w, working_h;
-// output image size for debugging
-	int output_w, output_h;
+	int image_w, image_h;
 // coordinates from config file
 // range of top X for the line 0 - 100
 	int top_x1;
@@ -105,13 +102,7 @@ typedef struct
 	unsigned char *y_buffer;
 	unsigned char *u_buffer;
 	unsigned char *v_buffer;
-	unsigned int *accum;
 	unsigned char *mask;
-
-// output image
-	unsigned char *out_y;
-	unsigned char *out_u;
-	unsigned char *out_v;
 
 // Total frames read or written
 	int total_frames;
@@ -122,18 +113,12 @@ typedef struct
 	int led_on;
 } vision_t;
 
-extern vision_t vision;
 
 void init_vision();
 // Reset the timer.  This is not reentrant.
 void reset_timer(cartimer_t *ptr);
 // Get difference since last reset in ms.  This is reentrant.
 int get_timer_difference(cartimer_t *ptr);
-void draw_line(int x1, int y1, int x2, int y2);
-void draw_pixel(int x, int y);
-void draw_rect(int x1, int y1, int x2, int y2);
-int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_buffer);
-void compress_jpeg();
 
 
 #endif // VISION_H

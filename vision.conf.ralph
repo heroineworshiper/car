@@ -1,25 +1,19 @@
 # settings for vision
 # range of top X for the line 0 - 100
-TOP_X1 25
-TOP_X2 75
-TOP_Y 0
+TOP_X1 0
+TOP_X2 100
+TOP_Y 40
 # range of bottom X for the line 0 - 100
 BOTTOM_X1 0
 BOTTOM_X2 100
-BOTTOM_Y 100
+BOTTOM_Y 60
 # range on each side of the line 0 - 100
 SIDE_W 25
 # pixels for initial search 1 - 320
 SEARCH_STEP 8
 
-# input image size
-CAM_W 320
-CAM_H 240
 
 # working image size, 640x480 or 320x240
-WORKING_W 320
-WORKING_H 240
+IMAGE_W 320
+IMAGE_H 240
 
-# output image size.  2x width for feature matching
-OUTPUT_W 320
-OUTPUT_H 240

@@ -1,5 +1,5 @@
 /*
- * STM32F4 Wifi flight controller
+ * STM32F4 Car controller for brushless 2 wheeler
  * Copyright (C) 2012-2014 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify

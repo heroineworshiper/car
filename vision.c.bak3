@@ -20,7 +20,7 @@
 
 
 // Lane following, using USB cam
-// ralph transform + chroma key
+// ralph transform
 
 
 
@@ -46,7 +46,6 @@
 #include <setjmp.h>
 
 vision_t vision;
-void detect_path();
 
 
 #define SQR(x) ((x) * (x))
@@ -84,8 +83,7 @@ void detect_path();
 
 // Set to 0 to increase framerate
 //#define SATURATION 0
-//#define SATURATION 34
-#define SATURATION 64
+#define SATURATION 34
 
 
 #define GAIN 0
@@ -105,13 +103,9 @@ void detect_path();
 // Save unprocessed frames to files.  Only good with JPEG input
 //#define RECORD_INPUT
 // Read JPEG from files instead of video device.
-//#define PLAYBACK
+#define PLAYBACK
 // Record the processed images.
 #define RECORD_OUTPUT
-
-
-// quality of recorded JPEGs
-#define JPEG_QUALITY 90
 // Starting frame for playback
 #define STARTING_FRAME 0
 // Output file to record
@@ -122,8 +116,6 @@ void detect_path();
 #define DEVICE_PATH "/dev/video0"
 
 #define CONFIG_PATH "vision.conf"
-
-#define PICTURE_DATA_SIZE 0x100000
 
 #define LED_GPIO 2
 
@@ -299,16 +291,14 @@ void* spi_thread(void *ptr)
 		sem_wait(&vision.spi_send_lock);
 //printf("spi_thread %d\n", __LINE__);
 	
-		struct spi_ioc_transfer tr;
-		
-		
-		tr.tx_buf = (unsigned long)vision.spi_tx_data;
-		tr.rx_buf = (unsigned long)vision.spi_rx_data;
-		tr.len = vision.spi_tx_size;
-		tr.delay_usecs = 0;
-		tr.speed_hz = SPI_SPEED;
-		tr.bits_per_word = SPI_BITS;
-		
+		struct spi_ioc_transfer tr = {
+			.tx_buf = (unsigned long)vision.spi_tx_data,
+			.rx_buf = (unsigned long)vision.spi_rx_data,
+			.len = vision.spi_tx_size,
+			.delay_usecs = 0,
+			.speed_hz = SPI_SPEED,
+			.bits_per_word = SPI_BITS,
+		};
 
 		ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
 //printf("spi_thread %d\n", __LINE__);
@@ -383,21 +373,21 @@ void append_tar(char *filename, unsigned char *data, int size)
 	const unsigned char user_id[] = { 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe };
 	const unsigned char blank_checksum[] = { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20 };
 	bzero(header, 512);
-	strcpy((char*)header, filename);
-	sprintf((char*)header + 100, "0000644");
+	strcpy(header, filename);
+	sprintf(header + 100, "0000644");
 	memcpy(header + 108, user_id, 8);
 	memcpy(header + 116, user_id, 8);
-	sprintf((char*)header + 124, "%011o", size);
-	sprintf((char*)header + 136, "%011o", 0);
+	sprintf(header + 124, "%011o", size);
+	sprintf(header + 136, "%011o", 0);
 	memcpy(header + 148, blank_checksum, 8);
 	header[156] = 0x30;
-	sprintf((char*)header + 257, "ustar  ");
-	sprintf((char*)header + 265, "nfsnobody");
-	sprintf((char*)header + 297, "nfsnobody");
+	sprintf(header + 257, "ustar  ");
+	sprintf(header + 265, "nfsnobody");
+	sprintf(header + 297, "nfsnobody");
 	int chksum = 0;
 	int i;
 	for(i = 0; i < 512; i++) chksum += header[i];
-	sprintf((char*)header + 148, "%o", chksum);
+	sprintf(header + 148, "%o", chksum);
 	
 	fwrite(header, 512, 1, tar_fd);
 	fwrite(data, size, 1, tar_fd);
@@ -932,10 +922,10 @@ void close_input(int fd)
 }
 
 
-//typedef struct 
-//{
-//	struct jpeg_source_mgr pub;	/* public fields */
-//} jpeg_source_mgr;
+typedef struct 
+{
+	struct jpeg_source_mgr pub;	/* public fields */
+} jpeg_source_mgr;
 typedef jpeg_source_mgr* jpeg_src_ptr;
 
 
@@ -963,8 +953,8 @@ METHODDEF(boolean) fill_input_buffer(j_decompress_ptr cinfo)
 printf("fill_input_buffer %d '%02x'\n", __LINE__, jpeg_input_buffer[0]);
 	jpeg_input_buffer[0] = (JOCTET)0xFF;
 	jpeg_input_buffer[1] = (JOCTET)M_EOI;
-	src->next_input_byte = jpeg_input_buffer;
-	src->bytes_in_buffer = 2;
+	src->pub.next_input_byte = jpeg_input_buffer;
+	src->pub.bytes_in_buffer = 2;
 
 	return TRUE;
 }
@@ -974,8 +964,8 @@ METHODDEF(void) skip_input_data(j_decompress_ptr cinfo, long num_bytes)
 {
 	jpeg_src_ptr src = (jpeg_src_ptr)cinfo->src;
 
-	src->next_input_byte += num_bytes;
-	src->bytes_in_buffer -= num_bytes;
+	src->pub.next_input_byte += num_bytes;
+	src->pub.bytes_in_buffer -= num_bytes;
 }
 
 
@@ -998,26 +988,27 @@ METHODDEF(void) my_jpeg_error_exit (j_common_ptr cinfo)
 }
 
 
-int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_buffer)
+int read_frame()
 {
-	int picture_size = 0;
 	int i, j;
+	int picture_size = 0;
 
+
+#ifdef PLAYBACK
 	static const uint8_t start_code[] = 
 	{
-//		0xff, 0xd8, 0xff, 0xe0, 0x00, 0x21, 0x41, 0x56, 0x49, 0x31
-		0xff, 0xd8, 0xff, 0xe0
+		0xff, 0xd8, 0xff, 0xe0, 0x00, 0x21, 0x41, 0x56, 0x49, 0x31
 	};
-#define START_CODE_SIZE sizeof(start_code)
-	if(jpeg_input_buffer == 0) jpeg_input_buffer = (uint8_t*)malloc(JPEG_INPUT_ALLOC);
+#define START_CODE_SIZE 10
+	if(jpeg_input_buffer == 0) jpeg_input_buffer = malloc(JPEG_INPUT_ALLOC);
 	jpeg_input_offset = 0;
 	jpeg_input_size = 0;
 
 // Find next start code
 	int state = 0;
-	while(!feof(fd))
+	while(!feof(vision.playback_fd))
 	{
-		uint8_t c = fgetc(fd);
+		uint8_t c = fgetc(vision.playback_fd);
 		if(c == start_code[state])
 		{
 			jpeg_input_buffer[jpeg_input_size++] = c;
@@ -1027,10 +1018,10 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 // got it
 // read rest of frame
 				state = 0;
-				while(!feof(fd) &&
+				while(!feof(vision.playback_fd) &&
 					jpeg_input_size < JPEG_INPUT_ALLOC)
 				{
-					uint8_t c = fgetc(fd);
+					uint8_t c = fgetc(vision.playback_fd);
 					jpeg_input_buffer[jpeg_input_size++] = c;
 					if(c == start_code[state])
 					{
@@ -1045,9 +1036,8 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 					if(state >= START_CODE_SIZE)
 					{
 // rewind
-						fseek(fd, -START_CODE_SIZE, SEEK_CUR);
+						fseek(vision.playback_fd, -START_CODE_SIZE, SEEK_CUR);
 						jpeg_input_size -= START_CODE_SIZE;
-						picture_size = jpeg_input_size;
 						break;
 					}
 				}
@@ -1057,7 +1047,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 				{
 /* If we get here, the JPEG code has signaled an error. */
 					printf("read_frame %d: JPEG error\n", __LINE__);
-					return 0;
+					return;
 				}
 
 				struct jpeg_decompress_struct cinfo;
@@ -1070,13 +1060,13 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
         			JPOOL_PERMANENT,
 					sizeof(jpeg_source_mgr));
 				jpeg_src_ptr src = (jpeg_src_ptr)cinfo.src;
-				src->init_source = init_source;
-				src->fill_input_buffer = fill_input_buffer;
-				src->skip_input_data = skip_input_data;
-				src->resync_to_restart = jpeg_resync_to_restart; /* use default method */
-				src->term_source = term_source;
-				src->next_input_byte = jpeg_input_buffer;
-				src->bytes_in_buffer = jpeg_input_size;
+				src->pub.init_source = init_source;
+				src->pub.fill_input_buffer = fill_input_buffer;
+				src->pub.skip_input_data = skip_input_data;
+				src->pub.resync_to_restart = jpeg_resync_to_restart; /* use default method */
+				src->pub.term_source = term_source;
+				src->pub.next_input_byte = jpeg_input_buffer;
+				src->pub.bytes_in_buffer = jpeg_input_size;
 				jpeg_read_header(&cinfo, 1);
 				cinfo.raw_data_out = TRUE;
 				cinfo.err->num_warnings = 1;
@@ -1086,7 +1076,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 				unsigned char **mcu_rows[3];
 				for(i = 0; i < 3; i++)
 				{
-					mcu_rows[i] = (unsigned char**)malloc(16 * sizeof(unsigned char*));
+					mcu_rows[i] = malloc(16 * sizeof(unsigned char*));
 				}
 
 
@@ -1098,12 +1088,12 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 						int output_y = cinfo.output_scanline + j;
 						mcu_rows[0][j] = vision.picture_data +
 							output_y * vision.cam_w;
-						if(!(j % 2))
+						if(j < 8)
 						{
-							mcu_rows[1][j / 2] = vision.picture_data +
+							mcu_rows[1][j] = vision.picture_data +
 								vision.cam_w * vision.cam_h +
 								(output_y / 2) * (vision.cam_w / 2);
-							mcu_rows[2][j / 2] = vision.picture_data +
+							mcu_rows[2][j] = vision.picture_data +
 								vision.cam_w * vision.cam_h +
 								vision.cam_w * vision.cam_h / 4 +
 								(output_y / 2) * (vision.cam_w / 2);
@@ -1114,10 +1104,15 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 					jpeg_read_raw_data(&cinfo, 
 						mcu_rows, 
 						vision.cam_h);
-
 //printf("read_frame %d\n", __LINE__);
 				}
 
+//memset(vision.y_buffer, 0xff, vision.image_w * vision.image_h);
+/*
+ * memset(vision.picture_data, 
+ * 	0x00, 
+ * 	vision.image_w * vision.image_h / 4);
+ */
 
 //printf("read_frame %d\n", __LINE__);
 				jpeg_finish_decompress(&cinfo);
@@ -1130,16 +1125,16 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 				}
 
 // move data into working buffer
-				if(vision.cam_h == vision.working_h)
+				if(vision.cam_h == vision.image_h)
 				{
-					for(i = 0; i < vision.working_h; i += 2)
+					for(i = 0; i < vision.image_h; i += 2)
 					{
-						unsigned char *out_y1 = y_buffer + i * vision.working_w;
-						unsigned char *out_y2 = y_buffer + (i + 1) * vision.working_w;
-						unsigned char *out_u1 = u_buffer + i * vision.working_w;
-						unsigned char *out_u2 = u_buffer + (i + 1) * vision.working_w;
-						unsigned char *out_v1 = v_buffer + i * vision.working_w;
-						unsigned char *out_v2 = v_buffer + (i + 1) * vision.working_w;
+						unsigned char *out_y1 = vision.y_buffer + i * vision.image_w;
+						unsigned char *out_y2 = vision.y_buffer + (i + 1) * vision.image_w;
+						unsigned char *out_u1 = vision.u_buffer + i * vision.image_w;
+						unsigned char *out_u2 = vision.u_buffer + (i + 1) * vision.image_w;
+						unsigned char *out_v1 = vision.v_buffer + i * vision.image_w;
+						unsigned char *out_v2 = vision.v_buffer + (i + 1) * vision.image_w;
 						unsigned char *in_y1 = vision.picture_data + i * vision.cam_w;
 						unsigned char *in_y2 = vision.picture_data + (i + 1) * vision.cam_w;
 						unsigned char *in_u = vision.picture_data + 
@@ -1149,7 +1144,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 							vision.cam_w * vision.cam_h +
 							vision.cam_w * vision.cam_h / 4 +
 							(i / 2) * (vision.cam_w / 2);
-						for(j = 0; j < vision.working_w; j += 2)
+						for(j = 0; j < vision.image_w; j += 2)
 						{
 							*out_y1++ = *in_y1++;
 							*out_y1++ = *in_y1++;
@@ -1169,7 +1164,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 				else
 				{
 // shrink input to working size
-					for(i = 0; i < vision.working_h; i++)
+					for(i = 0; i < vision.image_h; i++)
 					{
 						unsigned char *in_y1 = vision.picture_data + (i * 2) * vision.cam_w;
 						unsigned char *in_y2 = vision.picture_data + (i * 2 + 1) * vision.cam_w;
@@ -1180,10 +1175,10 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 							vision.cam_w * vision.cam_h +
 							vision.cam_w * vision.cam_h / 4 +
 							i * (vision.cam_w / 2);
-						unsigned char *out_y = y_buffer + i * vision.working_w;
-						unsigned char *out_u = u_buffer + i * vision.working_w;
-						unsigned char *out_v = v_buffer + i * vision.working_w;
-						for(j = 0; j < vision.working_w; j++)
+						unsigned char *out_y = vision.y_buffer + i * vision.image_w;
+						unsigned char *out_u = vision.u_buffer + i * vision.image_w;
+						unsigned char *out_v = vision.v_buffer + i * vision.image_w;
+						for(j = 0; j < vision.image_w; j++)
 						{
 							*out_y++ = ((uint32_t)*in_y1++ + 
 								(uint32_t)*in_y1++ + 
@@ -1197,7 +1192,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 					}
 				}
 				vision.total_frames++;
-				return picture_size;
+				return;
 			}
 		}
 		else
@@ -1207,17 +1202,6 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 		}
 	}
 
-	return picture_size;
-}
-
-int read_frame()
-{
-	int i, j;
-	int picture_size = 0;
-	int result = 0;
-
-#ifdef PLAYBACK
-	picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
 
 #else // PLAYBACK
 
@@ -1262,17 +1246,17 @@ int read_frame()
 // Capture YUYV
 	if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
 	{
-		if(vision.cam_h == vision.working_h)
+		if(vision.cam_h == vision.image_h)
 		{
-			for(i = 0; i < vision.working_h; i++)
+			for(i = 0; i < vision.image_h; i++)
 			{
 				unsigned char *input_row = vision.frame_buffer[buffer.index] +
 					i * vision.cam_w * 2;
-				unsigned char *output_y = vision.y_buffer + i * vision.working_w;
-				unsigned char *output_u = vision.u_buffer + i * vision.working_w;
-				unsigned char *output_v = vision.v_buffer + i * vision.working_w;
+				unsigned char *output_y = vision.y_buffer + i * vision.image_w;
+				unsigned char *output_u = vision.u_buffer + i * vision.image_w;
+				unsigned char *output_v = vision.v_buffer + i * vision.image_w;
 
-				for(j = 0; j < vision.working_w; j++)
+				for(j = 0; j < vision.image_w; j++)
 				{
 					*output_y++ = input_row[0];
 					*output_y++ = input_row[2];
@@ -1287,17 +1271,17 @@ int read_frame()
 		}
 		else
 		{
-			for(i = 0; i < vision.working_h; i++)
+			for(i = 0; i < vision.image_h; i++)
 			{
 				unsigned char *input_row1 = vision.frame_buffer[buffer.index] +
 					(i * 2) * vision.cam_w * 2;
 				unsigned char *input_row2 = vision.frame_buffer[buffer.index] +
 					(i * 2 + 1) * vision.cam_w * 2;
-				unsigned char *output_y = vision.y_buffer + i * vision.working_w;
-				unsigned char *output_u = vision.u_buffer + i * vision.working_w;
-				unsigned char *output_v = vision.v_buffer + i * vision.working_w;
+				unsigned char *output_y = vision.y_buffer + i * vision.image_w;
+				unsigned char *output_u = vision.u_buffer + i * vision.image_w;
+				unsigned char *output_v = vision.v_buffer + i * vision.image_w;
 
-				for(j = 0; j < vision.working_w; j++)
+				for(j = 0; j < vision.image_w; j++)
 				{
 					*output_y++ = ((uint32_t)input_row1[0] + 
 						(uint32_t)input_row1[2] + 
@@ -1382,7 +1366,7 @@ METHODDEF(void) init_destination(j_compress_ptr cinfo)
 /* Set the pointer to the preallocated buffer */
   	dest->buffer = vision.picture_data;
   	dest->pub.next_output_byte = vision.picture_data;
-  	dest->pub.free_in_buffer = PICTURE_DATA_SIZE;
+  	dest->pub.free_in_buffer = vision.image_w * vision.image_h * 3;
 }
 
 METHODDEF(boolean) empty_output_buffer(j_compress_ptr cinfo)
@@ -1396,7 +1380,7 @@ METHODDEF(void) term_destination(j_compress_ptr cinfo)
 {
 /* Just get the length */
 	mjpeg_dest_ptr dest = (mjpeg_dest_ptr)cinfo->dest;
-	vision.picture_size = PICTURE_DATA_SIZE - 
+	vision.picture_size = vision.image_w * vision.image_h * 3 - 
 		dest->pub.free_in_buffer;
 }
 
@@ -1426,29 +1410,18 @@ GLOBAL(void) jpeg_buffer_dest(j_compress_ptr cinfo)
 }
 
 
-void print_buffer(unsigned char *data, int size)
-{
-	int i;
-	for(i = 0; i < size; i++)
-	{
-		printf("%02x ", data[i]);
-		if(!((i + 1) % 16)) printf("\n");
-	}
-	printf("\n");
-}
-
 void compress_jpeg()
 {
 	struct jpeg_compress_struct jpeg_compress;
  	struct jpeg_error_mgr jerr;
 	jpeg_compress.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&jpeg_compress);
-	jpeg_compress.image_width = vision.output_w;
-	jpeg_compress.image_height = vision.output_h;
+	jpeg_compress.image_width = vision.image_w;
+	jpeg_compress.image_height = vision.image_h;
 	jpeg_compress.input_components = 3;
 	jpeg_compress.in_color_space = JCS_RGB;
 	jpeg_set_defaults(&jpeg_compress);
-	jpeg_set_quality(&jpeg_compress, JPEG_QUALITY, 0);
+	jpeg_set_quality(&jpeg_compress, 80, 0);
 	jpeg_compress.dct_method = JDCT_IFAST;
 	jpeg_compress.comp_info[0].h_samp_factor = 2;
 	jpeg_compress.comp_info[0].v_samp_factor = 2;
@@ -1462,27 +1435,25 @@ void compress_jpeg()
 	unsigned char **mcu_rows[3];
 	for(i = 0; i < 3; i++)
 	{
-		mcu_rows[i] = (unsigned char**)malloc(16 * sizeof(unsigned char*));
+		mcu_rows[i] = malloc(16 * sizeof(unsigned char*));
 	}
 
 	jpeg_compress.raw_data_in = TRUE;
 	jpeg_start_compress(&jpeg_compress, TRUE);
 	while(jpeg_compress.next_scanline < jpeg_compress.image_height)
 	{
-		for(i = 0; 
-			i < 16 && i + jpeg_compress.next_scanline < vision.output_h; 
-			i++)
+		for(i = 0; i < 16; i++)
 		{
-			mcu_rows[0][i] = vision.out_y + 
-				(jpeg_compress.next_scanline + i) * vision.output_w;
+			mcu_rows[0][i] = vision.y_buffer + 
+				(jpeg_compress.next_scanline + i) * vision.image_w;
 			if(i < 8)
 			{
-				unsigned char *u_row = mcu_rows[1][i] = vision.out_u +
-					(jpeg_compress.next_scanline + i * 2) * vision.output_w;
-				unsigned char *v_row = mcu_rows[2][i] = vision.out_v +
-					(jpeg_compress.next_scanline + i * 2) * vision.output_w;
+				unsigned char *u_row = mcu_rows[1][i] = vision.u_buffer +
+					(jpeg_compress.next_scanline + i * 2) * vision.image_w;
+				unsigned char *v_row = mcu_rows[2][i] = vision.v_buffer +
+					(jpeg_compress.next_scanline + i * 2) * vision.image_w;
 // pack UV data for this line
-				for(j = 0; j < vision.output_w / 2; j++)
+				for(j = 0; j < vision.image_w / 2; j++)
 				{
 					u_row[j] = u_row[j * 2];
 					v_row[j] = v_row[j * 2];
@@ -1492,7 +1463,7 @@ void compress_jpeg()
 
 		jpeg_write_raw_data(&jpeg_compress, 
 			mcu_rows, 
-			vision.output_h);
+			vision.image_h);
 	}
 	
 	
@@ -1506,8 +1477,6 @@ void compress_jpeg()
 		free(mcu_rows[i]);
 	}
 	
-//	printf("compress_jpeg %d\n", __LINE__);
-//	print_buffer(vision.picture_data, vision.picture_size);
 
 	append_file(vision.picture_data, vision.picture_size);
 }
@@ -1538,8 +1507,8 @@ void init_vision()
 	
 	vision.cam_w = 640;
 	vision.cam_h = 480;
-	vision.working_w = 320;
-	vision.working_h = 240;
+	vision.image_w = 320;
+	vision.image_h = 240;
 
 
 	char key[TEXTLEN];
@@ -1548,7 +1517,7 @@ void init_vision()
 	{
 		key[0] = 0;
 		value[0] = 0;
-		int temp = fscanf(in, "%s %s", key, value);
+		fscanf(in, "%s %s", key, value);
 		if(key[0])
 		{
 			char *ptr = key;
@@ -1573,17 +1542,9 @@ void init_vision()
 				else
 				if(!strcasecmp(ptr, "SEARCH_STEP")) vision.search_step = atoi(value);
 				else
-				if(!strcasecmp(ptr, "CAM_W")) vision.cam_w = atoi(value);
+				if(!strcasecmp(ptr, "IMAGE_W")) vision.image_w = atoi(value);
 				else
-				if(!strcasecmp(ptr, "CAM_H")) vision.cam_h = atoi(value);
-				else
-				if(!strcasecmp(ptr, "WORKING_W")) vision.working_w = atoi(value);
-				else
-				if(!strcasecmp(ptr, "WORKING_H")) vision.working_h = atoi(value);
-				else
-				if(!strcasecmp(ptr, "OUTPUT_W")) vision.output_w = atoi(value);
-				else
-				if(!strcasecmp(ptr, "OUTPUT_H")) vision.output_h = atoi(value);
+				if(!strcasecmp(ptr, "IMAGE_H")) vision.image_h = atoi(value);
 			}
 			else
 			{
@@ -1604,38 +1565,17 @@ void init_vision()
 	printf("bottom_y=%d\n", vision.bottom_y);
 	printf("side_w=%d\n", vision.side_w);
 	printf("search_step=%d\n", vision.search_step);
-	printf("cam_w=%d\n", vision.cam_w);
-	printf("cam_h=%d\n", vision.cam_h);
-	printf("working_w=%d\n", vision.working_w);
-	printf("working_h=%d\n", vision.working_h);
-	printf("output_w=%d\n", vision.output_w);
-	printf("output_h=%d\n", vision.output_h);
+	printf("image_w=%d\n", vision.image_w);
+	printf("image_h=%d\n", vision.image_h);
 
-	
-	vision.y_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	vision.u_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	vision.v_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	if(vision.output_w == vision.working_w &&
-		vision.output_h == vision.working_h)
-	{
-		vision.out_y = vision.y_buffer;
-		vision.out_u = vision.u_buffer;
-		vision.out_v = vision.v_buffer;
-	}
-	else
-	{
-		vision.out_y = (unsigned char*)malloc(vision.output_w * vision.output_h);
-		vision.out_u = (unsigned char*)malloc(vision.output_w * vision.output_h);
-		vision.out_v = (unsigned char*)malloc(vision.output_w * vision.output_h);
-	}
-	
-	vision.picture_data = (unsigned char*)malloc(PICTURE_DATA_SIZE);
-	vision.latest_image = (unsigned char*)malloc(PICTURE_DATA_SIZE);
-	vision.accum = (unsigned int*)malloc(vision.working_w * vision.working_h * sizeof(int));
-	vision.mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	vision.y_buffer = malloc(vision.image_w * vision.image_h);
+	vision.u_buffer = malloc(vision.image_w * vision.image_h);
+	vision.v_buffer = malloc(vision.image_w * vision.image_h);
+	vision.picture_data = malloc(vision.cam_w * vision.cam_h * 3);
+	vision.latest_image = malloc(vision.cam_w * vision.cam_h * 3);
 
 #ifndef PLAYBACK
-	vision.fd = init_input((char*)DEVICE_PATH);
+	vision.fd = init_input(DEVICE_PATH);
 	if(vision.fd < 0) exit(1);
 #else
 	vision.playback_fd = fopen(PLAYBACK_PATH, "r");
@@ -1722,8 +1662,8 @@ void* httpd_thread(void *ptr)
 //			printf("init_httpd %d: '%s'\n", __LINE__, buffer);
 
 // search for GET
-			char *end = (char*)buffer + strlen((char*)buffer);
-			char *ptr = strstr((char*)buffer, "GET");
+			char *end = buffer + strlen(buffer);
+			char *ptr = strstr(buffer, "GET");
 			if(ptr)
 			{
 				ptr += 4;
@@ -1752,12 +1692,12 @@ void* httpd_thread(void *ptr)
 // 								vision.latest_image);
 
 							pthread_mutex_lock(&vision.latest_lock);
-							unsigned char *buffer2 = (unsigned char*)malloc(vision.latest_size);
+							unsigned char *buffer2 = malloc(vision.latest_size);
 							int buffer2_size = vision.latest_size;
 							memcpy(buffer2, vision.latest_image, vision.latest_size);
 							pthread_mutex_unlock(&vision.latest_lock);
 							
-							send_response(conn, buffer2, buffer2_size, (char*)"image/jpeg");
+							send_response(conn, buffer2, buffer2_size, "image/jpeg");
 							free(buffer2);
 						}
 						else
@@ -1765,21 +1705,21 @@ void* httpd_thread(void *ptr)
 						{
 							char string[TEXTLEN];
 							sprintf(string, "%d", vision.frames_written);
-							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+							send_response(conn, string, strlen(string) + 1, "text/html");
 						}
 						else
 						if(!strcmp(ptr, "/fps.txt"))
 						{
 							char string[TEXTLEN];
 							sprintf(string, "%d", vision.fps);
-							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+							send_response(conn, string, strlen(string) + 1, "text/html");
 						}
 						else
 						if(!strcmp(ptr, "/path_x.txt"))
 						{
 							char string[TEXTLEN];
 							sprintf(string, "%d", vision.path_x);
-							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+							send_response(conn, string, strlen(string) + 1, "text/html");
 						}
 						else
 // file in the html directory
@@ -1800,12 +1740,12 @@ void* httpd_thread(void *ptr)
 								fseek(fd, 0, SEEK_SET);
 
 // need to pad the buffer or fclose locks up
-								unsigned char *buffer = (unsigned char*)malloc(size + 16);
+								unsigned char *buffer = malloc(size + 16);
 								int result = fread(buffer, size, 1, fd);
 								buffer[size + 1] = 0;
 								fclose(fd);
 								
-								send_response(conn, buffer, size + 1, (char*)"text/html");
+								send_response(conn, buffer, size + 1, "text/html");
 								free(buffer);
 							}
 							else
@@ -1815,8 +1755,8 @@ void* httpd_thread(void *ptr)
 									"The requested file '%s' was not found on this server.",
 									string);
 								error_report(conn, 
-									(char*)"404", 
-									(char*)"Not Found",
+									"404", 
+									"Not Found",
 			                    	string2);
 							}
 							
@@ -1824,9 +1764,9 @@ void* httpd_thread(void *ptr)
 						else
 						{
 							error_report(conn, 
-								(char*)"404", 
-								(char*)"Not Found",
-			                    (char*)"The requested URL was not found on this server.");
+								"404", 
+								"Not Found",
+			                    "The requested URL was not found on this server.");
 						}
 					}
 				}
@@ -1880,11 +1820,11 @@ void init_httpd()
 
 void draw_pixel(int x, int y)
 {
-	if(!(x >= 0 && y >= 0 && x < vision.output_w && y < vision.output_h)) return;
-	int offset = y * vision.output_w + x;
-	vision.out_y[offset] = 0xff - vision.out_y[offset];
-	vision.out_u[offset] = 0x80 - vision.out_u[offset];
-	vision.out_v[offset] = 0x80 - vision.out_v[offset];
+	if(!(x >= 0 && y >= 0 && x < vision.image_w && y < vision.image_h)) return;
+	int offset = y * vision.image_w + x;
+	vision.y_buffer[offset] = 0xff - vision.y_buffer[offset];
+	vision.u_buffer[offset] = 0x80 - vision.u_buffer[offset];
+	vision.v_buffer[offset] = 0x80 - vision.v_buffer[offset];
 }
 
 
@@ -1944,22 +1884,14 @@ void draw_line(int x1, int y1, int x2, int y2)
 //printf("FindObjectMain::draw_line 2\n");
 }
 
-void draw_rect(int x1, int y1, int x2, int y2)
-{
-	draw_line(x1, y1, x2, y1);
-	draw_line(x1, y1, x1, y2);
-	draw_line(x2, y1, x2, y2);
-	draw_line(x1, y2, x2, y2);
-}
-
 #define SUM_PIXEL(x, y) \
 { \
-	if(x >= 0 && y >= 0 && x < vision.working_w && y < vision.working_h) \
+	if(x >= 0 && y >= 0 && x < vision.image_w && y < vision.image_h) \
 	{ \
-		int offset = y * vision.working_w + x; \
+		int offset = y * vision.image_w + x; \
 		accum_r += vision.y_buffer[offset]; \
-/* 		accum_g += vision.u_buffer[offset]; */ \
-/*		accum_b += vision.v_buffer[offset]; */ \
+		accum_g += vision.u_buffer[offset]; \
+		accum_b += vision.v_buffer[offset]; \
 		count++; \
 	} \
 }
@@ -2026,16 +1958,120 @@ int line_color(int x1, int y1, int x2, int y2)
 	return accum_r / count;
 }
 
+void detect_path()
+{
+	int i, j, k;
+
+// detect vanishing point
+	int vanish_x, vanish_y;
+	int x1 = vision.top_x1 * vision.image_w / 100;
+	int x2 = vision.top_x2 * vision.image_w / 100;
+	int y1 = vision.top_y * vision.image_h / 100;
+	int y2 = vision.bottom_y * vision.image_h / 100;
+	if(y2 == y1) y2 = y1 + 1;
+
+	int best_vanish_x = vision.image_w / 2;
+	int best_vanish_y = vision.image_h / 2;
+	int best_accum = 0;
+
+// detect horizon
+	
+
+// line ends at vanishing point
+	for(vanish_y = y1; vanish_y < y2; vanish_y += 1)
+	{
+		for(vanish_x = x1; vanish_x < x2; vanish_x += 1)
+		{
+// calculate average difference between all lines going to vanishing point
+			int64_t accum = 0;
+			int table_entry = 0;
+			int prev_value = 0;
+			int first_value = 1;
+
+// lines must be adjacent
+/*
+ * 			for(i = 0; i <= vision.image_h; i += 8)
+ * 			{
+ * 				int new_value = line_color(0, i, vanish_x, vanish_y);
+ * 				if(!first_value)
+ * 				{
+ * 					accum += SQR(new_value - prev_value);
+ * 				}
+ * 				prev_value = new_value;
+ * 				first_value = 0;
+ * 			}
+ */
+
+			for(i = 0; i <= vision.image_w; i++)
+			{
+				int new_value = line_color(i, vision.image_h, vanish_x, vanish_y);
+				if(!first_value)
+				{
+					accum += SQR(new_value - prev_value);
+				}
+				prev_value = new_value;
+				first_value = 0;
+			}
+
+/*
+ * 			for(i = vision.image_h; i >= 0; i -= 8)
+ * 			{
+ * 				int new_value = line_color(vision.image_w, i, vanish_x, vanish_y);
+ * 				if(!first_value)
+ * 				{
+ * 					accum += SQR(new_value - prev_value);
+ * 				}
+ * 				prev_value = new_value;
+ * 				first_value = 0;
+ * 			}
+ */
+
+// point with the most differences between adjacent lines
+			if(accum > best_accum)
+			{
+				best_accum = accum;
+				best_vanish_x = vanish_x;
+				best_vanish_y = vanish_y;
+			}
+
+/*
+ * 			printf("detect_path %d x=%d y=%d accum=%ld\n", 
+ * 				__LINE__, 
+ * 				vanish_x, 
+ * 				vanish_y, 
+ * 				accum);
+ */
+		}
+	}
+
+
+#ifndef X86
+	unsigned char packet[16];
+	packet[0] = 0xff;
+	packet[1] = 0x2d;
+	packet[2] = 0xd4;
+	packet[3] = 0xe5;
+	packet[4] = ((int)best_vanish_x) & 0xff;
+	packet[5] = (((int)best_vanish_x) >> 8) & 0xff;
+	write_spi(packet, 6);
+#endif
+
+	vision.path_x = (int)best_vanish_x;
+	draw_line(best_vanish_x, best_vanish_y - 5, best_vanish_x, best_vanish_y + 5);
+	draw_line(best_vanish_x - 5, best_vanish_y, best_vanish_x + 5, best_vanish_y);
+
+	draw_line(x1, y1, x2, y1);
+	draw_line(x2, y1, x2, y2);
+	draw_line(x2, y2, x1, y2);
+	draw_line(x1, y2, x1, y1);
+}
+
 void push_to_server()
 {
-	if(vision.picture_size > 0)
-	{
-		pthread_mutex_lock(&vision.latest_lock);
-//printf("push_to_server %d %d\n", __LINE__, vision.picture_size);
-		memcpy(vision.latest_image, vision.picture_data, vision.picture_size);
-		vision.latest_size = vision.picture_size;
-		pthread_mutex_unlock(&vision.latest_lock);
-	}
+	pthread_mutex_lock(&vision.latest_lock);
+	memcpy(vision.latest_image, vision.picture_data, vision.picture_size);
+	vision.latest_size = vision.picture_size;
+	pthread_mutex_unlock(&vision.latest_lock);
 }
 
 int main()
@@ -2058,26 +2094,24 @@ int main()
 	reset_timer(&vision.timer2);
 	while(1)
 	{
-		if(read_frame() <= 0)
+		if(read_frame() >= 0)
 		{
-#ifdef PLAYBACK
-			break;
-#endif
+/*
+ * 			printf("main %d: total_frames=%d size=%d\n", 
+ * 				__LINE__, 
+ * 				vision.total_frames,
+ * 				vision.picture_size);
+ */
 		}
 
 
-//		detect_path();
+		detect_path();
 
 
 
 #ifndef PLAYBACK
-#ifdef RECORD_OUTPUT
-// compress all frames if recording
-		if(1)
-#else
-// compress 1 frame/sec if only serving web page
-		if(get_timer_difference(&vision.timer) > 1000)
-#endif
+// compress 10fps
+		if(get_timer_difference(&vision.timer) > 100)
 		{
 			reset_timer(&vision.timer);
 
@@ -2106,7 +2140,7 @@ int main()
 
 #else // !PLAYBACK
 
-// compress all frames if playing back
+// compress all
 		compress_jpeg();
 // Copy JPEG to web server			
 		push_to_server();
@@ -2126,9 +2160,6 @@ int main()
 			reset_timer(&vision.timer2);
 		}
 
-// DEBUG
-// process only 1 frame
-//exit(0);
 	}
 }
 

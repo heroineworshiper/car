@@ -72,13 +72,11 @@ typedef struct
 	int throttle_state;
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
-#define THROTTLE_WAIT 2
-#define THROTTLE_AUTO 3
+#define THROTTLE_AUTO 2
 
 	pid_t heading_pid;
 	pid_t throttle_pid;
 	pid_t rpm_pid;
-	pid_t path_pid;
 
 	int battery;
 	int battery_accum;
@@ -178,16 +176,6 @@ typedef struct
 	int rpm_dv_size;
 
 
-    int spi_counter;
-    int spi_state;
-    int have_spi;
-    uint32_t spi_buffer;
-#define SPI_SYNC_CODE 0
-#define SPI_PACKET 1
-    int path_center;
-	int path_x;
-	derivative_t path_dx;
-	int path_dx_size;
 	
 	int throttle_time;
 	int debug_counter;
