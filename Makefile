@@ -215,18 +215,18 @@ PI_OBJS := \
 all: truck.bin car_remote.hex
 
 # PI version
-vision: $(VISION_OBJS)
-	$(GCC_PI) $(PI_CFLAGS) -o vision $(VISION_OBJS) -lpthread -lm
-
-$(VISION_OBJS):
-	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
-
-# X86 version
 #vision: $(VISION_OBJS)
-#	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
+#	$(GCC_PI) $(PI_CFLAGS) -o vision $(VISION_OBJS) -lpthread -lm
 
 #$(VISION_OBJS):
-#	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
+#	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
+
+# X86 version
+vision: $(VISION_OBJS)
+	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
+
+$(VISION_OBJS):
+	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
 
 
 

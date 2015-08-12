@@ -105,7 +105,7 @@ void detect_path();
 // Save unprocessed frames to files.  Only good with JPEG input
 //#define RECORD_INPUT
 // Read JPEG from files instead of video device.
-//#define PLAYBACK
+#define PLAYBACK
 // Record the processed images.
 #define RECORD_OUTPUT
 
@@ -114,10 +114,6 @@ void detect_path();
 #define JPEG_QUALITY 90
 // Starting frame for playback
 #define STARTING_FRAME 0
-// Output file to record
-#define RECORD_PATH "vision.out"
-// Input file to play
-#define PLAYBACK_PATH "vision.in"
 // Device to read
 #define DEVICE_PATH "/dev/video0"
 
@@ -413,7 +409,13 @@ void append_tar(char *filename, unsigned char *data, int size)
 void append_file(unsigned char *data, int size)
 {
 #ifdef RECORD_OUTPUT
-	if(!tar_fd) tar_fd = fopen(RECORD_PATH, "w");
+	if(!tar_fd) tar_fd = fopen(vision.write_path, "w");
+	if(!tar_fd)
+	{
+		printf("Couldn't open %s\n", vision.write_path);
+		exit(1);
+	}
+	
 	fwrite(data, size, 1, tar_fd);
 	fflush(tar_fd);
 	vision.frames_written++;
@@ -1196,7 +1198,6 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 						}
 					}
 				}
-				vision.total_frames++;
 				return picture_size;
 			}
 		}
@@ -1540,6 +1541,9 @@ void init_vision()
 	vision.cam_h = 480;
 	vision.working_w = 320;
 	vision.working_h = 240;
+	strcpy(vision.read_path, "vision.in");
+	strcpy(vision.write_path, "vision.out");
+	strcpy(vision.ref_path, "downhill1.mov");
 
 
 	char key[TEXTLEN];
@@ -1584,6 +1588,12 @@ void init_vision()
 				if(!strcasecmp(ptr, "OUTPUT_W")) vision.output_w = atoi(value);
 				else
 				if(!strcasecmp(ptr, "OUTPUT_H")) vision.output_h = atoi(value);
+				else
+				if(!strcasecmp(ptr, "READ_PATH")) strcpy(vision.read_path, value);
+				else
+				if(!strcasecmp(ptr, "WRITE_PATH")) strcpy(vision.write_path, value);
+				else
+				if(!strcasecmp(ptr, "REF_PATH")) strcpy(vision.ref_path, value);
 			}
 			else
 			{
@@ -1610,7 +1620,9 @@ void init_vision()
 	printf("working_h=%d\n", vision.working_h);
 	printf("output_w=%d\n", vision.output_w);
 	printf("output_h=%d\n", vision.output_h);
-
+	printf("read_path=%s\n", vision.read_path);
+	printf("ref_path=%s\n", vision.ref_path);
+	printf("write_path=%s\n", vision.write_path);
 	
 	vision.y_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	vision.u_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
@@ -1638,10 +1650,10 @@ void init_vision()
 	vision.fd = init_input((char*)DEVICE_PATH);
 	if(vision.fd < 0) exit(1);
 #else
-	vision.playback_fd = fopen(PLAYBACK_PATH, "r");
+	vision.playback_fd = fopen(vision.read_path, "r");
 	if(!vision.playback_fd) 
 	{
-		printf("Couldn't open %s\n", PLAYBACK_PATH);
+		printf("Couldn't open %s\n", vision.read_path);
 		exit(1);
 	}
 #endif
@@ -2066,7 +2078,7 @@ int main()
 		}
 
 
-//		detect_path();
+		detect_path();
 
 
 
@@ -2128,7 +2140,7 @@ int main()
 
 // DEBUG
 // process only 1 frame
-//exit(0);
+//if(vision.total_frames >= 1) exit(0);
 	}
 }
 

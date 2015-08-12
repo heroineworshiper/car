@@ -36,8 +36,9 @@
 //#define DEVICE_BUFFERS 8
 #define DEVICE_BUFFERS 2
 //#define USE_COLOR
-//#define USE_OPENCV
+#define USE_OPENCV
 
+#define TEXTLEN 1024
 
 // General purpose timer
 typedef struct
@@ -51,6 +52,10 @@ typedef struct
 // device read buffers
 	int buffer_size;
 	unsigned char *frame_buffer[DEVICE_BUFFERS];
+
+	char read_path[TEXTLEN];
+	char write_path[TEXTLEN];
+	char ref_path[TEXTLEN];
 
 	unsigned char **jpeg_rows;
 	unsigned char *jpeg_bitmap;
