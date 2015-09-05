@@ -1,0 +1,530 @@
+package com.truck;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Calendar;
+import java.util.Formatter;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.os.Looper;
+import android.os.Message;
+import android.util.Log;
+
+public class Truck extends Thread {
+	public Truck(Activity activity)
+	{
+		this.activity = activity;
+	}
+	
+	
+	public static void createObjects(Activity activity)
+	{
+		if(settings == null)
+		{
+			settings = new Settings(activity);
+			truck = new Truck(activity);
+			truck.start();
+		}
+	}
+
+
+	boolean initializeBluetooth()
+	{
+ 
+		socket = null;
+		istream = null;
+		ostream = null;
+		
+		BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+		if (mBluetoothAdapter == null) {
+	        printAlert("No bluetooth adapter\n");
+			return true;
+		}
+		
+		
+		
+		if (!mBluetoothAdapter.isEnabled()) {
+	        printAlert("Bluetooth not enabled\n");
+			return true;
+
+		}
+		else
+		{
+			Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+			// If there are paired devices
+			if (pairedDevices.size() > 0) {
+			    // Loop through paired devices
+			    for (BluetoothDevice device : pairedDevices) {
+			        // Add the name and address to an array adapter to show in a ListView
+			        Log.v("Rover2", "initializeBluetooth " + device.getName());
+			        if(device.getName().equals(Settings.bluetooth_id))
+			        {
+			        	BluetoothSocket tmp = null;
+			        	try {
+			                tmp = device.createRfcommSocketToServiceRecord(uuid);
+			            } catch (IOException e) { }
+
+			        	socket = tmp;
+			        }
+			    }
+			}
+			
+			
+			if(socket == null)
+			{
+				printAlert("No bluetooth device found\n");
+
+				return true;
+			}
+		}
+
+		
+		
+
+	
+        try {
+            // Connect the device through the socket. This will block
+            // until it succeeds or throws an exception
+            socket.connect();
+        } catch (IOException connectException) {
+            // Unable to connect; close the socket and get out
+            try {
+                socket.close();
+            } catch (IOException closeException) 
+            { 
+            	
+            }
+            
+            connectException.printStackTrace();
+//			alert("run: couldn't connect to bluetooth device");
+			Log.v("Rover2", "run: connect failed ");
+	        printAlert("Couldn't open bluetooth socket\n");
+	        return true;
+        }
+
+        
+        try {
+			ostream = socket.getOutputStream();
+		} catch (IOException e) {
+//			alert("run: couldn't get bluetooth ostream");
+			Log.v("Rover2", "run: ostream failed");
+			e.printStackTrace();
+	        printAlert("Couldn't get bluetooth ostream\n");
+			return true;
+		}
+
+        
+        try {
+			istream = socket.getInputStream();
+		} catch (IOException e) {
+			Log.v("Rover2", "run: istream failed");
+	        printAlert("Couldn't get bluetooth istream\n");
+			e.printStackTrace();
+			return true;
+		}
+        
+    
+    	printAlert("Got bluetooth connection\n");
+
+		
+		
+		return false;
+	}
+	
+	
+    public void run() 
+    {
+    	while(true)
+	    {
+	    	boolean result = true;
+	    	
+	    	lostContact = false;
+	    	initialized = false;
+	    	
+	    	while(result == true)
+	    	{
+	    		result = initializeBluetooth();
+	    		if(result)
+	    		{
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+	    		}
+	    	}
+	    	
+	    	if(result == false)
+	    	{
+	   		
+	    		while(!lostContact)
+	    		{
+	    			int offset = 0;
+	    			beacon[offset++] = (byte) 0xff;
+	    			beacon[offset++] = (byte) 0x2d;
+	    			beacon[offset++] = (byte) 0xd4;
+	    			beacon[offset++] = (byte) 0xe5;
+
+	    			if(needReset)
+	    			{
+	    				// reset gyro
+	    				// size
+		    			Math.write_int16(beacon, offset, 10);
+		    			offset += 2;
+		    			// command
+		    			beacon[offset++] = (byte) 1;
+		    			beacon[offset++] = (byte) 0;
+		    			
+		    			needReset = false;
+	    			}
+	    			else
+	    			if(needConfig)
+	    			{
+	    				// send config
+	    				// size
+		    			offset += 2;
+		    			// command
+		    			beacon[offset++] = (byte) 2;
+		    			beacon[offset++] = (byte) (needSaveConfig ? 1 : 0);
+		    			
+		    			
+		    			beacon[offset++] = (byte) (Settings.headlights ? 1 :0);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
+		    			
+						Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
+		    			offset += 2;
+		    			Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
+		    			offset += 2;
+
+<<<<<<< Updated upstream
+		    			Math.write_float32(beacon, offset, Settings.getFileFloat("THROTTLE_V0")[0]);
+		    			offset += 4;
+=======
+>>>>>>> Stashed changes
+		    			Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
+		    			offset += 4;
+		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
+		    			offset += 4;
+		    			Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+		    			offset += 4;
+						
+						float pid[] = Settings.getFileFloat("STEERING_PID");
+		    			for(int i = 0; i < 5; i++)
+						{
+							Math.write_float32(beacon, offset, pid[i]);
+		    				offset += 4;
+						}
+
+// write the size including the CRC
+						Math.write_int16(beacon, 4, offset + 2);
+
+		    			needConfig = false;
+	    			}
+	    			else
+	    			{
+// get battery voltage
+// size
+		    			Math.write_int16(beacon, offset, 16);
+		    			offset += 2;
+// command
+		    			beacon[offset++] = (byte) 0;
+		    			beacon[offset++] = (byte) 0;
+// offset = 8
+		    			beacon[offset++] = (byte)(haveControls ? 1 : 0);
+		    			beacon[offset++] = (byte)throttleOut;
+		    			beacon[offset++] = (byte)steeringOut;
+		    			beacon[offset++] = 0;
+		    			beacon[offset++] = 0;
+		    			beacon[offset++] = 0;
+	    			}
+	    			
+	    			
+	    			
+	    			int checksum = Math.getChecksum(beacon, 0, offset);
+	    			Math.write_int16(beacon, offset, checksum);
+	    			offset += 2;
+
+	    			sendBeacon(offset);
+
+	    			
+	    			
+	    			
+	    			
+	    			readPacket();
+//	    			printBuffer("run 1", receive_buf, 0, totalReceived);
+	    			
+	    			int drop_bytes = 0;
+	    			for(offset = 0; offset < totalReceived - 4; )
+	    			{
+	    				drop_bytes = 0;
+// got a packet
+	    				if(receive_buf[offset] == (byte)0xff &&
+	    					receive_buf[offset + 1] == (byte)0x2d &&
+	    					receive_buf[offset + 2] == (byte)0xd4 &&
+	    					receive_buf[offset + 3] == (byte)0xe5)
+	    				{
+	    					drop_bytes = offset;
+// get size
+	    					if(offset < totalReceived - 8)
+	    					{
+	    						int size = Math.read_uint16(receive_buf, offset + 4);
+	    						if(size + offset > receive_buf.length ||
+	    							size < 8)
+	    						{
+	    							drop_bytes = offset + 6;
+	    						}
+	    						else
+	    						if(offset <= totalReceived - size)
+	    						{
+	    							checksum = Math.getChecksum(receive_buf, offset, size - 2);
+	    							if(checksum == Math.read_uint16(receive_buf, offset + size - 2))
+	    							{
+// packet is intact
+		    							switch(receive_buf[offset + 6])
+		    							{
+		    							case 0:
+		    								battery_analog = Math.read_int32(receive_buf, offset + 8);
+		    								battery_voltage = Math.read_float32(receive_buf, offset + 12);
+		    								gyro_center = Math.read_int16(receive_buf, offset + 16);
+		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
+		    								current_heading = Math.read_float32(receive_buf, offset + 20);
+		    								throttleIn = receive_buf[offset + 24];
+		    								steeringIn = receive_buf[offset + 25];
+//		    			    				Log.v("run 1", "battery_analog=" + battery_analog + " battery_voltage=" + battery_voltage);
+		    								break;
+		    							}
+		    							
+		    							offset += size;
+		    							drop_bytes = offset;
+	    							}
+	    							else
+	    							{
+// skip the sync code
+	    								offset += 4;
+	    								drop_bytes = offset;
+	    							}
+	    						}
+	    						else
+	    						{
+// get more data
+	    							offset = totalReceived;
+	    						}
+	    					}
+	    					else
+	    					{
+// get more data
+	    						offset = totalReceived;
+	    					}
+	    				}
+	    				else
+	    				{
+	    					drop_bytes++;
+	    					offset++;
+	    				}
+
+//	    				Log.v("run 2", "drop_bytes=" + drop_bytes + " offset=" + offset);
+	    				for(int i = 0; i < totalReceived - drop_bytes; i++)
+	    				{
+	    					receive_buf[i] = receive_buf[i + drop_bytes];
+	    				}
+	    				totalReceived -= drop_bytes;
+	    				offset -= drop_bytes;
+	    				if(offset < 0) offset = 0;
+	    				if(totalReceived < 0) totalReceived = 0;
+	    			}
+	    		}
+	    		
+	    		
+	    		
+	    	}
+	    	
+	    	if(socket != null)
+	    	{
+	            try {
+	                socket.close();
+	                socket = null;
+	            } catch (IOException closeException) 
+	            { 
+	            	
+	            }
+	    	}
+	    	
+	    }
+    }
+
+
+	private void sendBeacon(int offset) {
+		Calendar cal = Calendar.getInstance();
+		long nextSentTime = cal.getTimeInMillis();
+		if(nextSentTime - lastSentTime < 1000 / Settings.BEACON_HZ)
+		{
+			long difference = lastSentTime + 1000 / Settings.BEACON_HZ - nextSentTime;
+//    				Log.v("Copter", "run difference=" + difference);
+			
+			try {
+				Thread.sleep(difference);
+			} catch (InterruptedException e) {
+				return;
+			}
+
+		}
+		lastSentTime = nextSentTime;
+		
+		// send beacon
+		try {
+			ostream.write(beacon, 
+				0, 
+				offset);
+			ostream.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	private int readPacket() 
+	{
+		if(totalReceived >= receive_buf.length)
+		{
+			printAlert("Receive buffer full");
+// reset the buffer
+			totalReceived = 0;
+		}
+		
+		// receive response
+		Callable<Integer> readTask = new Callable<Integer>() {
+		    @Override
+		    public Integer call() throws Exception {
+		        return istream.read(receive_buf, totalReceived, receive_buf.length - totalReceived);
+		    }
+		};
+		
+		int bytes = 0;
+		Future<Integer> future = executor.submit(readTask);
+		try {
+			bytes = future.get(1000 / Settings.BEACON_HZ, TimeUnit.MILLISECONDS);
+		} catch (Exception e) {
+		}
+		
+		if(bytes == 0)
+		{
+			droppedPackets++;
+			if(droppedPackets >= Settings.BEACON_HZ &&
+				initialized)
+			{
+				droppedPackets = 0;
+				lostContact = true;
+				printAlert("Lost contact");
+			}
+		}
+		else
+		{
+			totalReceived += bytes;
+			droppedPackets = 0;
+			if(lostContact)
+			{
+				lostContact = false;
+				printAlert("Regained contact");
+			}
+		}
+		return bytes;
+	}
+
+	static public void printBuffer(String string, byte[] buffer, int offset, int bytes)
+	{
+		StringBuilder sb = new StringBuilder();
+		Formatter formatter = new Formatter(sb);
+		for(int i = 0; i < bytes; i++) 
+		{
+		formatter.format("%02x ", buffer[i + offset]);
+		}
+		Log.v(string, sb.toString());
+	}
+
+    
+
+    void printAlert(String string)
+    {
+    	synchronized(this)
+    	{
+    		Settings.message = string;
+    		Settings.haveMessage = true;
+    	}
+    }
+    
+    
+    
+	static Truck truck;
+	static Activity activity;
+	static Settings settings;
+	
+ // the mane connection
+    BluetoothSocket socket = null;
+	OutputStream ostream = null;
+    InputStream istream = null;
+    
+    static int battery_analog;
+    static float battery_voltage;
+    static int gyro_center;
+    static int gyro_range;
+    static float current_heading;
+    
+    static boolean needReset = false;
+    static boolean needConfig = false;
+    static boolean needSaveConfig = false;
+   
+// throttle to send -127 - 127
+    static int throttleOut = 0;
+// throttle received -127 - 127
+    static int throttleIn = 0;
+// steering to send -127 - 127
+    static int steeringOut = 0;
+// steering to receive -127 - 127
+    static int steeringIn = 0;
+// have control values to send from the drive window
+    static boolean haveControls = false;
+    
+    
+    long lastSentTime;
+    boolean initialized = false;
+    int droppedPackets = 0;
+    boolean lostContact = false;
+
+	byte[] beacon = new byte[Settings.RADIO_BUFSIZE];
+	byte[] receive_buf = new byte[Settings.RADIO_BUFSIZE];
+	int totalReceived = 0;
+	ExecutorService executor = Executors.newFixedThreadPool(2);
+//	UUID uuid = UUID.randomUUID();
+	UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+}
