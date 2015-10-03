@@ -39,6 +39,7 @@
 #define USE_OPENCV
 
 #define TEXTLEN 1024
+#define SQR(x) ((x) * (x))
 
 // General purpose timer
 typedef struct
@@ -110,7 +111,7 @@ typedef struct
 	unsigned char *y_buffer;
 	unsigned char *u_buffer;
 	unsigned char *v_buffer;
-	unsigned int *accum;
+	int *accum;
 	unsigned char *mask;
 
 // output image

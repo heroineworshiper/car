@@ -20,7 +20,6 @@
 
 
 // Lane following, using USB cam
-// ralph transform + chroma key
 
 
 
@@ -47,7 +46,7 @@
 
 vision_t vision;
 void detect_path();
-
+void init_yuv();
 
 #define SQR(x) ((x) * (x))
 #define CLAMP(x, y, z) ((x) = ((x) < (y) ? (y) : ((x) > (z) ? (z) : (x))))
@@ -119,7 +118,8 @@ void detect_path();
 
 #define CONFIG_PATH "vision.conf"
 
-#define PICTURE_DATA_SIZE 0x100000
+// space for compressed output frame
+#define PICTURE_DATA_SIZE 0x1000000
 
 #define LED_GPIO 2
 
@@ -954,7 +954,8 @@ METHODDEF(void) init_source(j_decompress_ptr cinfo)
     jpeg_src_ptr src = (jpeg_src_ptr) cinfo->src;
 }
 
-#define JPEG_INPUT_ALLOC 0x100000
+// space for compressed input frame
+#define JPEG_INPUT_ALLOC 0x1000000
 #define   M_EOI     0xd9
 uint8_t *jpeg_input_buffer = 0;
 int jpeg_input_offset = 0;
@@ -1028,6 +1029,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 			{
 // got it
 // read rest of frame
+//printf("read_file_frame %d offset=%ld\n", __LINE__, ftell(fd) - state);
 				state = 0;
 				while(!feof(fd) &&
 					jpeg_input_size < JPEG_INPUT_ALLOC)
@@ -1058,12 +1060,11 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 				if(setjmp(my_jpeg_error.setjmp_buffer))
 				{
 /* If we get here, the JPEG code has signaled an error. */
-					printf("read_frame %d: JPEG error\n", __LINE__);
+					printf("read_file_frame %d: JPEG error\n", __LINE__);
 					return 0;
 				}
 
 				struct jpeg_decompress_struct cinfo;
-//printf("read_frame %d jpeg_input_size=%d\n", __LINE__, jpeg_input_size);
 				cinfo.err = jpeg_std_error(&(my_jpeg_error.pub));
 				my_jpeg_error.pub.error_exit = my_jpeg_error_exit;
 				jpeg_create_decompress(&cinfo);
@@ -1080,6 +1081,9 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 				src->next_input_byte = jpeg_input_buffer;
 				src->bytes_in_buffer = jpeg_input_size;
 				jpeg_read_header(&cinfo, 1);
+
+
+//printf("read_file_frame %d %dx%d\n", __LINE__, cinfo.input_width, cinfo.input_height);
 				cinfo.raw_data_out = TRUE;
 				cinfo.err->num_warnings = 1;
 				
@@ -1094,7 +1098,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 
 				while(cinfo.output_scanline < vision.cam_h)
 				{
-//printf("read_frame %d scanline=%d\n", __LINE__, cinfo.output_scanline);
+//printf("read_file_frame %d scanline=%d\n", __LINE__, cinfo.output_scanline);
 					for(j = 0; j < 16; j++)
 					{
 						int output_y = cinfo.output_scanline + j;
@@ -1112,19 +1116,19 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 						}
 					}
 
-//printf("read_frame %d\n", __LINE__);
+//printf("read_file_frame %d\n", __LINE__);
 					jpeg_read_raw_data(&cinfo, 
 						mcu_rows, 
 						vision.cam_h);
 
-//printf("read_frame %d\n", __LINE__);
+//printf("read_file_frame %d\n", __LINE__);
 				}
 
 
-//printf("read_frame %d\n", __LINE__);
+//printf("read_file_frame %d\n", __LINE__);
 				jpeg_finish_decompress(&cinfo);
 				jpeg_destroy_decompress(&cinfo);
-//printf("read_frame %d\n", __LINE__);
+//printf("read_file_frame %d\n", __LINE__);
 
 				for(i = 0; i < 3; i++)
 				{
@@ -1169,6 +1173,7 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 					}
 				}
 				else
+				if(vision.cam_h == vision.working_h * 2)
 				{
 // shrink input to working size
 					for(i = 0; i < vision.working_h; i++)
@@ -1198,6 +1203,64 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 						}
 					}
 				}
+				else
+				if(vision.cam_h == vision.working_h * 4)
+				{
+// shrink input to working size
+					for(i = 0; i < vision.working_h; i++)
+					{
+						unsigned char *in_y1 = vision.picture_data + (i * 4 + 0) * vision.cam_w;
+						unsigned char *in_y2 = vision.picture_data + (i * 4 + 1) * vision.cam_w;
+						unsigned char *in_y3 = vision.picture_data + (i * 4 + 2) * vision.cam_w;
+						unsigned char *in_y4 = vision.picture_data + (i * 4 + 3) * vision.cam_w;
+						unsigned char *in_u1 = vision.picture_data + 
+							vision.cam_w * vision.cam_h + 
+							i * 2 * (vision.cam_w / 2);
+						unsigned char *in_u2 = vision.picture_data + 
+							vision.cam_w * vision.cam_h + 
+							(i * 2 + 1) * (vision.cam_w / 2);
+						unsigned char *in_v1 = vision.picture_data +
+							vision.cam_w * vision.cam_h +
+							vision.cam_w * vision.cam_h / 4 +
+							i * 2 * (vision.cam_w / 2);
+						unsigned char *in_v2 = vision.picture_data +
+							vision.cam_w * vision.cam_h +
+							vision.cam_w * vision.cam_h / 4 +
+							(i * 2 + 1) * (vision.cam_w / 2);
+						unsigned char *out_y = y_buffer + i * vision.working_w;
+						unsigned char *out_u = u_buffer + i * vision.working_w;
+						unsigned char *out_v = v_buffer + i * vision.working_w;
+						for(j = 0; j < vision.working_w; j++)
+						{
+							*out_y++ = ((uint32_t)*in_y1++ + 
+								(uint32_t)*in_y1++ + 
+								(uint32_t)*in_y1++ + 
+								(uint32_t)*in_y1++ + 
+								(uint32_t)*in_y2++ +
+								(uint32_t)*in_y2++ +
+								(uint32_t)*in_y2++ +
+								(uint32_t)*in_y2++ + 
+								(uint32_t)*in_y3++ +
+								(uint32_t)*in_y3++ +
+								(uint32_t)*in_y3++ +
+								(uint32_t)*in_y3++ + 
+								(uint32_t)*in_y4++ +
+								(uint32_t)*in_y4++ +
+								(uint32_t)*in_y4++ +
+								(uint32_t)*in_y4++) / 16;
+							*out_u++ = ((uint32_t)*in_u1++ + 
+								(uint32_t)*in_u1++ +
+								(uint32_t)*in_u2++ + 
+								(uint32_t)*in_u2++) / 4;
+							*out_v++ = ((uint32_t)*in_v1++ + 
+								(uint32_t)*in_v1++ +
+								(uint32_t)*in_v2++ + 
+								(uint32_t)*in_v2++) / 4;
+//							*out_u++ = 0x80;
+//							*out_v++ = 0x80;
+						}
+					}
+				}
 				return picture_size;
 			}
 		}
@@ -1219,6 +1282,17 @@ int read_frame()
 
 #ifdef PLAYBACK
 	picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+/*
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+ */
 
 #else // PLAYBACK
 
@@ -1627,14 +1701,14 @@ void init_vision()
 	vision.y_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	vision.u_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	vision.v_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	if(vision.output_w == vision.working_w &&
-		vision.output_h == vision.working_h)
-	{
-		vision.out_y = vision.y_buffer;
-		vision.out_u = vision.u_buffer;
-		vision.out_v = vision.v_buffer;
-	}
-	else
+// 	if(vision.output_w == vision.working_w &&
+// 		vision.output_h == vision.working_h)
+// 	{
+// 		vision.out_y = vision.y_buffer;
+// 		vision.out_u = vision.u_buffer;
+// 		vision.out_v = vision.v_buffer;
+// 	}
+// 	else
 	{
 		vision.out_y = (unsigned char*)malloc(vision.output_w * vision.output_h);
 		vision.out_u = (unsigned char*)malloc(vision.output_w * vision.output_h);
@@ -1643,7 +1717,7 @@ void init_vision()
 	
 	vision.picture_data = (unsigned char*)malloc(PICTURE_DATA_SIZE);
 	vision.latest_image = (unsigned char*)malloc(PICTURE_DATA_SIZE);
-	vision.accum = (unsigned int*)malloc(vision.working_w * vision.working_h * sizeof(int));
+	vision.accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
 	vision.mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
 
 #ifndef PLAYBACK
@@ -2058,7 +2132,7 @@ int main()
 #endif
 
 	init_vision();
-	
+	init_yuv();
 	
 	init_httpd();
 
