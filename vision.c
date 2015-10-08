@@ -45,7 +45,7 @@
 #include <setjmp.h>
 
 vision_t vision;
-void detect_path();
+void detect_path(vision_package_t *engine);
 void init_yuv();
 
 #define SQR(x) ((x) * (x))
@@ -1274,14 +1274,19 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 	return picture_size;
 }
 
-int read_frame()
+int read_frame(unsigned char *output_y_arg,
+	unsigned char *output_u_arg,
+	unsigned char *output_v_arg)
 {
 	int i, j;
 	int picture_size = 0;
 	int result = 0;
 
 #ifdef PLAYBACK
-	picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
+	picture_size = read_file_frame(vision.playback_fd, 
+		output_y_arg, 
+		output_u_arg, 
+		output_v_arg);
 /*
  * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
  * 	if(picture_size > 0) picture_size = read_file_frame(vision.playback_fd, vision.y_buffer, vision.u_buffer, vision.v_buffer);
@@ -1343,9 +1348,9 @@ int read_frame()
 			{
 				unsigned char *input_row = vision.frame_buffer[buffer.index] +
 					i * vision.cam_w * 2;
-				unsigned char *output_y = vision.y_buffer + i * vision.working_w;
-				unsigned char *output_u = vision.u_buffer + i * vision.working_w;
-				unsigned char *output_v = vision.v_buffer + i * vision.working_w;
+				unsigned char *output_y = output_y_arg + i * vision.working_w;
+				unsigned char *output_u = output_u_arg + i * vision.working_w;
+				unsigned char *output_v = output_v_arg + i * vision.working_w;
 
 				for(j = 0; j < vision.working_w; j++)
 				{
@@ -1361,6 +1366,7 @@ int read_frame()
 			}
 		}
 		else
+		if(vision.cam_h == vision.working_h * 2)
 		{
 			for(i = 0; i < vision.working_h; i++)
 			{
@@ -1368,9 +1374,9 @@ int read_frame()
 					(i * 2) * vision.cam_w * 2;
 				unsigned char *input_row2 = vision.frame_buffer[buffer.index] +
 					(i * 2 + 1) * vision.cam_w * 2;
-				unsigned char *output_y = vision.y_buffer + i * vision.working_w;
-				unsigned char *output_u = vision.u_buffer + i * vision.working_w;
-				unsigned char *output_v = vision.v_buffer + i * vision.working_w;
+				unsigned char *output_y = output_y_arg + i * vision.working_w;
+				unsigned char *output_u = output_u_arg + i * vision.working_w;
+				unsigned char *output_v = output_v_arg + i * vision.working_w;
 
 				for(j = 0; j < vision.working_w; j++)
 				{
@@ -1385,6 +1391,65 @@ int read_frame()
 
 					input_row1 += 4;
 					input_row2 += 4;
+				}
+			}
+		}
+		else
+		if(vision.cam_h == vision.working_h * 4)
+		{
+			for(i = 0; i < vision.working_h; i++)
+			{
+				unsigned char *input_row1 = vision.frame_buffer[buffer.index] +
+					(i * 4) * vision.cam_w * 2;
+				unsigned char *input_row2 = vision.frame_buffer[buffer.index] +
+					(i * 4 + 1) * vision.cam_w * 2;
+				unsigned char *input_row3 = vision.frame_buffer[buffer.index] +
+					(i * 4 + 2) * vision.cam_w * 2;
+				unsigned char *input_row4 = vision.frame_buffer[buffer.index] +
+					(i * 4 + 3) * vision.cam_w * 2;
+				unsigned char *output_y = output_y_arg + i * vision.working_w;
+				unsigned char *output_u = output_u_arg + i * vision.working_w;
+				unsigned char *output_v = output_v_arg + i * vision.working_w;
+
+				for(j = 0; j < vision.working_w; j++)
+				{
+					*output_y++ = ((uint32_t)input_row1[0] + 
+						(uint32_t)input_row1[2] + 
+						(uint32_t)input_row1[4] + 
+						(uint32_t)input_row1[6] + 
+						(uint32_t)input_row2[0] +
+						(uint32_t)input_row2[2] +
+						(uint32_t)input_row2[4] +
+						(uint32_t)input_row2[6] +
+						(uint32_t)input_row3[0] + 
+						(uint32_t)input_row3[2] + 
+						(uint32_t)input_row3[4] + 
+						(uint32_t)input_row3[6] + 
+						(uint32_t)input_row4[0] +
+						(uint32_t)input_row4[2] +
+						(uint32_t)input_row4[4] +
+						(uint32_t)input_row4[6]) / 16;
+					*output_u++ = ((uint32_t)input_row1[1] + 
+						(uint32_t)input_row2[1] +
+						(uint32_t)input_row3[1] + 
+						(uint32_t)input_row4[1] +
+						(uint32_t)input_row1[5] + 
+						(uint32_t)input_row2[5] +
+						(uint32_t)input_row3[5] + 
+						(uint32_t)input_row4[5]) / 8;
+					*output_v++ = ((uint32_t)input_row1[3] +
+						(uint32_t)input_row2[3] +
+						(uint32_t)input_row3[3] +
+						(uint32_t)input_row4[3] +
+						(uint32_t)input_row1[7] +
+						(uint32_t)input_row2[7] +
+						(uint32_t)input_row3[7] +
+						(uint32_t)input_row4[7]) / 8;
+
+					input_row1 += 8;
+					input_row2 += 8;
+					input_row3 += 8;
+					input_row4 += 8;
 				}
 			}
 		}
@@ -1512,7 +1577,7 @@ void print_buffer(unsigned char *data, int size)
 	printf("\n");
 }
 
-void compress_jpeg()
+void compress_jpeg(vision_package_t *engine)
 {
 	struct jpeg_compress_struct jpeg_compress;
  	struct jpeg_error_mgr jerr;
@@ -1548,13 +1613,13 @@ void compress_jpeg()
 			i < 16 && i + jpeg_compress.next_scanline < vision.output_h; 
 			i++)
 		{
-			mcu_rows[0][i] = vision.out_y + 
+			mcu_rows[0][i] = engine->out_y + 
 				(jpeg_compress.next_scanline + i) * vision.output_w;
 			if(i < 8)
 			{
-				unsigned char *u_row = mcu_rows[1][i] = vision.out_u +
+				unsigned char *u_row = mcu_rows[1][i] = engine->out_u +
 					(jpeg_compress.next_scanline + i * 2) * vision.output_w;
-				unsigned char *v_row = mcu_rows[2][i] = vision.out_v +
+				unsigned char *v_row = mcu_rows[2][i] = engine->out_v +
 					(jpeg_compress.next_scanline + i * 2) * vision.output_w;
 // pack UV data for this line
 				for(j = 0; j < vision.output_w / 2; j++)
@@ -1594,34 +1659,64 @@ void compress_jpeg()
 
  
 
-
-
-void init_vision()
+void* vision_thread(void *ptr)
 {
-	int i, j;
+	vision_engine_t *engine = (vision_engine_t*)ptr;
 	
-	bzero(&vision, sizeof(vision_t));
-
-// load config file
-	
-	FILE *in = fopen(CONFIG_PATH, "r");
-	if(!in)
+	while(!engine->done)
 	{
-		printf("Failed to open settings file %s\n", CONFIG_PATH);
-		exit(1);
+// wait for a frame
+		sem_wait(&vision.package_lock);
+
+		vision_package_t *package = vision.packages[vision.input_package];
+		vision.input_package++;
+		if(vision.input_package >= TOTAL_PACKAGES)
+		{
+			vision.input_package = 0;
+		}
+		
+		
+// process it
+		detect_path(package);
+
+// release the frame
+		sem_post(&package->complete_lock);
 	}
-	
-	vision.cam_w = 640;
-	vision.cam_h = 480;
-	vision.working_w = 320;
-	vision.working_h = 240;
-	strcpy(vision.read_path, "vision.in");
-	strcpy(vision.write_path, "vision.out");
-	strcpy(vision.ref_path, "downhill1.mov");
+}
+
+void init_package(vision_package_t *package)
+{
+	package->in_y = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->in_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->in_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->out_y = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->out_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->out_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	package->accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
+	sem_init(&package->complete_lock, 0, 0);
+}
+
+void init_engine(vision_engine_t *engine)
+{
+	engine->done = 0;
+	sem_init(&engine->input_lock, 0, 0);
+	sem_init(&engine->complete_lock, 0, 0);
 
 
+	pthread_t tid;
+	pthread_attr_t  attr;
+	pthread_attr_init(&attr);
+	pthread_create(&tid, &attr, vision_thread, engine);
+}
+
+
+void parse_config(FILE *in)
+{
 	char key[TEXTLEN];
 	char value[TEXTLEN];
+
+
 	while(!feof(in))
 	{
 		key[0] = 0;
@@ -1638,6 +1733,16 @@ void init_vision()
 				if(!strcasecmp(ptr, "TOP_X1")) vision.top_x1 = atoi(value);
 				else
 				if(!strcasecmp(ptr, "TOP_X2")) vision.top_x2 = atoi(value);
+				else
+				if(!strcasecmp(ptr, "THRESHOLD")) vision.threshold = atoi(value);
+				else
+				if(!strcasecmp(ptr, "SEARCH_H")) vision.search_h = atoi(value);
+				else
+				if(!strcasecmp(ptr, "MAX_DX")) vision.max_dx = atof(value);
+				else
+				if(!strcasecmp(ptr, "EDGE_SIZE")) vision.edge_size = atoi(value);
+				else
+				if(!strcasecmp(ptr, "GEOMETRY_BANDWIDTH")) vision.geometry_bandwidth = atof(value);
 				else
 				if(!strcasecmp(ptr, "TOP_Y")) vision.top_y = atoi(value);
 				else
@@ -1698,27 +1803,50 @@ void init_vision()
 	printf("ref_path=%s\n", vision.ref_path);
 	printf("write_path=%s\n", vision.write_path);
 	
-	vision.y_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	vision.u_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	vision.v_buffer = (unsigned char*)malloc(vision.working_w * vision.working_h);
-// 	if(vision.output_w == vision.working_w &&
-// 		vision.output_h == vision.working_h)
-// 	{
-// 		vision.out_y = vision.y_buffer;
-// 		vision.out_u = vision.u_buffer;
-// 		vision.out_v = vision.v_buffer;
-// 	}
-// 	else
+}
+
+void init_vision()
+{
+	int i, j;
+	
+	bzero(&vision, sizeof(vision_t));
+
+// load config file
+	
+	FILE *in = fopen(CONFIG_PATH, "r");
+	if(!in)
 	{
-		vision.out_y = (unsigned char*)malloc(vision.output_w * vision.output_h);
-		vision.out_u = (unsigned char*)malloc(vision.output_w * vision.output_h);
-		vision.out_v = (unsigned char*)malloc(vision.output_w * vision.output_h);
+		printf("Failed to open settings file %s\n", CONFIG_PATH);
+		exit(1);
 	}
+	
+	vision.cam_w = 640;
+	vision.cam_h = 480;
+	vision.working_w = 320;
+	vision.working_h = 240;
+	strcpy(vision.read_path, "vision.in");
+	strcpy(vision.write_path, "vision.out");
+	strcpy(vision.ref_path, "downhill1.mov");
+	vision.bottom_x = 0.5;
+	vision.top_x = 0.5;
+
+
+	parse_config(in);
+	
+	for(i = 0; i < TOTAL_CPUS; i++)
+	{
+		init_engine(&vision.engine[i]);
+	}
+	
+	for(i = 0; i < TOTAL_PACKAGES; i++)
+	{
+		init_package(&vision.packages[i]);
+	}
+	sem_init(&vision.package_lock, 0, 1);
+
 	
 	vision.picture_data = (unsigned char*)malloc(PICTURE_DATA_SIZE);
 	vision.latest_image = (unsigned char*)malloc(PICTURE_DATA_SIZE);
-	vision.accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
-	vision.mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
 
 #ifndef PLAYBACK
 	vision.fd = init_input((char*)DEVICE_PATH);
@@ -1868,6 +1996,20 @@ void* httpd_thread(void *ptr)
 							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
 						}
 						else
+						if(!strcmp(ptr, "/bottom_x.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%f", vision.bottom_x);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
+						if(!strcmp(ptr, "/top_x.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%f", vision.top_x);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
 // file in the html directory
 						if(ptr[0] = '/')
 						{
@@ -1964,17 +2106,17 @@ void init_httpd()
 	pthread_create(&tid, &attr, httpd_thread, 0);
 }
 
-void draw_pixel(int x, int y)
+void draw_pixel(vision_package_t *engine, int x, int y)
 {
 	if(!(x >= 0 && y >= 0 && x < vision.output_w && y < vision.output_h)) return;
 	int offset = y * vision.output_w + x;
-	vision.out_y[offset] = 0xff - vision.out_y[offset];
-	vision.out_u[offset] = 0x80 - vision.out_u[offset];
-	vision.out_v[offset] = 0x80 - vision.out_v[offset];
+	engine->out_y[offset] = 0xff - engine->out_y[offset];
+	engine->out_u[offset] = 0x80 - engine->out_u[offset];
+	engine->out_v[offset] = 0x80 - engine->out_v[offset];
 }
 
 
-void draw_line(int x1, int y1, int x2, int y2)
+void draw_line(vision_package_t *engine, int x1, int y1, int x2, int y2)
 {
 	int w = labs(x2 - x1);
 	int h = labs(y2 - y1);
@@ -1982,7 +2124,7 @@ void draw_line(int x1, int y1, int x2, int y2)
 
 	if(!w && !h)
 	{
-		draw_pixel(x1, y1);
+		draw_pixel(engine, x1, y1);
 	}
 	else
 	if(w > h)
@@ -2003,7 +2145,7 @@ void draw_line(int x1, int y1, int x2, int y2)
 		for(i = x1; i <= x2; i++)
 		{
 			int y = y1 + (int64_t)(i - x1) * (int64_t)numerator / (int64_t)denominator;
-			draw_pixel(i, y);
+			draw_pixel(engine, i, y);
 		}
 	}
 	else
@@ -2024,18 +2166,18 @@ void draw_line(int x1, int y1, int x2, int y2)
 		for(i = y1; i <= y2; i++)
 		{
 			int x = x1 + (int64_t)(i - y1) * (int64_t)numerator / (int64_t)denominator;
-			draw_pixel(x, i);
+			draw_pixel(engine, x, i);
 		}
 	}
 //printf("FindObjectMain::draw_line 2\n");
 }
 
-void draw_rect(int x1, int y1, int x2, int y2)
+void draw_rect(vision_package_t *engine, int x1, int y1, int x2, int y2)
 {
-	draw_line(x1, y1, x2, y1);
-	draw_line(x1, y1, x1, y2);
-	draw_line(x2, y1, x2, y2);
-	draw_line(x1, y2, x2, y2);
+	draw_line(engine, x1, y1, x2, y1);
+	draw_line(engine, x1, y1, x1, y2);
+	draw_line(engine, x2, y1, x2, y2);
+	draw_line(engine, x1, y2, x2, y2);
 }
 
 #define SUM_PIXEL(x, y) \
@@ -2043,7 +2185,7 @@ void draw_rect(int x1, int y1, int x2, int y2)
 	if(x >= 0 && y >= 0 && x < vision.working_w && y < vision.working_h) \
 	{ \
 		int offset = y * vision.working_w + x; \
-		accum_r += vision.y_buffer[offset]; \
+		accum_r += engine->in_y[offset]; \
 /* 		accum_g += vision.u_buffer[offset]; */ \
 /*		accum_b += vision.v_buffer[offset]; */ \
 		count++; \
@@ -2051,7 +2193,7 @@ void draw_rect(int x1, int y1, int x2, int y2)
 }
 
 
-int line_color(int x1, int y1, int x2, int y2)
+int line_color(vision_package_t *engine, int x1, int y1, int x2, int y2)
 {
 	int w = labs(x2 - x1);
 	int h = labs(y2 - y1);
@@ -2126,6 +2268,8 @@ void push_to_server()
 
 int main()
 {
+	int i;
+
 #ifndef X86
 	init_spi();
 //	init_gpio();
@@ -2142,79 +2286,111 @@ int main()
 	int prev_total = vision.total_frames;
 	reset_timer(&vision.timer);
 	reset_timer(&vision.timer2);
-	while(1)
+	int got_input = 1;
+	int got_output = 1;
+	int total_no_input = 0;
+	while(got_input || got_output)
 	{
-		if(read_frame() <= 0)
-		{
+// Never stop if live
 #ifdef PLAYBACK
+		got_input = 0;
+		if(total_no_input >= TOTAL_CPUS)
+		{
 			break;
+		}
 #endif
+		got_output = 0;
+
+		vision_package_t *engine = &vision.packages[vision.current_engine];
+		if(!read_frame(engine->in_y, engine->in_u, engine->in_v) <= 0)
+		{
+			got_input = 1;
+		}
+		else
+		{
+			total_no_input++;
 		}
 
 
-		detect_path();
+// process it
+		sem_post(&engine->package_lock);
 
+// wait for processed frame
+		vision.current_engine++;
+		if(vision.current_engine >= TOTAL_CPUS)
+		{
+			vision.current_engine = 0;
+		}
 
+		engine = &vision.engine[vision.current_engine];
 
+printf("main %d %d\n", __LINE__, vision.current_engine);
+		sem_wait(&engine->complete_lock);
+
+		if(engine->has_frame)
+		{
+//printf("main %d current_engine=%d\n", __LINE__, vision.current_engine);
+			engine->has_frame = 0;
+			got_output = 1;
+		
 #ifndef PLAYBACK
 #ifdef RECORD_OUTPUT
 // compress all frames if recording
-		if(1)
+			if(1)
 #else
 // compress 1 frame/sec if only serving web page
-		if(get_timer_difference(&vision.timer) > 1000)
+			if(get_timer_difference(&vision.timer) > 1000)
 #endif
-		{
-			reset_timer(&vision.timer);
-
-
-			if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
 			{
-				append_file(vision.picture_data, vision.picture_size);
-			}
-			else
-			if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_RGB24)
-			{
-			}
-			else
-			if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
-			{
-				compress_jpeg();
-			}
-
-// Copy JPEG to web server
-			push_to_server();
-			
-//			printf("main %d: wrote %d %d bytes", __LINE__, vision.frames_written, vision.picture_size);
+				reset_timer(&vision.timer);
 
 
-		}
+				if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
+				{
+					append_file(vision.picture_data, vision.picture_size);
+				}
+				else
+				if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_RGB24)
+				{
+				}
+				else
+				if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
+				{
+					compress_jpeg(engine);
+				}
+
+	// Copy JPEG to web server
+				push_to_server();
+
+	//			printf("main %d: wrote %d %d bytes", __LINE__, vision.frames_written, vision.picture_size);
+
+
+			}
 
 #else // !PLAYBACK
 
-// compress all frames if playing back
-		compress_jpeg();
-// Copy JPEG to web server			
-		push_to_server();
+	// compress all frames if playing back
+			compress_jpeg(engine);
+	// Copy JPEG to web server			
+			push_to_server();
 
 #endif // PLAYBACK
 
 
-// Show FPS
-		if(get_timer_difference(&vision.timer2) > 1000)
-		{
-			vision.fps = vision.total_frames - prev_total;
-			printf("main %d: fps=%d wrote %d\n", 
-				__LINE__, 
-				vision.fps,
-				vision.frames_written);
-			prev_total = vision.total_frames;
-			reset_timer(&vision.timer2);
+	// Show FPS
+			if(get_timer_difference(&vision.timer2) > 1000)
+			{
+				vision.fps = vision.total_frames - prev_total;
+				printf("main %d: fps=%d wrote %d\n", 
+					__LINE__, 
+					vision.fps,
+					vision.frames_written);
+				prev_total = vision.total_frames;
+				reset_timer(&vision.timer2);
+			}
 		}
-
-// DEBUG
-// process only 1 frame
-//if(vision.total_frames >= 1) exit(0);
+		
+//		printf("main %d got_input=%d got_output=%d\n", __LINE__, got_input, got_output);
 	}
 }
 
