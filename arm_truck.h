@@ -69,6 +69,7 @@ typedef struct
 	int led_counter;
 // throttle starts at this level when using feedback
 	int throttle_base;
+	int throttle_reverse_base;
 	int throttle_state;
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
@@ -78,7 +79,12 @@ typedef struct
 	pid_t heading_pid;
 	pid_t throttle_pid;
 	pid_t rpm_pid;
+// vanishing point feedback
+// P=1/16deg
 	pid_t path_pid;
+// side of path feedback
+// P=1/16deg
+	pid_t side_pid;
 
 	int battery;
 	int battery_accum;
@@ -125,6 +131,8 @@ typedef struct
 	int target_rpm;
 // RPM feedback after rolling back for power
 	int target_rpm2;
+// reverse RPM
+	int target_reverse_rpm;
 // result of PID controller
 	float throttle_feedback;
 // currently sampling the ref pin
@@ -156,6 +164,7 @@ typedef struct
 	int pid_downsample;
 // in radians
 	float current_heading;
+	float target_heading;
 // steering with throttle
 // number of PWM cycles for each steering step
 	int steering_step_delay;
@@ -184,10 +193,25 @@ typedef struct
     uint32_t spi_buffer;
 #define SPI_SYNC_CODE 0
 #define SPI_PACKET 1
-    int path_center;
-	int path_x;
+
+// enable path following
+	int enable_vision;
+// where in the camera view the vanishing point should be 0 - 255
+    int vanish_center;
+// where in the camera view the bottom of the center line should be 0 - 255
+	int bottom_center;
+// raw data from vision program 0 - 255
+	int vanish_x;
+	int vanish_y;
+	int bottom_x;
+	float vanish_lowpass;
+	float bottom_lowpass;
+	float vision_bandwidth;
 	derivative_t path_dx;
 	int path_dx_size;
+// delay between manual steering & path following
+	int manual_override_delay;
+	int manual_override_counter;
 	
 	int throttle_time;
 	int debug_counter;

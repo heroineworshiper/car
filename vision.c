@@ -40,13 +40,13 @@
 #include <sys/types.h>        /*  socket types              */
 #include <sys/wait.h>         /*  for waitpid()             */
 #include <arpa/inet.h>        /*  inet (3) funtions         */
-#include <linux/spi/spidev.h>
 #include "jpeglib.h"
 #include <setjmp.h>
 
 vision_t vision;
-void detect_path(vision_package_t *engine);
+void detect_path(vision_engine_t *engine);
 void init_yuv();
+void push_to_server();
 
 #define SQR(x) ((x) * (x))
 #define CLAMP(x, y, z) ((x) = ((x) < (y) ? (y) : ((x) > (z) ? (z) : (x))))
@@ -55,6 +55,13 @@ void init_yuv();
 #define TEXTLEN 1024
 
 
+
+// Save unprocessed frames to files.
+//#define RECORD_INPUT
+// Read JPEG from files instead of video device.
+#define PLAYBACK
+// Record the processed images.
+#define RECORD_OUTPUT
 
 
 // Camera type
@@ -101,13 +108,12 @@ void init_yuv();
 #endif
 
 
-// Save unprocessed frames to files.  Only good with JPEG input
-//#define RECORD_INPUT
-// Read JPEG from files instead of video device.
-#define PLAYBACK
-// Record the processed images.
-#define RECORD_OUTPUT
-
+// raspberry pi style SPI communication
+//#define USE_SPI
+// ODroid style SPI communication
+#define USE_ODROID_SPI
+// ODroid style UART communication
+//#define USE_UART
 
 // quality of recorded JPEGs
 #define JPEG_QUALITY 90
@@ -117,6 +123,8 @@ void init_yuv();
 #define DEVICE_PATH "/dev/video0"
 
 #define CONFIG_PATH "vision.conf"
+
+
 
 // space for compressed output frame
 #define PICTURE_DATA_SIZE 0x1000000
@@ -174,6 +182,9 @@ static unsigned char dht_data[DHT_SIZE] = {
 
 
 #ifndef X86
+#ifdef USE_SPI
+
+#include <linux/spi/spidev.h>
 
 // http://elinux.org/RPi_Low-level_peripherals#C
 #define BCM2708_PERI_BASE        0x20000000
@@ -280,7 +291,6 @@ void toggle_led()
  */
 
 
-int spi_fd;
 #define SPI_PATH "/dev/spidev0.1"
 // minimum is 4096
 #define SPI_SPEED 4096
@@ -306,7 +316,7 @@ void* spi_thread(void *ptr)
 		tr.bits_per_word = SPI_BITS;
 		
 
-		ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
+		ioctl(vision.spi_fd, SPI_IOC_MESSAGE(1), &tr);
 //printf("spi_thread %d\n", __LINE__);
 		
 		sem_post(&vision.spi_complete_lock);
@@ -328,19 +338,19 @@ void* spi_thread(void *ptr)
 
 void init_spi()
 {
-	spi_fd = open(SPI_PATH, O_RDWR);
-	if(spi_fd < 0)
+	vision.spi_fd = open(SPI_PATH, O_RDWR);
+	if(vision.spi_fd < 0)
 	{
 		printf("init_spi %d: couldn't open %s\n", __LINE__, SPI_PATH);
 		return;
 	}
 	
 	uint8_t mode = 0;
-	ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
+	ioctl(vision.spi_fd, SPI_IOC_WR_MODE, &mode);
 	uint8_t bits = SPI_BITS;
-	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
+	ioctl(vision.spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
 	uint32_t speed = SPI_SPEED;
-	ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
+	ioctl(vision.spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	
 	sem_init(&vision.spi_send_lock, 0, 0);
 	sem_init(&vision.spi_complete_lock, 0, 1);
@@ -365,7 +375,336 @@ void write_spi(unsigned char *data, int size)
 //printf("write_spi %d\n", __LINE__);
 }
 
+#endif // USE_SPI
+
+
+
+
+
+#ifdef USE_ODROID_SPI
+
+
+#include <linux/spi/spidev.h>
+
+#define SPI_PATH "/dev/spidev0.1"
+// minimum is 4096
+#define SPI_SPEED 4096
+#define SPI_BITS 8
+
+// GPIO numbers
+#define CLK_PIN 189
+#define DAT_PIN 192
+// GPIO usage:
+// echo 189 > /sys/class/gpio/export
+// echo out > /sys/class/gpio/gpio189/direction
+// echo 1 > /sys/class/gpio/gpio189/value
+
+void* spi_thread(void *ptr)
+{
+	while(1)
+	{
+		sem_wait(&vision.spi_send_lock);
+		int success = 1;
+//printf("spi_thread %d\n", __LINE__);
+
+		FILE *export_fd = fopen("/sys/class/gpio/export", "w");
+		if(!export_fd)
+		{
+			printf("spi_thread %d couldn't open export_fd\n", __LINE__);
+			success = 0;
+		}
+
+// this creates the file handles for the next open calls
+		if(success)
+		{
+			char string[1024];
+			sprintf(string, "%d\n", DAT_PIN);
+			fwrite(string, strlen(string), 1, export_fd);
+			fflush(export_fd);
+
+			sprintf(string, "%d\n", CLK_PIN);
+			fwrite(string, strlen(string), 1, export_fd);
+			fflush(export_fd);
+		}
+
+		char path[1024];
+		sprintf(path, "/sys/class/gpio/gpio%d/direction", DAT_PIN);
+		FILE *dat_tristate = fopen(path, "w");
+		if(!dat_tristate)
+		{
+			printf("spi_thread %d couldn't open %s\n", __LINE__, path);
+			success = 0;
+		}
+
+		sprintf(path, "/sys/class/gpio/gpio%d/direction", CLK_PIN);
+		FILE *clk_tristate = fopen(path, "w");
+		if(!clk_tristate)
+		{
+			printf("spi_thread %d couldn't open %s\n", __LINE__, path);
+			success = 0;
+		}
+		
+		sprintf(path, "/sys/class/gpio/gpio%d/value", DAT_PIN);
+		FILE *dat_value = fopen(path, "w");
+		if(!dat_value)
+		{
+			printf("spi_thread %d couldn't open %s\n", __LINE__, path);
+			success = 0;
+		}
+
+		sprintf(path, "/sys/class/gpio/gpio%d/value", CLK_PIN);
+		FILE *clk_value = fopen(path, "w");
+		if(!dat_value)
+		{
+			printf("spi_thread %d couldn't open %s\n", __LINE__, path);
+			success = 0;
+		}
+		
+		
+		if(success)
+		{
+			char string[1024];
+
+			sprintf(string, "out\n");
+			fwrite(string, strlen(string), 1, dat_tristate);
+			fflush(dat_tristate);
+			
+			fwrite(string, strlen(string), 1, clk_tristate);
+			fflush(clk_tristate);
+
+			int i;
+			for(i = 0; i < vision.spi_tx_size; i++)
+			{
+				uint8_t byte = vision.spi_tx_data[i];
+				int j;
+//				int delay = 1000000 / SPI_SPEED / 3;
+				int delay = 0;
+// 3.5khz is the max
+				for(j = 0; j < 8; j++)
+				{
+// bit is transferred on the rising edge
+// inverted logic because of level conversion transistors
+					sprintf(string, "1\n");
+					fwrite(string, strlen(string), 1, clk_value);
+					fflush(clk_value);
+					usleep(delay);
+					
+					sprintf(string, "%d\n", (byte & 0x80) ? 0 : 1);
+					fwrite(string, strlen(string), 1, dat_value);
+					fflush(dat_value);
+					usleep(delay);
+					
+					sprintf(string, "0\n");
+					fwrite(string, strlen(string), 1, clk_value);
+					fflush(clk_value);
+					usleep(delay);
+					
+					byte <<= 1;
+				}
+			}
+		}
+		
+		if(export_fd) fclose(export_fd);
+		if(dat_tristate) fclose(dat_tristate);
+		if(clk_tristate) fclose(clk_tristate);
+		if(dat_value) fclose(dat_value);
+		if(clk_value) fclose(clk_value);
+
+		sem_post(&vision.spi_complete_lock);
+	}
+
+}
+
+void init_spi()
+{
+// 	vision.spi_fd = open(SPI_PATH, O_RDWR);
+// 	if(vision.spi_fd < 0)
+// 	{
+// 		printf("init_spi %d: couldn't open %s\n", __LINE__, SPI_PATH);
+// 		return;
+// 	}
+// 	
+// 	uint8_t mode = 0;
+// 	ioctl(vision.spi_fd, SPI_IOC_WR_MODE, &mode);
+// 	uint8_t bits = SPI_BITS;
+// 	ioctl(vision.spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
+// 	uint32_t speed = SPI_SPEED;
+// 	ioctl(vision.spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
+
+	sem_init(&vision.spi_send_lock, 0, 0);
+	sem_init(&vision.spi_complete_lock, 0, 1);
+
+	pthread_t tid;
+	pthread_attr_t  attr;
+	pthread_attr_init(&attr);
+	pthread_create(&tid, &attr, spi_thread, 0);
+}
+
+
+
+void write_spi()
+{
+	sem_post(&vision.spi_send_lock);
+}
+
+
+#endif // USE_ODROID_SPI
+
+
+
+
+
+
+
+#ifdef USE_UART
+
+// send data to microprocessor over UART
+
+// Returns the FD of the serial port
+static int init_serial(char *path, int baud, int custom_baud)
+{
+	struct termios term;
+
+	printf("init_serial %d: opening %s\n", __LINE__, path);
+
+// Initialize serial port
+	int fd = open(path, O_RDWR | O_NOCTTY | O_SYNC);
+	if(fd < 0)
+	{
+		printf("init_serial %d: path=%s: %s\n", __LINE__, path, strerror(errno));
+		return -1;
+	}
+	
+	if (tcgetattr(fd, &term))
+	{
+		printf("init_serial %d: path=%s %s\n", __LINE__, path, strerror(errno));
+		close(fd);
+		return -1;
+	}
+
+
+// Try to set kernel to custom baud and low latency
+	if(custom_baud)
+	{
+		struct serial_struct serial_struct;
+		if(ioctl(fd, TIOCGSERIAL, &serial_struct) < 0)
+		{
+			printf("init_serial %d: path=%s %s\n", __LINE__, path, strerror(errno));
+		}
+
+		serial_struct.flags |= ASYNC_LOW_LATENCY;
+		serial_struct.flags &= ~ASYNC_SPD_CUST;
+		if(custom_baud)
+		{
+			serial_struct.flags |= ASYNC_SPD_CUST;
+			serial_struct.custom_divisor = (int)((float)serial_struct.baud_base / 
+				(float)custom_baud + 0.5);
+			baud = B38400;
+		}  
+/*
+ * printf("init_serial: %d serial_struct.baud_base=%d serial_struct.custom_divisor=%d\n", 
+ * __LINE__,
+ * serial_struct.baud_base,
+ * serial_struct.custom_divisor);
+ */
+
+
+// Do setserial on the command line to ensure it actually worked.
+		if(ioctl(fd, TIOCSSERIAL, &serial_struct) < 0)
+		{
+			printf("init_serial %d: path=%s %s\n", __LINE__, path, strerror(errno));
+		}
+	}
+
+/*
+ * printf("init_serial: %d path=%s iflag=0x%08x oflag=0x%08x cflag=0x%08x\n", 
+ * __LINE__, 
+ * path, 
+ * term.c_iflag, 
+ * term.c_oflag, 
+ * term.c_cflag);
+ */
+	tcflush(fd, TCIOFLUSH);
+	cfsetispeed(&term, baud);
+	cfsetospeed(&term, baud);
+//	term.c_iflag = IGNBRK;
+	term.c_iflag = 0;
+	term.c_oflag = 0;
+	term.c_lflag = 0;
+//	term.c_cflag &= ~(PARENB | PARODD | CRTSCTS | CSTOPB | CSIZE);
+//	term.c_cflag |= CS8;
+	term.c_cc[VTIME] = 1;
+	term.c_cc[VMIN] = 1;
+/*
+ * printf("init_serial: %d path=%s iflag=0x%08x oflag=0x%08x cflag=0x%08x\n", 
+ * __LINE__, 
+ * path, 
+ * term.c_iflag, 
+ * term.c_oflag, 
+ * term.c_cflag);
+ */
+	if(tcsetattr(fd, TCSANOW, &term))
+	{
+		printf("init_serial %d: path=%s %s\n", __LINE__, path, strerror(errno));
+		close(fd);
+		return -1;
+	}
+
+	printf("init_serial %d: opened %s\n", __LINE__, path);
+	return fd;
+}
+
+void* serial_thread(void *ptr)
+{
+	while(1)
+	{
+//printf("spi_thread %d\n", __LINE__);
+		sem_wait(&vision.spi_send_lock);
+		
+		write(vision.serial_fd, vision.spi_tx_data, vision.spi_tx_size);
+		
+		sem_post(&vision.spi_complete_lock);
+	}
+}
+
+
+void write_spi()
+{
+	sem_post(&vision.spi_send_lock);
+}
+
+
+void init_serial_thread()
+{
+	sem_init(&vision.spi_send_lock, 0, 0);
+	sem_init(&vision.spi_complete_lock, 0, 1);
+
+
+	vision.serial_fd = init_serial((char*)"/dev/ttyS", B115200, 0);
+	if(vision.serial_fd < 0)
+	{
+		printf("init_serial_thread: couldn't open serial port\n");
+		return;
+	}
+
+	pthread_t tid;
+	pthread_attr_t  attr;
+	pthread_attr_init(&attr);
+	pthread_create(&tid, &attr, serial_thread, 0);
+
+}
+
+
+
+
+#endif // USE_UART
+
+
+
+
 #endif // !X86
+
+
 
 
 
@@ -408,7 +747,6 @@ void append_tar(char *filename, unsigned char *data, int size)
 
 void append_file(unsigned char *data, int size)
 {
-#ifdef RECORD_OUTPUT
 	if(!tar_fd) tar_fd = fopen(vision.write_path, "w");
 	if(!tar_fd)
 	{
@@ -419,7 +757,6 @@ void append_file(unsigned char *data, int size)
 	fwrite(data, size, 1, tar_fd);
 	fflush(tar_fd);
 	vision.frames_written++;
-#endif // RECORD_OUTPUT
 }
 
 int init_input(char *path)
@@ -1274,6 +1611,9 @@ int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_b
 	return picture_size;
 }
 
+
+void compress_input(unsigned char *frame, int w, int h);
+
 int read_frame(unsigned char *output_y_arg,
 	unsigned char *output_u_arg,
 	unsigned char *output_v_arg)
@@ -1337,11 +1677,28 @@ int read_frame(unsigned char *output_y_arg,
 	    	(buffer.bytesused - HEADERFRAME1));
 		picture_size = vision.picture_size = buffer.bytesused + DHT_SIZE;
 #endif // !ZSTAR
+
+#ifdef RECORD_INPUT
+		append_file(vision.picture_data, picture_size);
+#endif
 	}
 	else
 // Capture YUYV
 	if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
 	{
+
+#ifdef RECORD_INPUT
+		if(get_timer_difference(&vision.record_input_timer) > vision.record_period)
+		{
+			reset_timer(&vision.record_input_timer);
+			compress_input(vision.frame_buffer[buffer.index], 
+				vision.cam_w, 
+				vision.cam_h);
+			append_file(vision.picture_in, vision.in_size);
+		}
+#endif
+
+
 		if(vision.cam_h == vision.working_h)
 		{
 			for(i = 0; i < vision.working_h; i++)
@@ -1352,7 +1709,7 @@ int read_frame(unsigned char *output_y_arg,
 				unsigned char *output_u = output_u_arg + i * vision.working_w;
 				unsigned char *output_v = output_v_arg + i * vision.working_w;
 
-				for(j = 0; j < vision.working_w; j++)
+				for(j = 0; j < vision.working_w / 2; j++)
 				{
 					*output_y++ = input_row[0];
 					*output_y++ = input_row[2];
@@ -1520,8 +1877,8 @@ METHODDEF(void) init_destination(j_compress_ptr cinfo)
   	mjpeg_dest_ptr dest = (mjpeg_dest_ptr)cinfo->dest;
 
 /* Set the pointer to the preallocated buffer */
-  	dest->buffer = vision.picture_data;
-  	dest->pub.next_output_byte = vision.picture_data;
+  	dest->buffer = vision.picture_out;
+  	dest->pub.next_output_byte = vision.picture_out;
   	dest->pub.free_in_buffer = PICTURE_DATA_SIZE;
 }
 
@@ -1536,7 +1893,7 @@ METHODDEF(void) term_destination(j_compress_ptr cinfo)
 {
 /* Just get the length */
 	mjpeg_dest_ptr dest = (mjpeg_dest_ptr)cinfo->dest;
-	vision.picture_size = PICTURE_DATA_SIZE - 
+	vision.out_size = PICTURE_DATA_SIZE - 
 		dest->pub.free_in_buffer;
 }
 
@@ -1577,14 +1934,18 @@ void print_buffer(unsigned char *data, int size)
 	printf("\n");
 }
 
-void compress_jpeg(vision_package_t *engine)
+void compress_output(unsigned char *out_y, 
+	unsigned char *out_u,
+	unsigned char *out_v,
+	int w,
+	int h)
 {
 	struct jpeg_compress_struct jpeg_compress;
  	struct jpeg_error_mgr jerr;
 	jpeg_compress.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&jpeg_compress);
-	jpeg_compress.image_width = vision.output_w;
-	jpeg_compress.image_height = vision.output_h;
+	jpeg_compress.image_width = w;
+	jpeg_compress.image_height = h;
 	jpeg_compress.input_components = 3;
 	jpeg_compress.in_color_space = JCS_RGB;
 	jpeg_set_defaults(&jpeg_compress);
@@ -1610,19 +1971,19 @@ void compress_jpeg(vision_package_t *engine)
 	while(jpeg_compress.next_scanline < jpeg_compress.image_height)
 	{
 		for(i = 0; 
-			i < 16 && i + jpeg_compress.next_scanline < vision.output_h; 
+			i < 16 && i + jpeg_compress.next_scanline < h; 
 			i++)
 		{
-			mcu_rows[0][i] = engine->out_y + 
-				(jpeg_compress.next_scanline + i) * vision.output_w;
+			mcu_rows[0][i] = out_y + 
+				(jpeg_compress.next_scanline + i) * w;
 			if(i < 8)
 			{
-				unsigned char *u_row = mcu_rows[1][i] = engine->out_u +
-					(jpeg_compress.next_scanline + i * 2) * vision.output_w;
-				unsigned char *v_row = mcu_rows[2][i] = engine->out_v +
-					(jpeg_compress.next_scanline + i * 2) * vision.output_w;
+				unsigned char *u_row = mcu_rows[1][i] = out_u +
+					(jpeg_compress.next_scanline + i * 2) * w;
+				unsigned char *v_row = mcu_rows[2][i] = out_v +
+					(jpeg_compress.next_scanline + i * 2) * w;
 // pack UV data for this line
-				for(j = 0; j < vision.output_w / 2; j++)
+				for(j = 0; j < w / 2; j++)
 				{
 					u_row[j] = u_row[j * 2];
 					v_row[j] = v_row[j * 2];
@@ -1632,7 +1993,7 @@ void compress_jpeg(vision_package_t *engine)
 
 		jpeg_write_raw_data(&jpeg_compress, 
 			mcu_rows, 
-			vision.output_h);
+			h);
 	}
 	
 	
@@ -1646,10 +2007,158 @@ void compress_jpeg(vision_package_t *engine)
 		free(mcu_rows[i]);
 	}
 	
-//	printf("compress_jpeg %d\n", __LINE__);
-//	print_buffer(vision.picture_data, vision.picture_size);
+//	printf("compress_output %d\n", __LINE__);
 
-	append_file(vision.picture_data, vision.picture_size);
+}
+
+
+
+
+
+
+
+
+METHODDEF(void) init_destination2(j_compress_ptr cinfo)
+{
+  	mjpeg_dest_ptr dest = (mjpeg_dest_ptr)cinfo->dest;
+
+/* Set the pointer to the preallocated buffer */
+  	dest->buffer = vision.picture_in;
+  	dest->pub.next_output_byte = vision.picture_in;
+  	dest->pub.free_in_buffer = PICTURE_DATA_SIZE;
+}
+
+METHODDEF(boolean) empty_output_buffer2(j_compress_ptr cinfo)
+{
+	printf("empty_output_buffer2 %d called\n", __LINE__);
+
+	return TRUE;
+}
+
+METHODDEF(void) term_destination2(j_compress_ptr cinfo)
+{
+/* Just get the length */
+	mjpeg_dest_ptr dest = (mjpeg_dest_ptr)cinfo->dest;
+	vision.in_size = PICTURE_DATA_SIZE - 
+		dest->pub.free_in_buffer;
+}
+
+GLOBAL(void) jpeg_buffer_dest2(j_compress_ptr cinfo)
+{
+  	mjpeg_dest_ptr dest;
+
+/* The destination object is made permanent so that multiple JPEG images
+ * can be written to the same file without re-executing jpeg_stdio_dest.
+ * This makes it dangerous to use this manager and a different destination
+ * manager serially with the same JPEG object, because their private object
+ * sizes may be different.  Caveat programmer.
+ */
+	if(cinfo->dest == NULL) 
+	{	
+/* first time for this JPEG object? */
+      	cinfo->dest = (struct jpeg_destination_mgr *)
+    		(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, 
+				JPOOL_PERMANENT,
+				sizeof(mjpeg_destination_mgr));
+	}
+
+	dest = (mjpeg_dest_ptr)cinfo->dest;
+	dest->pub.init_destination = init_destination2;
+	dest->pub.empty_output_buffer = empty_output_buffer2;
+	dest->pub.term_destination = term_destination2;
+}
+
+
+void compress_input(unsigned char *frame, int w, int h)
+{
+	struct jpeg_compress_struct jpeg_compress;
+ 	struct jpeg_error_mgr jerr;
+	jpeg_compress.err = jpeg_std_error(&jerr);
+	jpeg_create_compress(&jpeg_compress);
+	jpeg_compress.image_width = w;
+	jpeg_compress.image_height = h;
+	jpeg_compress.input_components = 3;
+	jpeg_compress.in_color_space = JCS_RGB;
+	jpeg_set_defaults(&jpeg_compress);
+	jpeg_set_quality(&jpeg_compress, JPEG_QUALITY, 0);
+	jpeg_compress.dct_method = JDCT_IFAST;
+	jpeg_compress.comp_info[0].h_samp_factor = 2;
+	jpeg_compress.comp_info[0].v_samp_factor = 2;
+	jpeg_compress.comp_info[1].h_samp_factor = 1;
+	jpeg_compress.comp_info[1].v_samp_factor = 1;
+	jpeg_compress.comp_info[2].h_samp_factor = 1;
+	jpeg_compress.comp_info[2].v_samp_factor = 1;
+	jpeg_buffer_dest2(&jpeg_compress);
+
+	int i, j;
+	unsigned char **mcu_rows[3];
+	for(i = 0; i < 3; i++)
+	{
+		mcu_rows[i] = (unsigned char**)malloc(16 * sizeof(unsigned char*));
+		for(j = 0; j < 16; j++)
+		{
+			mcu_rows[i][j] = (unsigned char*)malloc(w);
+		}
+	}
+	
+	
+
+	jpeg_compress.raw_data_in = TRUE;
+	jpeg_start_compress(&jpeg_compress, TRUE);
+	while(jpeg_compress.next_scanline < jpeg_compress.image_height)
+	{
+		for(i = 0; 
+			i < 16 && i + jpeg_compress.next_scanline < h; 
+			i++)
+		{
+			unsigned char *output_y = mcu_rows[0][i];
+			unsigned char *input_row = frame +
+					(jpeg_compress.next_scanline + i) * vision.cam_w * 2;
+			for(j = 0; j < w / 2; j++)
+			{
+				*output_y++ = input_row[0];
+				*output_y++ = input_row[2];
+				input_row += 4;
+			}
+
+
+			if(i < 8)
+			{
+				unsigned char *output_u = mcu_rows[1][i];
+				unsigned char *output_v = mcu_rows[2][i];
+				unsigned char *input_row = frame + 
+					(jpeg_compress.next_scanline + i * 2) * vision.cam_w * 2;
+				for(j = 0; j < w / 2; j++)
+				{
+					*output_u++ = input_row[1];
+					*output_v++ = input_row[3];
+					input_row += 4;
+				}
+			}
+		}
+
+		jpeg_write_raw_data(&jpeg_compress, 
+			mcu_rows, 
+			h);
+	}
+	
+	
+	
+	jpeg_finish_compress(&jpeg_compress);
+	jpeg_destroy((j_common_ptr)&jpeg_compress);
+
+
+	for(i = 0; i < 3; i++)
+	{
+		for(j = 0; j < 16; j++)
+		{
+			free(mcu_rows[i][j]);
+		}
+		free(mcu_rows[i]);
+	}
+	
+//	printf("compress_output %d\n", __LINE__);
+
 }
 
 
@@ -1663,44 +2172,39 @@ void* vision_thread(void *ptr)
 {
 	vision_engine_t *engine = (vision_engine_t*)ptr;
 	
-	while(!engine->done)
+	while(1)
 	{
 // wait for a frame
-		sem_wait(&vision.package_lock);
-
-		vision_package_t *package = vision.packages[vision.input_package];
-		vision.input_package++;
-		if(vision.input_package >= TOTAL_PACKAGES)
+		sem_wait(&engine->ready_lock);
+		
+		if(engine->eof)
 		{
-			vision.input_package = 0;
+			sem_post(&engine->complete_lock);
+			break;
 		}
-		
-		
+
 // process it
-		detect_path(package);
+//printf("vision_thread %d\n", __LINE__);
+		detect_path(engine);
+//printf("vision_thread %d\n", __LINE__);
 
-// release the frame
-		sem_post(&package->complete_lock);
+		sem_post(&engine->complete_lock);
 	}
-}
-
-void init_package(vision_package_t *package)
-{
-	package->in_y = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->in_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->in_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->out_y = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->out_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->out_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
-	package->accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
-	sem_init(&package->complete_lock, 0, 0);
 }
 
 void init_engine(vision_engine_t *engine)
 {
-	engine->done = 0;
-	sem_init(&engine->input_lock, 0, 0);
+	engine->in_y = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->in_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->in_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->out_y = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->out_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->out_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
+
+	sem_init(&engine->input_lock, 0, 1);
+	sem_init(&engine->ready_lock, 0, 0);
 	sem_init(&engine->complete_lock, 0, 0);
 
 
@@ -1729,7 +2233,7 @@ void parse_config(FILE *in)
 				(*ptr == ' ' || *ptr == '\t')) ptr++;
 			if(*ptr != '#')
 			{
-//printf("init_vision %d '%s' '%s'\n", __LINE__, key, value);
+//printf("parse_config %d '%s' '%s'\n", __LINE__, key, value);
 				if(!strcasecmp(ptr, "TOP_X1")) vision.top_x1 = atoi(value);
 				else
 				if(!strcasecmp(ptr, "TOP_X2")) vision.top_x2 = atoi(value);
@@ -1773,6 +2277,8 @@ void parse_config(FILE *in)
 				if(!strcasecmp(ptr, "WRITE_PATH")) strcpy(vision.write_path, value);
 				else
 				if(!strcasecmp(ptr, "REF_PATH")) strcpy(vision.ref_path, value);
+				else
+				if(!strcasecmp(ptr, "RECORD_PERIOD")) vision.record_period = atoi(value);
 			}
 			else
 			{
@@ -1784,7 +2290,7 @@ void parse_config(FILE *in)
 		}
 	}
 
-	printf("init_vision %d: \n", __LINE__);
+	printf("parse_config %d: \n", __LINE__);
 	printf("top_x1=%d\n", vision.top_x1);
 	printf("top_x2=%d\n", vision.top_x2);
 	printf("top_y=%d\n", vision.top_y);
@@ -1804,6 +2310,120 @@ void parse_config(FILE *in)
 	printf("write_path=%s\n", vision.write_path);
 	
 }
+
+// read frames from the pipeline as fast as they come off
+void* frame_writer(void *ptr)
+{
+	int prev_total = 0;
+	while(1)
+	{
+		vision_engine_t *engine = &vision.engine[vision.current_output];
+
+// wait for frame to be finished
+		sem_wait(&engine->complete_lock);
+
+		if(engine->eof)
+		{
+			break;
+		}
+
+
+// send telemetry to microcontroller
+#ifndef X86
+#ifdef USE_ODROID_SPI
+		
+		vision.spi_tx_data[0] = 0xff;
+		vision.spi_tx_data[1] = 0x2d;
+		vision.spi_tx_data[2] = 0xd4;
+		vision.spi_tx_data[3] = 0xe5;
+		vision.spi_tx_data[4] = engine->vanish_x;
+		vision.spi_tx_data[5] = engine->vanish_y;
+		CLAMP(engine->bottom_x, 0, 0xff);
+		vision.spi_tx_data[6] = engine->bottom_x;
+		vision.spi_tx_data[7] = 0;
+		vision.spi_tx_size = 8;
+		write_spi();
+		vision.path_x = engine->vanish_x;
+#endif
+#endif
+
+
+
+
+//printf("main %d current_engine=%d\n", __LINE__, vision.current_engine);
+
+#ifndef PLAYBACK
+#ifdef RECORD_OUTPUT
+// compress all frames if recording
+		if(1)
+#else
+// compress 1 frame/sec if only serving web page
+		if(get_timer_difference(&vision.timer) > 1000)
+#endif
+		{
+			reset_timer(&vision.timer);
+
+
+			compress_output(engine->out_y, 
+				engine->out_u, 
+				engine->out_v, 
+				vision.output_w, 
+				vision.output_h);
+#ifdef RECORD_OUTPUT
+			append_file(vision.picture_out, vision.out_size);
+#endif
+
+// Copy JPEG to web server
+			push_to_server();
+
+//			printf("main %d: wrote %d %d bytes", __LINE__, vision.frames_written, vision.out_size);
+
+
+		}
+
+#else // !PLAYBACK
+
+// compress all frames if playing back
+		compress_output(engine->out_y, 
+			engine->out_u, 
+			engine->out_v, 
+			vision.output_w, 
+			vision.output_h);
+#ifdef RECORD_OUTPUT
+		append_file(vision.picture_out, vision.out_size);
+#endif
+// Copy JPEG to web server			
+		push_to_server();
+
+#endif // PLAYBACK
+
+
+// Show FPS
+		if(get_timer_difference(&vision.timer2) > 1000)
+		{
+			vision.fps = vision.total_frames - prev_total;
+			printf("main %d: fps=%d wrote %d\n", 
+				__LINE__, 
+				vision.fps,
+				vision.frames_written);
+			prev_total = vision.total_frames;
+			reset_timer(&vision.timer2);
+		}
+//sleep(1);
+
+
+
+// release frame for next read
+		sem_post(&engine->input_lock);
+
+		vision.current_output++;
+		if(vision.current_output >= TOTAL_CPUS)
+		{
+			vision.current_output = 0;
+		}
+	}
+}
+
 
 void init_vision()
 {
@@ -1829,6 +2449,7 @@ void init_vision()
 	strcpy(vision.ref_path, "downhill1.mov");
 	vision.bottom_x = 0.5;
 	vision.top_x = 0.5;
+	vision.record_period = 1000;
 
 
 	parse_config(in);
@@ -1838,14 +2459,14 @@ void init_vision()
 		init_engine(&vision.engine[i]);
 	}
 	
-	for(i = 0; i < TOTAL_PACKAGES; i++)
-	{
-		init_package(&vision.packages[i]);
-	}
-	sem_init(&vision.package_lock, 0, 1);
+	pthread_t tid;
+	pthread_attr_t  attr;
+	pthread_attr_init(&attr);
+	pthread_create(&tid, &attr, frame_writer, 0);
 
-	
 	vision.picture_data = (unsigned char*)malloc(PICTURE_DATA_SIZE);
+	vision.picture_out = (unsigned char*)malloc(PICTURE_DATA_SIZE);
+	vision.picture_in = (unsigned char*)malloc(PICTURE_DATA_SIZE);
 	vision.latest_image = (unsigned char*)malloc(PICTURE_DATA_SIZE);
 
 #ifndef PLAYBACK
@@ -2106,7 +2727,7 @@ void init_httpd()
 	pthread_create(&tid, &attr, httpd_thread, 0);
 }
 
-void draw_pixel(vision_package_t *engine, int x, int y)
+void draw_pixel(vision_engine_t *engine, int x, int y)
 {
 	if(!(x >= 0 && y >= 0 && x < vision.output_w && y < vision.output_h)) return;
 	int offset = y * vision.output_w + x;
@@ -2116,7 +2737,7 @@ void draw_pixel(vision_package_t *engine, int x, int y)
 }
 
 
-void draw_line(vision_package_t *engine, int x1, int y1, int x2, int y2)
+void draw_line(vision_engine_t *engine, int x1, int y1, int x2, int y2)
 {
 	int w = labs(x2 - x1);
 	int h = labs(y2 - y1);
@@ -2172,7 +2793,7 @@ void draw_line(vision_package_t *engine, int x1, int y1, int x2, int y2)
 //printf("FindObjectMain::draw_line 2\n");
 }
 
-void draw_rect(vision_package_t *engine, int x1, int y1, int x2, int y2)
+void draw_rect(vision_engine_t *engine, int x1, int y1, int x2, int y2)
 {
 	draw_line(engine, x1, y1, x2, y1);
 	draw_line(engine, x1, y1, x1, y2);
@@ -2193,7 +2814,7 @@ void draw_rect(vision_package_t *engine, int x1, int y1, int x2, int y2)
 }
 
 
-int line_color(vision_package_t *engine, int x1, int y1, int x2, int y2)
+int line_color(vision_engine_t *engine, int x1, int y1, int x2, int y2)
 {
 	int w = labs(x2 - x1);
 	int h = labs(y2 - y1);
@@ -2256,22 +2877,30 @@ int line_color(vision_package_t *engine, int x1, int y1, int x2, int y2)
 
 void push_to_server()
 {
-	if(vision.picture_size > 0)
+	if(vision.out_size > 0)
 	{
 		pthread_mutex_lock(&vision.latest_lock);
-//printf("push_to_server %d %d\n", __LINE__, vision.picture_size);
-		memcpy(vision.latest_image, vision.picture_data, vision.picture_size);
-		vision.latest_size = vision.picture_size;
+//printf("push_to_server %d %d\n", __LINE__, vision.out_size);
+		memcpy(vision.latest_image, vision.picture_out, vision.out_size);
+		vision.latest_size = vision.out_size;
 		pthread_mutex_unlock(&vision.latest_lock);
 	}
 }
+
+
 
 int main()
 {
 	int i;
 
 #ifndef X86
+	#if defined(USE_SPI) || defined(USE_ODROID_SPI)
 	init_spi();
+	#endif
+
+	#ifdef USE_SERIAL
+	init_serial_thread();
+	#endif
 //	init_gpio();
 #endif
 
@@ -2283,112 +2912,41 @@ int main()
 	
 	
 	
-	int prev_total = vision.total_frames;
 	reset_timer(&vision.timer);
 	reset_timer(&vision.timer2);
-	int got_input = 1;
-	int got_output = 1;
-	int total_no_input = 0;
-	while(got_input || got_output)
+	reset_timer(&vision.record_input_timer);
+	while(1)
 	{
-// Never stop if live
-#ifdef PLAYBACK
-		got_input = 0;
-		if(total_no_input >= TOTAL_CPUS)
-		{
-			break;
-		}
-#endif
-		got_output = 0;
+		vision_engine_t *engine = &vision.engine[vision.current_input];
+		sem_wait(&engine->input_lock);
 
-		vision_package_t *engine = &vision.packages[vision.current_engine];
+//sleep(1);		
 		if(!read_frame(engine->in_y, engine->in_u, engine->in_v) <= 0)
 		{
-			got_input = 1;
-		}
-		else
-		{
-			total_no_input++;
-		}
 
 
 // process it
-		sem_post(&engine->package_lock);
+			sem_post(&engine->ready_lock);
 
-// wait for processed frame
-		vision.current_engine++;
-		if(vision.current_engine >= TOTAL_CPUS)
-		{
-			vision.current_engine = 0;
+			vision.current_input++;
+			if(vision.current_input >= TOTAL_CPUS)
+			{
+				vision.current_input = 0;
+			}
 		}
-
-		engine = &vision.engine[vision.current_engine];
-
-printf("main %d %d\n", __LINE__, vision.current_engine);
-		sem_wait(&engine->complete_lock);
-
-		if(engine->has_frame)
+		else
 		{
-//printf("main %d current_engine=%d\n", __LINE__, vision.current_engine);
-			engine->has_frame = 0;
-			got_output = 1;
-		
-#ifndef PLAYBACK
-#ifdef RECORD_OUTPUT
-// compress all frames if recording
-			if(1)
+#ifdef PLAYBACK
+// wait for frame writer to finish
+			engine->eof = 1;
+			sem_post(&engine->ready_lock);
+			break;
 #else
-// compress 1 frame/sec if only serving web page
-			if(get_timer_difference(&vision.timer) > 1000)
+// try reading again
+			sem_post(&engine->input_lock);
 #endif
-			{
-				reset_timer(&vision.timer);
-
-
-				if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG)
-				{
-					append_file(vision.picture_data, vision.picture_size);
-				}
-				else
-				if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_RGB24)
-				{
-				}
-				else
-				if(vision.v4l2_params.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
-				{
-					compress_jpeg(engine);
-				}
-
-	// Copy JPEG to web server
-				push_to_server();
-
-	//			printf("main %d: wrote %d %d bytes", __LINE__, vision.frames_written, vision.picture_size);
-
-
-			}
-
-#else // !PLAYBACK
-
-	// compress all frames if playing back
-			compress_jpeg(engine);
-	// Copy JPEG to web server			
-			push_to_server();
-
-#endif // PLAYBACK
-
-
-	// Show FPS
-			if(get_timer_difference(&vision.timer2) > 1000)
-			{
-				vision.fps = vision.total_frames - prev_total;
-				printf("main %d: fps=%d wrote %d\n", 
-					__LINE__, 
-					vision.fps,
-					vision.frames_written);
-				prev_total = vision.total_frames;
-				reset_timer(&vision.timer2);
-			}
 		}
+
 		
 //		printf("main %d got_input=%d got_output=%d\n", __LINE__, got_input, got_output);
 	}

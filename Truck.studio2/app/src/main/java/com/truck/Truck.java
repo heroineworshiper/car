@@ -199,15 +199,23 @@ public class Truck extends Thread {
 		    			offset += 2;
 		    			// command
 		    			beacon[offset++] = (byte) 2;
-		    			beacon[offset++] = (byte) (needSaveConfig ? 1 : 0);
-		    			
-		    			
-		    			beacon[offset++] = (byte) (Settings.headlights ? 1 :0);
+						//beacon[offset++] = (byte) (needSaveConfig ? 1 : 0);
+						beacon[offset++] = (byte) 1;
+
+
+						beacon[offset++] = (byte) (Settings.getFileFloat("VISION_BANDWIDTH")[0] * 255);
+						beacon[offset++] = (byte) (Settings.getFileFloat("PATH_CENTER")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("BOTTOM_CENTER")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_VISION")[0]);
+						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("MANUAL_OVERRIDE_DELAY")[0]));
+
+
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
@@ -224,19 +232,36 @@ public class Truck extends Thread {
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 
-                        float targetPace = Settings.getFileFloat("TARGET_PACE")[0];
+                        //float targetPace = Settings.getFileFloat("TARGET_PACE")[0];
+						float targetPace = Settings.targetPace;
                         if(targetPace > 0.001)
                         {
                             // meters per minute/wheel circumference in meters
-                            int targetRpm = (int)(1609.0 / targetPace / (0.110 * Math.PI));
-                            offset = Math.write_int16(beacon, offset, targetRpm);
-Log.v("Truck", "run targetRPM=" + targetRpm);
+                            offset = Math.write_int16(beacon, offset, paceToRPM(targetPace));
+//Log.v("Truck", "run targetRPM=" + targetRpm);
                         }
                         else
                         {
                             offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
                         }
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PATH_CENTER")[0]));
+
+
+						float targetReversePace = Settings.getFileFloat("TARGET_REVERSE_PACE")[0];
+						if(targetPace > 0.001)
+						{
+							// meters per minute/wheel circumference in meters
+							offset = Math.write_int16(beacon, offset, paceToRPM(targetReversePace));
+//Log.v("Truck", "run targetRPM=" + targetRpm);
+						}
+						else
+						{
+							offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_REVERSE_RPM")[0]));
+						}
+
+
+
+
+
 
 
 		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
@@ -250,7 +275,10 @@ Log.v("Truck", "run targetRPM=" + targetRpm);
 		    			offset = writePid(offset, pid);
 
 						pid = Settings.getFileFloat("PATH_PID");
-		    			offset = writePid(offset, pid);
+						offset = writePid(offset, pid);
+
+						pid = Settings.getFileFloat("SIDE_PID");
+						offset = writePid(offset, pid);
 
 // write the size including the CRC
 						Math.write_int16(beacon, 4, offset + 2);
@@ -288,7 +316,7 @@ Log.v("Truck", "run targetRPM=" + targetRpm);
 	    			
 	    			
 	    			readPacket();
-//	    			printBuffer("run 1", receive_buf, 0, totalReceived);
+	    			//printBuffer("run 1", receive_buf, 0, totalReceived);
 	    			
 	    			int drop_bytes = 0;
 	    			for(offset = 0; offset < totalReceived - 4; )
@@ -313,8 +341,10 @@ Log.v("Truck", "run targetRPM=" + targetRpm);
 	    						else
 	    						if(offset <= totalReceived - size)
 	    						{
-	    							checksum = Math.getChecksum(receive_buf, offset, size - 2);
-//    			    				Log.v("Truck.run 1", "checksum1=" + checksum + " checksum2=" + Math.read_uint16(receive_buf, offset + size - 2));
+									printBuffer("run 1", receive_buf, 0, totalReceived);
+
+									checksum = Math.getChecksum(receive_buf, offset, size - 2);
+    			    				Log.v("Truck.run 1", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math.read_uint16(receive_buf, offset + size - 2));
 	    							if(checksum == Math.read_uint16(receive_buf, offset + size - 2))
 	    							{
 // packet is intact
@@ -327,8 +357,9 @@ Log.v("Truck", "run targetRPM=" + targetRpm);
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
 		    								rpm = Math.read_uint16(receive_buf, offset + 20);
 		    								current_heading = Math.read_float32(receive_buf, offset + 22);
-//		    								power = Math.read_float32(receive_buf, offset + 26);
-		    								path_x = Math.read_int16(receive_buf, offset + 26);
+											vanish_x = receive_buf[offset + 26];
+											vanish_y = receive_buf[offset + 27];
+											bottom_x = receive_buf[offset + 28];
 
 		    								break;
 		    							}
@@ -390,6 +421,10 @@ Log.v("Truck", "run targetRPM=" + targetRpm);
 	    	
 	    }
     }
+
+	private int paceToRPM(float targetPace) {
+		return (int)(1609.0 / targetPace / (0.110 * Math.PI));
+	}
 
 
 	private int writePid(int offset, float[] pid) {
@@ -519,7 +554,7 @@ Log.v("Truck", "run targetRPM=" + targetRpm);
     static float current_heading;
 	static float power;
 	static int rpm;
-	static int path_x;
+	static int vanish_x, vanish_y, bottom_x;
     
     static boolean needReset = false;
     static boolean needConfig = false;

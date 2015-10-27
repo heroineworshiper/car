@@ -112,7 +112,8 @@ public class Settings {
 	{
 		SharedPreferences file = null;
 		file = context.getSharedPreferences("truck", 0);
-		headlights = file.getInt("headlights", 0) == 0 ? false : true;
+		//headlights = file.getInt("headlights", 0) == 0 ? false : true;
+		targetPace = file.getFloat("targetPace", targetPace);
 	}
 	
 	static void save()
@@ -122,7 +123,8 @@ public class Settings {
 		file2 = context.getSharedPreferences("truck", 0);
 		file = file2.edit();
 		
-		file.putInt("headlights", headlights ? 1 : 0);
+		//file.putInt("headlights", headlights ? 1 : 0);
+		file.putFloat("targetPace", targetPace);
 
 		file.commit();
 	}
@@ -210,7 +212,8 @@ public class Settings {
 	static final String DIR = "//sdcard//truck//";
 	static final String FILENAME = "settings.conf";
 	static String bluetooth_id = "truck";
-	static boolean headlights = false;
+//	static boolean headlights = false;
+	static float targetPace = 9.00f;
 	
 	static Context context;
 	

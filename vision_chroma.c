@@ -20,6 +20,8 @@
 
 #undef CLAMP
 #define CLAMP(x, y, z) ((x) = ((x) < (y) ? (y) : ((x) > (z) ? (z) : (x))))
+#define TO_RAD(x) (((float)(x)) * 2 * M_PI / 360)
+#define TO_DEG(x) ((x) * 360 / 2 / M_PI)
 
 int threshold;
 int search_h;
@@ -101,7 +103,7 @@ void init_yuv()
 }
 
 
-int detect_blobs(vision_package_t *engine, int fill_it)
+int detect_blobs(vision_engine_t *engine, int fill_it)
 {
 // scan the entire mask
 	int i, j, k;
@@ -236,7 +238,7 @@ int detect_blobs(vision_package_t *engine, int fill_it)
 	return distance_accum;
 }
 
-int test_pixel(vision_package_t *engine, int x, int y)
+int test_pixel(vision_engine_t *engine, int x, int y)
 {
 	if(x < 0 || y < 0 || x >= vision.working_w || y >= vision.working_h)
 	{
@@ -248,7 +250,7 @@ int test_pixel(vision_package_t *engine, int x, int y)
 	return *(engine->accum + x + y * vision.working_w);
 }
 
-int test_line(vision_package_t *engine, int x1, int y1, int x2, int y2)
+int test_line(vision_engine_t *engine, int x1, int y1, int x2, int y2)
 {
 	int w = labs(x2 - x1);
 	int h = labs(y2 - y1);
@@ -308,7 +310,7 @@ int test_line(vision_package_t *engine, int x1, int y1, int x2, int y2)
 
 
 // edge detection
-void edge_detection(vision_package_t *engine)
+void edge_detection(vision_engine_t *engine)
 {
 	int i, j;
 	bzero(engine->accum, vision.working_h * vision.working_w * sizeof(int));
@@ -508,7 +510,7 @@ void normalize()
 #endif // 0
 
 
-void chroma_key(vision_package_t *engine)
+void chroma_key(vision_engine_t *engine)
 {
 // Use center X pixels of current line as next keys
 // Advance 1 line up to get next key
@@ -580,9 +582,16 @@ void chroma_key(vision_package_t *engine)
 		int key_x;
 		int key_y1 = key_y - search_h;
 		int key_y2 = key_y;
+// search every y
+		int search_step = 1;
+// Only do 2 searches
+//		int search_step = search_h - 1;
+		if(search_step <= 0) search_step = 1;
+		
 		if(key_y1 < 0) key_y1 = 0;
 		if(key_y2 < 1) key_y2 = 1;
-		for(key_y = key_y1; key_y < key_y2; key_y++)
+// overwrites key_y here
+		for(key_y = key_y1; key_y < key_y2; key_y += search_step)
 		{
 			for(key_x = key_x1; key_x < key_x2; key_x++)
 			{
@@ -638,6 +647,8 @@ void chroma_key(vision_package_t *engine)
 //printf("detect_path %d\n", __LINE__);
 			}
 		}
+
+		key_y = key_y2;
 		
 //		to_output();
 //		compress_jpeg();
@@ -648,7 +659,7 @@ void chroma_key(vision_package_t *engine)
 }
 
 
-void to_output(vision_package_t *engine)
+void to_output(vision_engine_t *engine)
 {
 	int i, j;
 
@@ -660,7 +671,7 @@ void to_output(vision_package_t *engine)
 	int max = -0x7fffffff;
 	for(i = 0; i < vision.working_h; i++)
 	{
-		int *row = vision.accum + i * vision.working_w;
+		int *row = engine->accum + i * vision.working_w;
 		for(j = 0; j < vision.working_w; j++)
 		{
 			if(*row > max)
@@ -679,10 +690,10 @@ void to_output(vision_package_t *engine)
 
 	for(i = 0; i < vision.working_h; i++)
 	{
-		int *in_row = vision.accum + i * vision.working_w;
-		unsigned char *out_y = vision.out_y + i * vision.working_w;
-		unsigned char *out_u = vision.out_u + i * vision.working_w;
-		unsigned char *out_v = vision.out_v + i * vision.working_w;
+		int *in_row = engine->accum + i * vision.working_w;
+		unsigned char *out_y = engine->out_y + i * vision.working_w;
+		unsigned char *out_u = engine->out_u + i * vision.working_w;
+		unsigned char *out_v = engine->out_v + i * vision.working_w;
 		for(j = 0; j < vision.working_w; j++)
 		{
 			*out_y = (*in_row - min) * 0xff / (max - min);
@@ -771,80 +782,187 @@ void to_output(vision_package_t *engine)
 
 }
 
-
-void geometry(vision_package_t *engine)
+// convert angle, y into xy coords
+void param_to_xy(int *x1_out, 
+	int *y1_out, 
+	int *x2_out, 
+	int *y2_out, 
+	int y, 
+	float angle)
 {
-// find edge of left side
-// constrain search range to reasonable values
-	int x1, y1, x2 = vision.working_w / 2, y2 = vision.working_h / 2;
-	int left_x1, left_x2, left_y1, left_y2, left_diff = 0;
-	for(y2 = vision.working_h / 4; y2 < vision.working_h * 3 / 4; y2++)
+	float slope = tan(angle);
+	float y1 = y - slope * vision.working_w / 2;
+	float y2 = y + slope * vision.working_w / 2;
+	float x1 = 0;
+	float x2 = vision.working_w;
+
+	if(y1 < 0)
 	{
-		x1 = 0;
-		for(y1 = y2 /* + vision.working_h / 4 */; y1 < vision.working_h; y1++)
-		{
-			int diff = test_line(engine, x1, y1, x2, y2);
-
-			if(diff > left_diff)
-			{
-				left_x1 = x1;
-				left_x2 = x2;
-				left_y1 = y1;
-				left_y2 = y2;
-				left_diff = diff;
-			}
-		}
-		y1 = vision.working_h - 1;
-		for(x1 = 0; x1 < vision.working_w / 2; x1++)
-		{
-			int diff = test_line(engine, x1, y1, x2, y2);
-
-			if(diff > left_diff)
-			{
-				left_x1 = x1;
-				left_x2 = x2;
-				left_y1 = y1;
-				left_y2 = y2;
-				left_diff = diff;
-			}
-		}
+		y1 = 0;
+// (y - b) / m = x
+		x1 = -y / slope + vision.working_w / 2;
+	}
+	
+	if(y1 > vision.working_h)
+	{
+		y1 = vision.working_h;
+		x1 = (vision.working_h - y) / slope + vision.working_w / 2;
 	}
 
-// edge of right side
-	x1 = vision.working_w / 2;
-	int right_x1, right_x2, right_y1, right_y2, right_diff = 0;
-	for(y1 = vision.working_h / 4; y1 < vision.working_h * 3 / 4; y1++)
+	if(y2 < 0)
 	{
-		x2 = vision.working_w;
-		for(y2 = y1 + vision.working_h / 4; y2 < vision.working_h; y2++)
-		{
-			int diff = -test_line(engine, x1, y1, x2, y2);
-			
-			if(diff > right_diff)
-			{
-				right_x1 = x1;
-				right_x2 = x2;
-				right_y1 = y1;
-				right_y2 = y2;
-				right_diff = diff;
-			}
-		}
-
-		y2 = vision.working_h - 1;
-		for(x2 = vision.working_w / 2; x2 < vision.working_w; x2++)
-		{
-			int diff = -test_line(engine, x1, y1, x2, y2);
-			
-			if(diff > right_diff)
-			{
-				right_x1 = x1;
-				right_x2 = x2;
-				right_y1 = y1;
-				right_y2 = y2;
-				right_diff = diff;
-			}
-		}
+		y2 = 0;
+		x2 = -y / slope + vision.working_w / 2;
 	}
+
+	if(y2 > vision.working_h)
+	{
+		y2 = vision.working_h;
+		x2 = (vision.working_h - y) / slope + vision.working_w / 2;
+	}
+
+	CLAMP(x1, 0, vision.working_w);
+	CLAMP(x2, 0, vision.working_w);
+	CLAMP(y1, 0, vision.working_h);
+	CLAMP(y2, 0, vision.working_h);
+
+	*x1_out = x1;
+	*y1_out = y1;
+	*x2_out = x2;
+	*y2_out = y2;
+}
+
+void geometry_range(vision_engine_t *engine,
+	int y_step, 
+	float a_step, 
+	int y_center, 
+	int y_range, 
+	float a_center, 
+	float a_range,
+	int *best_y,
+	float *best_angle,
+	int *best_diff,
+	int want_greatest)
+{
+	int y;
+	for(y = y_center - y_range; y < y_center + y_range; y += y_step)
+	{
+		float angle;
+		for(angle = a_center - a_range; angle < a_center + a_range; angle += a_step)
+		{
+			int x1, y1, x2, y2;
+			param_to_xy(&x1, 
+				&y1, 
+				&x2, 
+				&y2, 
+				y, 
+				angle);
+			
+			int diff = test_line(engine, x1, y1, x2, y2);
+			if((want_greatest && diff > *best_diff) ||
+				(!want_greatest && diff < *best_diff))
+			{
+				*best_y = y;
+				*best_angle = angle;
+				*best_diff = diff;
+			}
+			
+// printf("geometry_range %d y=%d angle=%d %d %d %d %d\n", 
+// __LINE__, 
+// y, 
+// (int)TO_DEG(angle), 
+// (int)x1, 
+// (int)y1, 
+// (int)x2, 
+// (int)y2);
+//draw_line(engine, x1, y1, x2, y2);
+		}
+//return;
+	}
+}
+
+void geometry(vision_engine_t *engine)
+{
+	int y_step;
+	int y_center = vision.working_h / 2;
+	int y_range = vision.working_h / 4;
+	float a_step = TO_RAD(4);
+	float a_center = TO_RAD(45);
+	float a_range = TO_RAD(35);
+	int best_y = 0;
+	float best_angle = 0;
+	int best_diff = -1;
+
+	int left_x1, left_x2, left_y1, left_y2;
+	int right_x1, right_x2, right_y1, right_y2;
+
+// right edge
+	for(y_step = 4; y_step > 0; y_step >>= 1)
+	{
+		geometry_range(engine, 
+			y_step, 
+			a_step, 
+			y_center,
+			y_range, 
+			a_center, 
+			a_range,
+			&best_y,
+			&best_angle,
+			&best_diff,
+			0);
+
+		y_center = best_y;
+		a_center = best_angle;
+		y_range = y_step;
+		a_range = a_step;
+		y_step /= 2;
+		a_step /= 2;
+	}
+
+	param_to_xy(&right_x1, 
+		&right_y1, 
+		&right_x2, 
+		&right_y2, 
+		best_y, 
+		best_angle);
+
+// left edge
+	y_center = vision.working_h / 2;
+	y_range = vision.working_h / 4;
+	a_step = TO_RAD(4);
+	a_center = TO_RAD(-45);
+	a_range = TO_RAD(35);
+	best_y = 0;
+	best_angle = 0;
+	best_diff = 1;
+	for(y_step = 4; y_step > 0; y_step >>= 1)
+	{
+		geometry_range(engine, 
+			y_step, 
+			a_step, 
+			y_center,
+			y_range, 
+			a_center, 
+			a_range,
+			&best_y,
+			&best_angle,
+			&best_diff,
+			1);
+
+		y_center = best_y;
+		a_center = best_angle;
+		y_range = y_step;
+		a_range = a_step;
+		y_step /= 2;
+		a_step /= 2;
+	}
+
+	param_to_xy(&left_x1, 
+		&left_y1, 
+		&left_x2, 
+		&left_y2, 
+		best_y, 
+		best_angle);
 
 #if 1
 // draw center of path
@@ -881,6 +999,10 @@ void geometry(vision_package_t *engine)
  * 				vision.bottom_x * vision.working_w, 
  * 				vision.working_h - 1);
  */
+ 
+ 			engine->vanish_x = (int)(vanish_x * 255 / vision.working_w);
+			engine->vanish_y = (int)(vanish_y * 255 / vision.working_h);
+			engine->bottom_x = (int)(bottom_x * 255 / vision.working_w);
 		}
 	}
 
@@ -891,7 +1013,7 @@ void geometry(vision_package_t *engine)
 
 
 
-void detect_path(vision_package_t *engine)
+void detect_path(vision_engine_t *engine)
 {
 	int i, j, k, l;
 	cartimer_t profiler;

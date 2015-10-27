@@ -140,11 +140,11 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 //				power.setPositions(positions);
 //				power.update(0, "0.0");
 //				y += power.getH(paint);
-				readouts.add(path_x = new SmallReadout(x, y, 2));
-				path_x.setTitle("Path X");
-				path_x.setPositions(positions);
-				path_x.update(0, "0");
-				y += path_x.getH(paint);
+//				readouts.add(path_x = new SmallReadout(x, y, 2));
+//				path_x.setTitle("Path X");
+//				path_x.setPositions(positions);
+//				path_x.update(0, "0");
+//				y += path_x.getH(paint);
 
 				readouts.add(rpm = new SmallReadout(x, y, 2));
 				rpm.setTitle("RPM");
@@ -153,7 +153,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				y += rpm.getH(paint);
 				
 				readouts.add(messages = new SmallReadout(x, y, 1));
-				messages.update(0, "Hello world");
+				messages.update(0, Settings.message);
 			}
 			
 			
@@ -172,11 +172,11 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 //						new StringBuilder())
 //							.format("%.02fW", Truck.power)
 //							.toString());
-			path_x.update(0, 
-					new Formatter(
-						new StringBuilder())
-							.format("%d", Truck.path_x)
-							.toString());
+//			path_x.update(0,
+//					new Formatter(
+//						new StringBuilder())
+//							.format("%d", Truck.path_x)
+//							.toString());
 			rpm.update(0, 
 					new Formatter(
 						new StringBuilder())
@@ -204,7 +204,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;
-	SmallReadout gyro, heading, /* power, */ path_x, rpm;
+	SmallReadout gyro, heading, /* power, path_x, */ rpm;
 	SmallReadout batteryAnalog;
 	SmallReadout messages;
     boolean initialized = false;

@@ -208,6 +208,7 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
+		    			beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
@@ -224,6 +225,7 @@ public class Truck extends Thread {
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
+		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_REVERSE_RPM")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PATH_CENTER")[0]));
 
 

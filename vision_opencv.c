@@ -8,6 +8,8 @@
 
 #include <iostream>
 #include <vector>
+#include <string.h>
+#include <stdlib.h>
 #include "opencv2/legacy/compat.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/core/mat.hpp"
@@ -26,9 +28,8 @@
 // Use full color to match frames
 //#define MATCH_COLOR
 
-//#define GLOBAL_MOTION
+#define GLOBAL_MOTION
 
-#define SQR(x) ((x) * (x))
 
 // detect path by matching images with OpenCV
 using namespace cv;
@@ -47,7 +48,7 @@ CvSeq *v_descriptors = 0;
 int opencv_initialized = 0;
 
 // reference file
-#define REF_FRAMES 100
+#define REF_FRAMES 10
 typedef struct
 {
 	unsigned char *y;
@@ -291,6 +292,42 @@ locatePlanarObject(const CvSeq* objectKeypoints,
     return 1;
 }
 
+
+
+void downsample_image(unsigned char *dst_y, 
+	unsigned char *dst_u, 
+	unsigned char *dst_v, 
+	unsigned char *src_y, 
+	unsigned char *src_u, 
+	unsigned char *src_v)
+{
+	for(int i = 0; i < vision.working_h / 2; i++)
+	{
+		unsigned char *src_row_y1 = src_y + (i * 2) * vision.working_w;
+		unsigned char *src_row_u1 = src_u + (i * 2) * vision.working_w;
+		unsigned char *src_row_v1 = src_v + (i * 2) * vision.working_w;
+		unsigned char *src_row_y2 = src_row_y1 + vision.working_w;
+		unsigned char *src_row_u2 = src_row_u1 + vision.working_w;
+		unsigned char *src_row_v2 = src_row_v1 + vision.working_w;
+		unsigned char *dst_row_y = dst_y + i * vision.working_w / 2;
+		unsigned char *dst_row_u = dst_u + i * vision.working_w / 2;
+		unsigned char *dst_row_v = dst_v + i * vision.working_w / 2;
+
+		for(int j = 0; j < vision.working_w / 2; j++)
+		{
+			int y = *src_row_y1++ + *src_row_y2++;
+			int u = *src_row_u1++ + *src_row_u2++;
+			int v = *src_row_v1++ + *src_row_v2++;
+			y += *src_row_y1++ + *src_row_y2++;
+			u += *src_row_u1++ + *src_row_u2++;
+			v += *src_row_v1++ + *src_row_v2++;
+			
+			*dst_row_y++ = y / 4;
+			*dst_row_u++ = u / 4;
+			*dst_row_v++ = v / 4;
+		}
+	}
+}
 
 
 void detect_path()
@@ -569,48 +606,31 @@ void detect_path()
 #ifdef GLOBAL_MOTION
 	int search_step = 2;
 
-// make downsampled images
-	if(!motion_ref_y)
+// make downsampled images for motion
+	if(search_step > 1)
 	{
-		motion_ref_y = malloc(vision.working_w / 2 * vision.working_h / 2);
-		motion_ref_u = malloc(vision.working_w / 2 * vision.working_h / 2);
-		motion_ref_v = malloc(vision.working_w / 2 * vision.working_h / 2);
-		motion_current_y = malloc(vision.working_w / 2 * vision.working_h / 2);
-		motion_current_u = malloc(vision.working_w / 2 * vision.working_h / 2);
-		motion_current_v = malloc(vision.working_w / 2 * vision.working_h / 2);
-	}
-
-
-	for(int i = 0; i < vision.working_h / motion_scale; i++)
-	{
-		unsigned char *ref_y = refs[max_frame].y + i * vision.working_w;
-		unsigned char *ref_u = refs[max_frame].u + i * vision.working_w;
-		unsigned char *ref_v = refs[max_frame].v + i * vision.working_w;
-		unsigned char *current_y = vision.y_buffer + i * vision.working_w;
-		unsigned char *current_u = vision.u_buffer + i * vision.working_w;
-		unsigned char *current_v = vision.v_buffer + i * vision.working_w;
-		unsigned char *dst_
-
-		for(int j = 0; j < current_w; j++)
+		if(!motion_ref_y)
 		{
-// best results from squared diff of color cube
-			int y_value = *ref_y - *current_y;
-			y_value *= y_value;
-			ref_y++;
-			current_y++;
-
-			int u_value = *ref_u - *current_u;
-			u_value *= u_value;
-			ref_u++;
-			current_u++;
-
-			int v_value = *ref_v - *current_v;
-			v_value *= v_value;
-			ref_v++;
-			current_v++;
-
-			abs_diff += y_value + u_value + v_value;
+			motion_ref_y = (unsigned char*)malloc(vision.working_w / 2 * vision.working_h / 2);
+			motion_ref_u = (unsigned char*)malloc(vision.working_w / 2 * vision.working_h / 2);
+			motion_ref_v = (unsigned char*)malloc(vision.working_w / 2 * vision.working_h / 2);
+			motion_current_y = (unsigned char*)malloc(vision.working_w / 2 * vision.working_h / 2);
+			motion_current_u = (unsigned char*)malloc(vision.working_w / 2 * vision.working_h / 2);
+			motion_current_v = (unsigned char*)malloc(vision.working_w / 2 * vision.working_h / 2);
 		}
+
+		downsample_image(motion_current_y, 
+			motion_current_u, 
+			motion_current_v, 
+	    	vision.y_buffer, 
+			vision.u_buffer, 
+			vision.v_buffer);
+		downsample_image(motion_ref_y, 
+			motion_ref_u, 
+			motion_ref_v, 
+			refs[max_frame].y, 
+			refs[max_frame].u, 
+			refs[max_frame].v);
 	}
 
 //	int block_w = vision.working_w;
@@ -629,13 +649,16 @@ void detect_path()
 	int global_search_y2 = search_y2;
 	int ref_x = (vision.working_w - block_w) / 2;
 	int ref_y = (vision.working_h - block_h) / 2;
+	double avg_avg_diff = 0;
+	int total_searches = 0;
 	double diff_history[search_x2 * search_y2];
 	int history_used[search_x2 * search_y2];
 	bzero(history_used, sizeof(history_used));
 	
+	double min_diff = 0x7fffffff;
+	double max_diff = 0;
 	while(search_step >= 1)
 	{
-		double min_diff = 0x7fffffff;
 		int best_x;
 		int best_y;
 		for(int search_x = search_x1; search_x < search_x2; search_x += search_step)
@@ -690,61 +713,98 @@ void detect_path()
 
 					int current_w = current_x2 - current_x1;
 					int current_h = current_y2 - current_y1;
-
-	//printf("detect_path ref_y1=%d ref_y2=%d ref_x1=%d ref_x2=%d current_x1=%d current_x2=%d current_y1=%d current_y2=%d\n", 
-	//ref_y1, ref_y2, ref_x1, ref_x2, current_x1, current_x2, current_y1, current_y2);
-					for(int i = 0; i < current_h; i++)
+					int total_pixels = current_w * current_h;
+//int avg_value = 0;
+					if(search_step > 1)
 					{
-						unsigned char *ref_y = refs[max_frame].y + 
-							(ref_y1 + i) * vision.working_w + 
-							ref_x1;
-						unsigned char *ref_u = refs[max_frame].u + 
-							(ref_y1 + i) * vision.working_w + 
-							ref_x1;
-						unsigned char *ref_v = refs[max_frame].v + 
-							(ref_y1 + i) * vision.working_w + 
-							ref_x1;
-						unsigned char *current_y = vision.y_buffer +
-							(current_y1 + i) * vision.working_w +
-							current_x1;
-						unsigned char *current_u = vision.u_buffer +
-							(current_y1 + i) * vision.working_w +
-							current_x1;
-						unsigned char *current_v = vision.v_buffer +
-							(current_y1 + i) * vision.working_w +
-							current_x1;
-
-						for(int j = 0; j < current_w; j++)
+						total_pixels /= 4;
+						for(int i = 0; i < current_h; i += 2)
 						{
-// best results from squared diff of color cube
-							int y_value = *ref_y - *current_y;
-							y_value *= y_value;
-							ref_y++;
-							current_y++;
+							int offset = (ref_y1 + i) / 2 * vision.working_w / 2 +
+								ref_x1 / 2;
+							unsigned char *ref_y = motion_ref_y + offset;
+							unsigned char *ref_u = motion_ref_u + offset;
+							unsigned char *ref_v = motion_ref_v + offset;
+							offset = (current_y1 + i) / 2 * vision.working_w / 2 +
+								current_x1 / 2;
+							unsigned char *current_y = motion_current_y + offset;
+							unsigned char *current_u = motion_current_u + offset;
+							unsigned char *current_v = motion_current_v + offset;
 
-							int u_value = *ref_u - *current_u;
-							u_value *= u_value;
-							ref_u++;
-							current_u++;
-
-							int v_value = *ref_v - *current_v;
-							v_value *= v_value;
-							ref_v++;
-							current_v++;
-
-							abs_diff += y_value + u_value + v_value;
+							for(int j = 0; j < current_w; j += 2)
+							{
+#define ADD_PIXEL \
+/* avg_value += *ref_y; */ \
+	int y_value = *ref_y - *current_y; \
+	y_value *= y_value; \
+	ref_y++; \
+	current_y++; \
+ \
+	int u_value = *ref_u - *current_u; \
+	u_value *= u_value; \
+	ref_u++; \
+	current_u++; \
+ \
+	int v_value = *ref_v - *current_v; \
+	v_value *= v_value; \
+	ref_v++; \
+	current_v++; \
+ \
+	abs_diff += y_value + u_value + v_value;
+								
+								ADD_PIXEL
+							}
 						}
 					}
+					else
+					{
+	//printf("detect_path ref_y1=%d ref_y2=%d ref_x1=%d ref_x2=%d current_x1=%d current_x2=%d current_y1=%d current_y2=%d\n", 
+	//ref_y1, ref_y2, ref_x1, ref_x2, current_x1, current_x2, current_y1, current_y2);
+						for(int i = 0; i < current_h; i++)
+						{
+							int offset = (ref_y1 + i) * vision.working_w + 
+								ref_x1;
+							unsigned char *ref_y = refs[max_frame].y + offset;
+							unsigned char *ref_u = refs[max_frame].u + offset;
+							unsigned char *ref_v = refs[max_frame].v + offset;
+							offset = (current_y1 + i) * vision.working_w +
+								current_x1;
+							unsigned char *current_y = vision.y_buffer + offset;
+							unsigned char *current_u = vision.u_buffer + offset;
+							unsigned char *current_v = vision.v_buffer + offset;
 
-					int pixels = current_w * current_h;
-					avg_diff = (double)abs_diff / pixels;
+							for(int j = 0; j < current_w; j++)
+							{
+	// best results from squared diff of color cube
+								ADD_PIXEL
+							}
+						}
+
+					}
+					
+					avg_diff = (double)abs_diff / total_pixels;
+
+// avg_value /= total_pixels;
+// printf("detect_path %d avg_value=%d avg_diff=%f search_step=%d\n", 
+// __LINE__, 
+// avg_value, 
+// avg_diff, 
+// search_step);
 					diff_history[history_index] = avg_diff;
 					history_used[history_index] = 1;
 				}
 				
+				avg_avg_diff += avg_diff;
+				total_searches++;
 				
 //printf("avg_diff=%f ref_x1=%d ref_y1=%d ref_x2=%d ref_y2=%d cur_x1=%d cur_y1=%d cur_x2=%d cur_y2=%d\n", 
 //avg_diff, ref_x1, ref_y1, ref_x2, ref_y2, current_x1, current_y1, current_x2, current_y2);
+
+				if(avg_diff > max_diff)
+				{
+					max_diff = avg_diff;
+				}
+
 				if(avg_diff < min_diff)
 				{
 					min_diff = avg_diff;
@@ -763,10 +823,14 @@ void detect_path()
 		dy = best_y - ref_y;
 		search_step /= 2;
 	}
+	
 #endif // GLOBAL_MOTION
 
 // draw best image, translated to database position
 	bzero(vision.out_y, vision.output_w * vision.output_h);
+	bzero(vision.out_u, vision.output_w * vision.output_h);
+	bzero(vision.out_v, vision.output_w * vision.output_h);
+
 	for(int i = 0; i < vision.working_h; i++)
 	{
 		int dst_y = i + dy;
@@ -804,32 +868,41 @@ void detect_path()
 				
 			}
 		}
-	}	
+	}
 
-// draw best image
+
+// draw best match
  	for(int i = 0; i < vision.working_h; i++)
  	{
-// // current
-// 		memcpy(vision.out_y + i * vision.output_w,
-// 			vision.y_buffer + i * vision.working_w,
-// 			vision.working_w);
-// 		memcpy(vision.out_u + i * vision.output_w,
-// 			vision.u_buffer + i * vision.working_w,
-// 			vision.working_w);
-// 		memcpy(vision.out_v + i * vision.output_w,
-// 			vision.v_buffer + i * vision.working_w,
-// 			vision.working_w);
- 
-// reference
- 		memcpy(vision.out_y + vision.working_w + i * vision.output_w,
- 			refs[max_frame].y + i * vision.working_w,
- 			vision.working_w);
- 		memcpy(vision.out_u + vision.working_w + i * vision.output_w,
- 			refs[max_frame].u + i * vision.working_w,
- 			vision.working_w);
- 		memcpy(vision.out_v + vision.working_w + i * vision.output_w,
- 			refs[max_frame].v + i * vision.working_w,
- 			vision.working_w);
+		unsigned char *dst_y = vision.out_y + vision.output_w * i;
+		unsigned char *dst_u = vision.out_u + vision.output_w * i;
+		unsigned char *dst_v = vision.out_v + vision.output_w * i;
+		unsigned char *src_y = refs[max_frame].y + i * vision.working_w;
+		unsigned char *src_u = refs[max_frame].u + i * vision.working_w;
+		unsigned char *src_v = refs[max_frame].v + i * vision.working_w;
+
+		for(int j = 0; j < vision.working_w; j++)
+		{
+			*dst_y = (*dst_y + *src_y) / 2;
+			*dst_u = (*dst_u + *src_u) / 2;
+			*dst_v = (*dst_v + *src_v) / 2;
+			dst_y++;
+			dst_u++;
+			dst_v++;
+			src_y++;
+			src_u++;
+			src_v++;
+		}
+
+//  		memcpy(vision.out_y + vision.working_w + i * vision.output_w,
+//  			refs[max_frame].y + i * vision.working_w,
+//  			vision.working_w);
+//  		memcpy(vision.out_u + vision.working_w + i * vision.output_w,
+//  			refs[max_frame].u + i * vision.working_w,
+//  			vision.working_w);
+//  		memcpy(vision.out_v + vision.working_w + i * vision.output_w,
+//  			refs[max_frame].v + i * vision.working_w,
+//  			vision.working_w);
 	}
 
 
@@ -860,8 +933,13 @@ void detect_path()
 
 //	compress_jpeg();
 // best match has most pairs
-	printf("detect_path %d max_pairs=%d max_frame=%d\n", 
+	printf("detect_path %d %d %d %d %d ", 
 		__LINE__, 
+		vision.total_frames,
+		(int)min_diff,
+		(int)avg_avg_diff / total_searches, 
+		(int)max_diff);
+	printf("max_pairs=%d max_frame=%d\n", 
 		max_keypoints,
 		max_frame);
 

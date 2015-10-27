@@ -43,25 +43,34 @@ ARM_LFLAGS := -mcpu=cortex-m4 \
 	-nostdinc \
 	$(ARM_LIBM) $(ARM_LIBC)
 GCC_PI := /opt/pi/bin/bcm2708hardfp-g++
-PI_CFLAGS := -O2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Ijpeg
 
 OPENCV_DIR := ../opencv-2.4.11/bin/
 OPENCV_CFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --cflags opencv )
 OPENCV_LFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --libs opencv )
 
+OPENCV_PI_DIR := ../opencv-2.4.11.arm/
+OPENCV_PI_CFLAGS := -I$(OPENCV_PI_DIR)/build/ \
+	-I$(OPENCV_PI_DIR)/modules/core/include/ \
+	-I$(OPENCV_PI_DIR)/modules/features2d/include/ \
+	-I$(OPENCV_PI_DIR)/modules/legacy/include/ \
+	-I$(OPENCV_PI_DIR)/modules/calib3d/include/ \
+	-I$(OPENCV_PI_DIR)/modules/flann/include/ \
+	-I$(OPENCV_PI_DIR)/modules/imgproc/include/ \
+	-I$(OPENCV_PI_DIR)/modules/highgui/include/ \
+	-I$(OPENCV_PI_DIR)/modules/video/include/ \
+	-I$(OPENCV_PI_DIR)/modules/ml/include/ \
+	-I$(OPENCV_PI_DIR)/modules/nonfree/include/ \
+	-I$(OPENCV_PI_DIR)/modules/ocl/include/ \
+	-I$(OPENCV_PI_DIR)/modules/objdetect/include/
+OPENCV_PI_LFLAGS := $(OPENCV_PI_DIR)/libopencv.a
 
-#OPENCV_DIR := $(shell expr /root/hvirtual/thirdparty/OpenCV* )
-#OPENCV_LFLAGS := $(OPENCV_DIR)/libopencv.a
-#OPENCV_CFLAGS := -I$(OPENCV_DIR)/modules/core/include/ \
-#	-I$(OPENCV_DIR)/modules/features2d/include/ \
-#	-I$(OPENCV_DIR)/modules/calib3d/include/ \
-#	-I$(OPENCV_DIR)/modules/flann/include/ \
-#	-I$(OPENCV_DIR)/modules/imgproc/include/ \
-#	-I$(OPENCV_DIR)/modules/legacy/include/ \
-#	-I$(OPENCV_DIR)/modules/highgui/include/ \
-#	-I$(OPENCV_DIR)/modules/objdetect/include/ \
-#	-I$(OPENCV_DIR)/modules/video/include/
+PI_CFLAGS := -O2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Ijpeg
 
+
+GCC_ODROID := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-g++
+#ODROID_CFLAGS := -O3 -pipe -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Ijpeg
+ODROID_CFLAGS := -O3 -pipe -mcpu=cortex-a15 -mfloat-abi=hard -mfpu=neon-vfpv4 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Ijpeg
+ODROID_LFLAGS := 
 
 $(shell echo $(SDCC_CFLAGS) > sdcc_cflags)
 $(shell echo $(SDCC_LFLAGS) > sdcc_lflags)
@@ -135,7 +144,7 @@ ARM_OBJS := \
 
 VISION_OBJS := \
 	vision.o \
-	vision_opencv.o \
+	vision_chroma.o \
 	jpeg/cdjpeg.o \
 	jpeg/jcapimin.o \
 	jpeg/jcapistd.o \
@@ -214,19 +223,32 @@ PI_OBJS := \
 
 all: truck.bin car_remote.hex
 
+# ODROID version
+#vision: $(VISION_OBJS)
+#	$(GCC_ODROID) -g -o vision $(VISION_OBJS) -lpthread -lm
+
+#$(VISION_OBJS): 
+#	$(GCC_ODROID) -g  $(ODROID_CFLAGS) -c $*.c -o $*.o
+
+
 # PI version
 #vision: $(VISION_OBJS)
+#	$(GCC_PI) $(PI_CFLAGS) -o vision $(VISION_OBJS) $(OPENCV_PI_LFLAGS) -lpthread -lm
 #	$(GCC_PI) $(PI_CFLAGS) -o vision $(VISION_OBJS) -lpthread -lm
 
 #$(VISION_OBJS):
+#	$(GCC_PI) $(PI_CFLAGS) $(OPENCV_PI_CFLAGS) -c $*.c -o $*.o
 #	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
 
 # X86 version
 vision: $(VISION_OBJS)
-	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
+#	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
+	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
+
 
 $(VISION_OBJS):
-	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
+#	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
+	$(GXX) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
 
 
 
@@ -372,6 +394,7 @@ lidar_test: lidar_test.c
 clean:
 	rm -f $(ARM_OBJS) \
 		$(VISION_OBJS) \
+		vision \
 		*.o \
 		*.hex \
 		*.lst \
@@ -460,7 +483,7 @@ arm_truck.o: 			     arm_truck.c
 cc1101.o: 			     cc1101.c
 imu.o: 			   	     imu.c
 vision.o: vision.c
-vision_opencv.o: vision_opencv.c
-
+vision_surface.o: vision_surface.c
+vision_chroma.o: vision_chroma.c
 
 

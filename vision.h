@@ -35,7 +35,6 @@
 // produces
 //#define DEVICE_BUFFERS 8
 #define DEVICE_BUFFERS 2
-#define TOTAL_PACKAGES 4
 #define TOTAL_CPUS 4
 //#define USE_COLOR
 #define USE_OPENCV
@@ -65,22 +64,20 @@ typedef struct
 // the mask
 	unsigned char *mask;
 	int *accum;
-	
-	sem_t complete_lock;
-} vision_package_t;
 
-
-
-
-typedef struct
-{
-	int done;
+// wait for frame to be ready for reading
 	sem_t input_lock;
+// wait for frame to be ready for processing
+	sem_t ready_lock;
+// wait for frame to be finished processing
 	sem_t complete_lock;
+// empty frame.  Stop processing.
+	int eof;
+
+	int vanish_x;
+	int vanish_y;
+	int bottom_x;
 } vision_engine_t;
-
-
-
 
 typedef struct 
 {
@@ -92,9 +89,6 @@ typedef struct
 	char write_path[TEXTLEN];
 	char ref_path[TEXTLEN];
 
-	unsigned char **jpeg_rows;
-	unsigned char *jpeg_bitmap;
-	int jpeg_shmid;
 // imported image size
 	int cam_w, cam_h;
 // working image size
@@ -126,22 +120,29 @@ typedef struct
 	float geometry_bandwidth;
 
 
-// compressed image for GUI
-	unsigned char *preview_data;
-	int preview_size;
-	int preview_allocated;
-
-
+	int spi_fd;
+	int serial_fd;
+// webcam FD
 	int fd;
 	FILE *playback_fd;
 	struct v4l2_format v4l2_params;
 
-// compressed image from camera
+// raw image read from camera
 	unsigned char *picture_data;
 	int picture_size;
-// image for web server
+
+// compressed input for debugging
+	unsigned char *picture_in;
+	int in_size;
+	
+// compressed output for debugging & web server
+	unsigned char *picture_out;
+	int out_size;
+
+// copy of image for web server
 	unsigned char *latest_image;
 	int latest_size;
+
 	pthread_mutex_t latest_lock;
 	sem_t spi_send_lock;
 	sem_t spi_complete_lock;
@@ -156,15 +157,15 @@ typedef struct
 	int frames_written;
 	cartimer_t timer;
 	cartimer_t timer2;
+	cartimer_t record_input_timer;
+	int record_period;
 	int led_on;
 
 	vision_engine_t engine[TOTAL_CPUS];
-	vision_package_t packages[TOTAL_PACKAGES];
-	sem_t package_lock;
-// next array index to process
-	int input_package;
-// next array index to store
-	int output_package;
+// engine to put new frames into
+	int current_input;
+// engine to take finished frames from
+	int current_output;
 } vision_t;
 
 
