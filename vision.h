@@ -35,7 +35,7 @@
 // produces
 //#define DEVICE_BUFFERS 8
 #define DEVICE_BUFFERS 2
-#define TOTAL_CPUS 4
+#define TOTAL_CPUS 1
 //#define USE_COLOR
 #define USE_OPENCV
 
@@ -64,6 +64,9 @@ typedef struct
 // the mask
 	unsigned char *mask;
 	int *accum;
+// color key pixels
+	int *key_x;
+	int *key_y;
 
 // wait for frame to be ready for reading
 	sem_t input_lock;
@@ -74,9 +77,14 @@ typedef struct
 // empty frame.  Stop processing.
 	int eof;
 
+// scaled to 0-255
 	int vanish_x;
 	int vanish_y;
 	int bottom_x;
+
+// raw coords
+	int prev_vanish_x;
+	int prev_vanish_y;
 } vision_engine_t;
 
 typedef struct 
@@ -181,7 +189,12 @@ void draw_line(vision_engine_t *engine, int x1, int y1, int x2, int y2);
 void draw_pixel(vision_engine_t *engine, int x, int y);
 void draw_rect(vision_engine_t *engine, int x1, int y1, int x2, int y2);
 int read_file_frame(FILE *fd, uint8_t *y_buffer, uint8_t *u_buffer, uint8_t *v_buffer);
-void compress_jpeg(vision_engine_t *engine);
+void compress_output(unsigned char *out_y, 
+	unsigned char *out_u,
+	unsigned char *out_v,
+	int w,
+	int h);
+void append_file(unsigned char *data, int size);
 
 
 #endif // VISION_H

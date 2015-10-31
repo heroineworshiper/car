@@ -228,6 +228,19 @@ int detect_blobs(vision_engine_t *engine, int fill_it)
 		{
 			engine->mask[best_fill_y[i] * vision.working_w + best_fill_x[i]] = 1;
 		}
+
+		// draw color key pixels
+		for(i = 0; i < vision.working_h; i++)
+		{
+			int key_x = engine->key_x[i];
+			int key_y = engine->key_y[i];
+			if(key_x < 0)
+			{
+				break;
+			}
+			
+//			engine->mask[key_y * vision.working_w + key_x] = 2;
+		}
 	}
 
 	free(fill_x);
@@ -309,7 +322,132 @@ int test_line(vision_engine_t *engine, int x1, int y1, int x2, int y2)
 }
 
 
-// edge detection
+void horizon_detect(vision_engine_t *engine)
+{
+// vertical edges
+	int i, j;
+	int edge_size = 16;
+	bzero(engine->accum, vision.working_h * vision.working_w * sizeof(int));
+
+
+	for(i = 0; i < vision.working_w; i++)
+	{
+		int top_accum_y = 0;
+		int top_accum_u = 0;
+		int top_accum_v = 0;
+		int bottom_accum_y = 0;
+		int bottom_accum_u = 0;
+		int bottom_accum_v = 0;
+		unsigned char *y_column = engine->in_y + i;
+		unsigned char *u_column = engine->in_u + i;
+		unsigned char *v_column = engine->in_v + i;
+		int *dst = engine->accum + i + edge_size * vision.working_w;
+
+// calculate 1st pixel 
+		for(j = 0; j < edge_size; j++)
+		{
+			top_accum_y += y_column[j * vision.working_w];
+			top_accum_u += u_column[j * vision.working_w];
+			top_accum_v += v_column[j * vision.working_w];
+		}
+		
+		for(j = edge_size; j < edge_size * 2; j++)
+		{
+			bottom_accum_y += y_column[j * vision.working_w];
+			bottom_accum_u += u_column[j * vision.working_w];
+			bottom_accum_v += v_column[j * vision.working_w];
+		}
+		
+		for(j = edge_size; j < vision.working_h - edge_size; j++)
+		{
+			top_accum_y -= y_column[(j - edge_size) * vision.working_w];
+			top_accum_y += y_column[j * vision.working_w];
+			bottom_accum_y -= y_column[j * vision.working_w];
+			bottom_accum_y += y_column[(j + edge_size) * vision.working_w];
+
+			top_accum_u -= u_column[(j - edge_size) * vision.working_w];
+			top_accum_u += u_column[j * vision.working_w];
+			bottom_accum_u -= u_column[j * vision.working_w];
+			bottom_accum_u += u_column[(j + edge_size) * vision.working_w];
+
+			top_accum_v -= v_column[(j - edge_size) * vision.working_w];
+			top_accum_v += v_column[j * vision.working_w];
+			bottom_accum_v -= v_column[j * vision.working_w];
+			bottom_accum_v += v_column[(j + edge_size) * vision.working_w];
+
+			*dst += sqrt(SQR(bottom_accum_y - top_accum_y) +
+				SQR(bottom_accum_u - top_accum_u) +
+				SQR(bottom_accum_v - top_accum_v));
+			dst += vision.working_w;
+		}
+	}
+}
+
+
+// edge detection using the input
+void edge_detect_yuv(vision_engine_t *engine)
+{
+	int i, j;
+	int edge_size = 16;
+
+	bzero(engine->accum, vision.working_h * vision.working_w * sizeof(int));
+
+
+// horizontal edges
+	for(i = 0; i < vision.working_h; i++)
+	{
+		int right_accum_y = 0;
+		int right_accum_u = 0;
+		int right_accum_v = 0;
+		int left_accum_y = 0;
+		int left_accum_u = 0;
+		int left_accum_v = 0;
+		unsigned char *y_row = engine->in_y + i * vision.working_w;
+		unsigned char *u_row = engine->in_u + i * vision.working_w;
+		unsigned char *v_row = engine->in_v + i * vision.working_w;
+		int *dst = engine->accum + i * vision.working_w + edge_size;
+
+// calculate 1st pixel 
+		for(j = 0; j < edge_size; j++)
+		{
+			left_accum_y += y_row[j];
+			left_accum_u += u_row[j];
+			left_accum_v += v_row[j];
+		}
+		
+		for(j = edge_size; j < edge_size * 2; j++)
+		{
+			right_accum_y += y_row[j];
+			right_accum_u += u_row[j];
+			right_accum_v += v_row[j];
+		}
+		
+		for(j = edge_size; j < vision.working_w - edge_size; j++)
+		{
+			left_accum_y -= y_row[j - edge_size];
+			left_accum_y += y_row[j];
+			right_accum_y -= y_row[j];
+			right_accum_y += y_row[j + edge_size];
+
+			left_accum_u -= u_row[j - edge_size];
+			left_accum_u += u_row[j];
+			right_accum_u -= u_row[j];
+			right_accum_u += u_row[j + edge_size];
+
+			left_accum_v -= v_row[j - edge_size];
+			left_accum_v += v_row[j];
+			right_accum_v -= v_row[j];
+			right_accum_v += v_row[j + edge_size];
+
+			*(dst++) = sqrt(SQR(right_accum_y - left_accum_y) +
+				SQR(right_accum_u - left_accum_u) +
+				SQR(right_accum_v - left_accum_v));
+		}
+	}
+
+}
+
+// edge detection using the mask
 void edge_detection(vision_engine_t *engine)
 {
 	int i, j;
@@ -325,20 +463,20 @@ void edge_detection(vision_engine_t *engine)
 // calculate 1st pixel 
 		for(j = 0; j < vision.edge_size; j++)
 		{
-			left_accum += row[j];
+			left_accum += (row[j] ? 1 : 0);
 		}
 		
 		for(j = vision.edge_size; j < vision.edge_size * 2; j++)
 		{
-			right_accum += row[j];
+			right_accum += (row[j] ? 1 : 0);
 		}
 		
 		for(j = vision.edge_size; j < vision.working_w - vision.edge_size; j++)
 		{
-			left_accum -= row[j - vision.edge_size];
-			left_accum += row[j];
-			right_accum -= row[j];
-			right_accum += row[j + vision.edge_size];
+			left_accum -= (row[j - vision.edge_size] ? 1 : 0);
+			left_accum += (row[j] ? 1 : 0);
+			right_accum -= (row[j] ? 1 : 0);
+			right_accum += (row[j + vision.edge_size] ? 1 : 0);
 			*(dst++) = right_accum - left_accum;
 		}
 	}
@@ -510,145 +648,92 @@ void normalize()
 #endif // 0
 
 
-void chroma_key(vision_engine_t *engine)
+void chroma_key(vision_engine_t *engine, int top_x)
 {
 // Use center X pixels of current line as next keys
 // Advance 1 line up to get next key
 	int i, j;
 	int key_y, key_r, key_g, key_b;
 	float prev_x = vision.working_w / 2;
+	int key_index = 0;
 
 	bzero(engine->mask, vision.working_w * vision.working_h);
+	memset(engine->key_x, 0xff, vision.working_h * sizeof(int));
+	memset(engine->key_y, 0xff, vision.working_h * sizeof(int));
 
-//printf("chroma_key %d\n", __LINE__);
-	int prev_key_r = -1;
-	int prev_key_g = -1;
-	int prev_key_b = -1;
-
-	for(key_y = vision.working_h - 1; key_y > vision.working_h / 2; key_y--)
+	int key_y1 = vision.working_h / 4;
+	for(key_y = vision.working_h - 1; key_y >= key_y1; key_y--)
 	{
-		float key_x1 = vision.working_w / 2;
+		float fraction = (float)(vision.working_h - key_y) / 
+			(vision.working_h - key_y1);
+		float key_x1 = top_x * fraction + 
+			vision.working_w / 2 * (1.0f - fraction);
 		float key_x2 = key_x1 + 1;
 
-//printf("detect_path %d frame=%d key_y=%d\n", __LINE__, vision.frames_written, key_y);
-		if(key_y < vision.working_h - 1)
-		{
-
-// get average X of all masked pixels
-			int accum = 0;
-			int total = 0;
-			unsigned char *row = engine->mask + key_y * vision.working_w;
-			for(i = 0; i < vision.working_w; i++)
-			{
-				if(row[i])
-				{
-					accum += i;
-					total++;
-				}
-			}
-
-// no masked pixels.  Give up.
-			if(total == 0)
-			{
-				break;
-			}
-			
-
-			key_x1 = accum / total;
-
- 			if(key_x1 - prev_x > vision.max_dx)
-  			{
-  				key_x1 = prev_x + vision.max_dx;
-  			}
-  			
-  			if(key_x1 - prev_x < -vision.max_dx)
-  			{
-  				key_x1 = prev_x - vision.max_dx;
-  			}
-  		
- 
-
-			key_x2 = key_x1 + 1;
-
-			if(key_x1 < 0) key_x1 = 0;
-			if(key_x2 > vision.working_w) key_x2 = vision.working_w;
-		}
 		
 		prev_x = key_x1;
-//printf("detect_path %d key_x1=%d key_x2=%d\n", __LINE__, key_x1, key_x2);
+//printf("detect_path %d key_x1=%d key_y=%d\n", __LINE__, (int)key_x1, key_y);
 
 
 // use each pixel as a key
 		int key_x;
-		int key_y1 = key_y - search_h;
-		int key_y2 = key_y;
 // search every y
 		int search_step = 1;
 // Only do 2 searches
 //		int search_step = search_h - 1;
 		if(search_step <= 0) search_step = 1;
 		
-		if(key_y1 < 0) key_y1 = 0;
-		if(key_y2 < 1) key_y2 = 1;
 // overwrites key_y here
-		for(key_y = key_y1; key_y < key_y2; key_y += search_step)
+		for(key_x = key_x1; key_x < key_x2; key_x++)
 		{
-			for(key_x = key_x1; key_x < key_x2; key_x++)
-			{
-				key_r = engine->in_y[key_y * vision.working_w + key_x];
-				key_g = engine->in_u[key_y * vision.working_w + key_x];
-				key_b = engine->in_v[key_y * vision.working_w + key_x];
+			key_r = engine->in_y[key_y * vision.working_w + key_x];
+			key_g = engine->in_u[key_y * vision.working_w + key_x];
+			key_b = engine->in_v[key_y * vision.working_w + key_x];
 
 /*
- * printf("key_y=%d prev_key_r=%d distance=%d\n", key_y, prev_key_r, 
- * sqrt(SQR(key_r - prev_key_r) + 
- * SQR(key_g - prev_key_g) + 
- * SQR(key_b - prev_key_b)));
- */
+* printf("key_y=%d prev_key_r=%d distance=%d\n", key_y, prev_key_r, 
+* sqrt(SQR(key_r - prev_key_r) + 
+* SQR(key_g - prev_key_g) + 
+* SQR(key_b - prev_key_b)));
+*/
 
 
 
 // mask based on the current key
-				for(i = 0; i < vision.working_h; i++)
+			for(i = 0; i < vision.working_h; i++)
+			{
+				int offset = i * vision.working_w;
+				unsigned char *mask_row = engine->mask + offset;
+				for(j = 0; j < vision.working_w; j++)
 				{
-					int offset = i * vision.working_w;
-					unsigned char *mask_row = engine->mask + offset;
-					for(j = 0; j < vision.working_w; j++)
+					if(!(*mask_row))
 					{
-						if(!(*mask_row))
+						int r = engine->in_y[offset];
+						int g = engine->in_u[offset];
+						int b = engine->in_v[offset];
+
+//						int distance = SQR(r - key_r);
+ 						int distance = sqrt(SQR(r - key_r) +
+ 							SQR(g - key_g) +
+ 							SQR(b - key_b));
+						if(distance < threshold)
 						{
-							int r = engine->in_y[offset];
-							int g = engine->in_u[offset];
-							int b = engine->in_v[offset];
-
-//							int distance = SQR(r - key_r);
- 							int distance = sqrt(SQR(r - key_r) +
- 								SQR(g - key_g) +
- 								SQR(b - key_b));
-							if(distance < threshold)
-							{
-								*mask_row = 1;
-							}
+							*mask_row = 1;
 						}
-
-						mask_row++;
-						offset++;
 					}
+
+					mask_row++;
+					offset++;
 				}
+			}
 
 // color searched pixels for debugging
-//				engine->mask[key_y * vision.working_w + key_x] = 2;
-/*
- * 				
- * 				prev_key_r = key_r;
- * 				prev_key_g = key_g;
- * 				prev_key_b = key_b;
- */
+			engine->key_x[key_index] = key_x;
+			engine->key_y[key_index] = key_y;
+			key_index++;
 //printf("detect_path %d\n", __LINE__);
-			}
 		}
 
-		key_y = key_y2;
 		
 //		to_output();
 //		compress_jpeg();
@@ -666,7 +751,7 @@ void to_output(vision_engine_t *engine)
 
 
 #if 0
-// create output image from edge
+// create output image from edge accumulator
 	int min = 0x7fffffff;
 	int max = -0x7fffffff;
 	for(i = 0; i < vision.working_h; i++)
@@ -708,32 +793,11 @@ void to_output(vision_engine_t *engine)
 #endif // 0
 
 #if 1
-// copy working image to output image
+// create output image from input image
 	memcpy(engine->out_y, engine->in_y, vision.working_w * vision.working_h);
 	memcpy(engine->out_u, engine->in_u, vision.working_w * vision.working_h);
 	memcpy(engine->out_v, engine->in_v, vision.working_w * vision.working_h);
 
-// 	for(i = 0; i < vision.working_h; i++)
-// 	{
-// 		unsigned char *r = &vision.y_buffer[i * vision.working_w];
-// 		unsigned char *g = &vision.u_buffer[i * vision.working_w];
-// 		unsigned char *b = &vision.v_buffer[i * vision.working_w];
-// 		unsigned char *dst_y = &vision.out_y[i * vision.working_w];
-// 		unsigned char *dst_u = &vision.out_u[i * vision.working_w];
-// 		unsigned char *dst_v = &vision.out_v[i * vision.working_w];
-// 
-// 		for(j = 0; j < vision.working_w; j++)
-// 		{
-// 			int y, u, v;
-// 			RGB_TO_YUV(y, u, v, *r, *g, *b)
-// 			*dst_y++ = y;
-// 			*dst_u++ = u;
-// 			*dst_v++ = v;
-// 			r++;
-// 			g++;
-// 			b++;
-// 		}
-// 	}
 #endif // 0
 
 #if 1
@@ -881,7 +945,7 @@ void geometry_range(vision_engine_t *engine,
 	}
 }
 
-void geometry(vision_engine_t *engine)
+float geometry(vision_engine_t *engine)
 {
 	int y_step;
 	int y_center = vision.working_h / 2;
@@ -891,7 +955,7 @@ void geometry(vision_engine_t *engine)
 	float a_range = TO_RAD(35);
 	int best_y = 0;
 	float best_angle = 0;
-	int best_diff = -1;
+	int best_left_diff = -1;
 
 	int left_x1, left_x2, left_y1, left_y2;
 	int right_x1, right_x2, right_y1, right_y2;
@@ -908,7 +972,7 @@ void geometry(vision_engine_t *engine)
 			a_range,
 			&best_y,
 			&best_angle,
-			&best_diff,
+			&best_left_diff,
 			0);
 
 		y_center = best_y;
@@ -934,7 +998,7 @@ void geometry(vision_engine_t *engine)
 	a_range = TO_RAD(35);
 	best_y = 0;
 	best_angle = 0;
-	best_diff = 1;
+	int best_right_diff = 1;
 	for(y_step = 4; y_step > 0; y_step >>= 1)
 	{
 		geometry_range(engine, 
@@ -946,7 +1010,7 @@ void geometry(vision_engine_t *engine)
 			a_range,
 			&best_y,
 			&best_angle,
-			&best_diff,
+			&best_right_diff,
 			1);
 
 		y_center = best_y;
@@ -964,8 +1028,7 @@ void geometry(vision_engine_t *engine)
 		best_y, 
 		best_angle);
 
-#if 1
-// draw center of path
+// compute vanishing point
 	if(left_x2 != left_x1 && 
 		right_x2 != right_x1)
 	{
@@ -974,10 +1037,12 @@ void geometry(vision_engine_t *engine)
 		
 		if(fabs(left_slope) > 0.001 && fabs(right_slope) > 0.001)
 		{
+			float vanish_x = 0;
+			float vanish_y = 0;
 			float left_intercept = -left_slope * left_x1 + left_y1;
 			float right_intercept = -right_slope * right_x1 + right_y1;
-			float vanish_x = (right_intercept - left_intercept) / (left_slope - right_slope);
-			float vanish_y = left_slope * vanish_x + left_intercept;
+			vanish_x = (right_intercept - left_intercept) / (left_slope - right_slope);
+			vanish_y = left_slope * vanish_x + left_intercept;
 			float bottom_left_x = ((vision.working_h - 1) - left_intercept) / left_slope;
 			float bottom_right_x = ((vision.working_h - 1) - right_intercept) / right_slope;
 			float bottom_x = (bottom_left_x + bottom_right_x) / 2;
@@ -999,16 +1064,100 @@ void geometry(vision_engine_t *engine)
  * 				vision.bottom_x * vision.working_w, 
  * 				vision.working_h - 1);
  */
- 
- 			engine->vanish_x = (int)(vanish_x * 255 / vision.working_w);
-			engine->vanish_y = (int)(vanish_y * 255 / vision.working_h);
-			engine->bottom_x = (int)(bottom_x * 255 / vision.working_w);
+			draw_line(engine, left_x1, left_y1, vanish_x, vanish_y);
+			draw_line(engine, vanish_x, vanish_y, right_x2, right_y2);
+
+ 			engine->vanish_x = vanish_x;
+			engine->vanish_y = vanish_y;
+			engine->bottom_x = bottom_x;
+
+
+
+// get percent of filled pixels in the triangle /
+// percent of filled pixels outside the triangle
+			int total_outside = vanish_y * vision.working_w;
+			int filled_outside = 0;
+			int i, j;
+			for(i = 0; i < vanish_y; i++)
+			{
+				unsigned char *row = &engine->mask[i * vision.working_w];
+				for(j = 0; j < vision.working_w; j++)
+				{
+					if(*row++)
+					{
+						filled_outside++;
+					}
+				}
+			}
+
+			int total_inside = 0;
+			int filled_inside = 0;
+			for(i = vanish_y; i < vision.working_h; i++)
+			{
+				unsigned char *row = &engine->mask[i * vision.working_w];
+// (y - b) / m = x
+				int left_x = (int)((i - vanish_y) / left_slope + vanish_x);
+				int right_x = (int)((i - vanish_y) / right_slope + vanish_x);
+				for(j = 0; j < left_x && j < vision.working_w; j++)
+				{
+					total_outside++;
+					if(*row++)
+					{
+						filled_outside++;
+					}
+				}
+				for( ; j < right_x && j < vision.working_w; j++)
+				{
+					total_inside++;
+					if(*row++)
+					{
+						filled_inside++;
+					}
+				}
+				for( ; j < vision.working_w; j++)
+				{
+					total_outside++;
+					if(*row++)
+					{
+						filled_outside++;
+					}
+				}
+			}
+
+printf("geometry %d %d total_outside=%d total_inside=%d ", 
+__LINE__, 
+vision.frames_written, 
+total_outside, 
+total_inside);
+			if(total_outside && total_inside)
+			{
+				float in_fraction = (float)filled_inside / total_inside;
+				float out_fraction = (float)filled_outside / total_outside;
+
+//printf("in_fraction=%f out_fraction=%f diff=%f\n", in_fraction, out_fraction, in_fraction - out_fraction);
+printf("diff=%f\n", in_fraction - out_fraction);
+return in_fraction - out_fraction;
+
+				if(filled_outside)
+				{
+					return in_fraction / out_fraction;
+				}
+				else
+				{
+					return 0x7fffffff;
+				}
+			}
+printf("\n");
+			return 0;
+		}
+		else
+		{
+			return 0;
 		}
 	}
 
-	draw_line(engine, left_x1, left_y1, left_x2, left_y2);
-	draw_line(engine, right_x1, right_y1, right_x2, right_y2);
-#endif // 0
+
+	return 0;
 }
 
 
@@ -1019,32 +1168,45 @@ void detect_path(vision_engine_t *engine)
 	cartimer_t profiler;
 	reset_timer(&profiler);
 	
+	threshold = vision.threshold;
+	search_h = vision.search_h;
+
+	engine->prev_vanish_x = engine->vanish_x;
+	engine->prev_vanish_y = engine->vanish_y;
 	
-/*
- * 	int best_distance = 0x7fffffff;
- * 	int best_threshold = -1;
- * 	for(threshold = vision.threshold1; threshold < vision.threshold2; threshold++)
- * 	{
- * 		vision.mask = vision.masks[threshold - vision.threshold1];
- * 		chroma_key();
- * 		int current_distance = detect_blobs(0);
- * 		
- * 		if(abs(current_distance - 40) < best_distance)
- * 		{
- * 			best_distance = abs(current_distance - 160);
- * 			best_threshold = threshold;
- * 		}
- * 		
- * 		to_output();
- * 		compress_jpeg();
- * 	}
- */
+	
+
+	
+// straight line of color keys
+	float best_score = 0;
+	int best_x = vision.working_w / 2;
+	for(i = 0; i < vision.working_w; i += 4)
+	{
+		chroma_key(engine, i);
+		detect_blobs(engine, 1);
+		edge_detection(engine);
+
+
+ 		to_output(engine);
+		float score = geometry(engine);
+		if(score > best_score)
+		{
+			best_score = score;
+			best_x = i;
+		}
+		
+//		printf("detect_path %d %d %d\n", __LINE__, vision.frames_written, diff);
+		
+ 		compress_output(engine->out_y, 
+ 			engine->out_u,
+ 			engine->out_v,
+ 			vision.output_w,
+ 			vision.output_h);
+ 		append_file(vision.picture_out, vision.out_size);
+	}
 
 //	printf("detect_path %d best_threshold=%d\n", __LINE__, best_threshold);
 // redo blob detection with best threshold
-
-	threshold = vision.threshold;
-	search_h = vision.search_h;
 
 //	vision.mask = vision.masks[threshold - vision.threshold1];
 // reset mask values
@@ -1058,7 +1220,8 @@ void detect_path(vision_engine_t *engine)
  * 	}
  */
 
- 	chroma_key(engine);
+
+ 	chroma_key(engine, best_x);
 
 //	printf("detect_path %d %d\n", __LINE__, get_timer_difference(&profiler));
 //	reset_timer(&profiler);

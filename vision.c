@@ -2202,6 +2202,11 @@ void init_engine(vision_engine_t *engine)
 	engine->out_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
+	engine->key_x = (int*)malloc(vision.working_h * sizeof(int));
+	engine->key_y = (int*)malloc(vision.working_h * sizeof(int));
+	engine->vanish_x = vision.working_w / 2;
+	engine->vanish_y = vision.working_h / 2;
+	engine->bottom_x = vision.working_w / 2;
 
 	sem_init(&engine->input_lock, 0, 1);
 	sem_init(&engine->ready_lock, 0, 0);
@@ -2336,10 +2341,10 @@ void* frame_writer(void *ptr)
 		vision.spi_tx_data[1] = 0x2d;
 		vision.spi_tx_data[2] = 0xd4;
 		vision.spi_tx_data[3] = 0xe5;
-		vision.spi_tx_data[4] = engine->vanish_x;
-		vision.spi_tx_data[5] = engine->vanish_y;
-		CLAMP(engine->bottom_x, 0, 0xff);
-		vision.spi_tx_data[6] = engine->bottom_x;
+		vision.spi_tx_data[4] = (int)(engine->vanish_x * 255 / vision.working_w);;
+		vision.spi_tx_data[5] = (int)(engine->vanish_y * 255 / vision.working_h);
+		CLAMP(engine->bottom_x, 0, vision.working_w);
+		vision.spi_tx_data[6] = (int)(engine->bottom_x * 255 / vision.working_w);
 		vision.spi_tx_data[7] = 0;
 		vision.spi_tx_size = 8;
 		write_spi();
