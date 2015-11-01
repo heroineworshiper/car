@@ -144,7 +144,8 @@ ARM_OBJS := \
 
 VISION_OBJS := \
 	vision.o \
-	vision_chroma.o \
+	vision_engine.o \
+	vision_server.o \
 	jpeg/cdjpeg.o \
 	jpeg/jcapimin.o \
 	jpeg/jcapistd.o \
@@ -484,6 +485,7 @@ cc1101.o: 			     cc1101.c
 imu.o: 			   	     imu.c
 vision.o: vision.c
 vision_surface.o: vision_surface.c
-vision_chroma.o: vision_chroma.c
+vision_engine.o: vision_engine.c
+vision_server.o: vision_server.c
 
 
