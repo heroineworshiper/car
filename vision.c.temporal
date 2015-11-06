@@ -47,7 +47,6 @@ vision_t vision;
 void detect_path(vision_engine_t *engine);
 void init_yuv();
 void push_to_server();
-void init_httpd();
 
 #define SQR(x) ((x) * (x))
 #define CLAMP(x, y, z) ((x) = ((x) < (y) ? (y) : ((x) > (z) ? (z) : (x))))
@@ -58,11 +57,11 @@ void init_httpd();
 
 
 // Save unprocessed frames to files.
-#define RECORD_INPUT
+//#define RECORD_INPUT
 // Read JPEG from files instead of video device.
-//#define PLAYBACK
+#define PLAYBACK
 // Record the processed images.
-//#define RECORD_OUTPUT
+#define RECORD_OUTPUT
 
 
 // Camera type
@@ -2185,7 +2184,9 @@ void* vision_thread(void *ptr)
 		}
 
 // process it
-//		detect_path(engine);
+//printf("vision_thread %d\n", __LINE__);
+		detect_path(engine);
+//printf("vision_thread %d\n", __LINE__);
 
 		sem_post(&engine->complete_lock);
 	}
@@ -2201,11 +2202,9 @@ void init_engine(vision_engine_t *engine)
 	engine->out_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
-	engine->key_x = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
-	engine->key_y = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
-	engine->vanish_x = vision.working_w / 2;
-	engine->vanish_y = vision.working_h / 2;
-	engine->bottom_x = vision.working_w / 2;
+	memset(engine->key_y, 0xff, HISTORY_SIZE * sizeof(int));
+	memset(engine->key_u, 0xff, HISTORY_SIZE * sizeof(int));
+	memset(engine->key_v, 0xff, HISTORY_SIZE * sizeof(int));
 
 	sem_init(&engine->input_lock, 0, 1);
 	sem_init(&engine->ready_lock, 0, 0);
@@ -2244,13 +2243,13 @@ void parse_config(FILE *in)
 				else
 				if(!strcasecmp(ptr, "THRESHOLD")) vision.threshold = atoi(value);
 				else
-				if(!strcasecmp(ptr, "HORIZON_Y")) vision.horizon_y = atoi(value);
-				else
 				if(!strcasecmp(ptr, "SEARCH_H")) vision.search_h = atoi(value);
 				else
 				if(!strcasecmp(ptr, "MAX_DX")) vision.max_dx = atof(value);
 				else
 				if(!strcasecmp(ptr, "EDGE_SIZE")) vision.edge_size = atoi(value);
+				else
+				if(!strcasecmp(ptr, "GEOMETRY_BANDWIDTH")) vision.geometry_bandwidth = atof(value);
 				else
 				if(!strcasecmp(ptr, "TOP_Y")) vision.top_y = atoi(value);
 				else
@@ -2340,10 +2339,10 @@ void* frame_writer(void *ptr)
 		vision.spi_tx_data[1] = 0x2d;
 		vision.spi_tx_data[2] = 0xd4;
 		vision.spi_tx_data[3] = 0xe5;
-		vision.spi_tx_data[4] = (int)(engine->vanish_x * 255 / vision.working_w);;
-		vision.spi_tx_data[5] = (int)(engine->vanish_y * 255 / vision.working_h);
-		CLAMP(engine->bottom_x, 0, vision.working_w);
-		vision.spi_tx_data[6] = (int)(engine->bottom_x * 255 / vision.working_w);
+		vision.spi_tx_data[4] = engine->vanish_x;
+		vision.spi_tx_data[5] = engine->vanish_y;
+		CLAMP(engine->bottom_x, 0, 0xff);
+		vision.spi_tx_data[6] = engine->bottom_x;
 		vision.spi_tx_data[7] = 0;
 		vision.spi_tx_size = 8;
 		write_spi();
@@ -2368,18 +2367,9 @@ void* frame_writer(void *ptr)
 			reset_timer(&vision.timer);
 
 
-/*
- * 			compress_output(engine->out_y, 
- * 				engine->out_u, 
- * 				engine->out_v, 
- * 				vision.output_w, 
- * 				vision.output_h);
- */
-
-// pass through to web server
-			compress_output(engine->in_y, 
-				engine->in_u, 
-				engine->in_v, 
+			compress_output(engine->out_y, 
+				engine->out_u, 
+				engine->out_v, 
 				vision.output_w, 
 				vision.output_h);
 #ifdef RECORD_OUTPUT
@@ -2462,7 +2452,7 @@ void init_vision()
 	strcpy(vision.ref_path, "downhill1.mov");
 	vision.bottom_x = 0.5;
 	vision.top_x = 0.5;
-	vision.record_period = 100;
+	vision.record_period = 1000;
 
 
 	parse_config(in);
@@ -2511,6 +2501,233 @@ int get_timer_difference(cartimer_t *ptr)
 	int result = current_time.tv_sec * 1000 + current_time.tv_usec / 1000 -
 		ptr->start_time.tv_sec * 1000 - ptr->start_time.tv_usec / 1000;
 	return result;
+}
+
+
+
+void error_report(int conn, char *code, char *title, char *msg)
+{
+	char buffer[TEXTLEN];
+	sprintf(buffer, 
+		"HTTP/1.0 %s %s\r\n" 
+        "\r\n" 
+        "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\r\n" 
+        "<TITLE>%s %s</TITLE>\r\n" 
+        "</HEAD><BODY>\r\n" 
+        "<H1>%s</H1>\r\n%s<P>\r\n" 
+        "<HR><ADDRESS>Truck web server\r\n" 
+        "</BODY></HTML>\r\n",
+		code,
+		title,
+		code,
+		title,
+		title,
+		msg);
+	int result = write(conn, buffer, strlen(buffer));
+}
+
+int send_response(int conn, 
+	unsigned char *buffer, 
+	int buffer_size, 
+	char *content_type)
+{
+	char string[TEXTLEN];
+	sprintf(string, "HTTP/1.0 200 OK\r\n" 
+     	   "Content-Type: %s\r\n" 
+     	   "Server: Truck web server\r\n\r\n",
+		   content_type);
+	int result = write(conn, string, strlen(string));
+	result = write(conn, buffer, buffer_size);
+}
+
+
+int listener;
+void* httpd_thread(void *ptr)
+{
+	int pid;
+	while(1)
+	{
+		int conn = accept(listener, NULL, NULL);
+
+		if ( (pid = fork()) == 0 ) 
+		{
+// child process
+			close(listener);
+			
+			unsigned char buffer[TEXTLEN];
+			int bytes_read = read(conn, buffer, TEXTLEN);
+			buffer[bytes_read] = 0;
+//			printf("init_httpd %d: '%s'\n", __LINE__, buffer);
+
+// search for GET
+			char *end = (char*)buffer + strlen((char*)buffer);
+			char *ptr = strstr((char*)buffer, "GET");
+			if(ptr)
+			{
+				ptr += 4;
+// get path
+				if(ptr < end)
+				{
+					char *ptr2 = strchr(ptr, ' ');
+					if(ptr2 && ptr2 < end)
+					{
+						*ptr2 = 0;
+//						printf("init_httpd %d: '%s'\n", __LINE__, ptr);
+
+// strip arguments
+						ptr2 = strchr(ptr, '?');
+						if(ptr2)
+						{
+							*ptr2 = 0;
+						}
+
+// create an image
+						if(!strcmp(ptr, "/latest.jpg"))
+						{
+// 							printf("init_httpd %d: latest_size=%d latest_image=%p\n", 
+// 								__LINE__, 
+// 								vision.latest_size,
+// 								vision.latest_image);
+
+							pthread_mutex_lock(&vision.latest_lock);
+							unsigned char *buffer2 = (unsigned char*)malloc(vision.latest_size);
+							int buffer2_size = vision.latest_size;
+							memcpy(buffer2, vision.latest_image, vision.latest_size);
+							pthread_mutex_unlock(&vision.latest_lock);
+							
+							send_response(conn, buffer2, buffer2_size, (char*)"image/jpeg");
+							free(buffer2);
+						}
+						else
+						if(!strcmp(ptr, "/total_frames.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%d", vision.frames_written);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
+						if(!strcmp(ptr, "/fps.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%d", vision.fps);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
+						if(!strcmp(ptr, "/path_x.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%d", vision.path_x);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
+						if(!strcmp(ptr, "/bottom_x.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%f", vision.bottom_x);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
+						if(!strcmp(ptr, "/top_x.txt"))
+						{
+							char string[TEXTLEN];
+							sprintf(string, "%f", vision.top_x);
+							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
+						}
+						else
+// file in the html directory
+						if(ptr[0] = '/')
+						{
+							char string[TEXTLEN];
+							if(!strcmp(ptr, "/"))
+								sprintf(string, "html/index.html");
+							else
+								sprintf(string, "html%s", ptr);
+							
+//							printf("init_httpd %d: '%s'\n", __LINE__, string);
+							FILE *fd = fopen(string, "r");
+							if(fd)
+							{
+								fseek(fd, 0, SEEK_END);
+								int size = ftell(fd);
+								fseek(fd, 0, SEEK_SET);
+
+// need to pad the buffer or fclose locks up
+								unsigned char *buffer = (unsigned char*)malloc(size + 16);
+								int result = fread(buffer, size, 1, fd);
+								buffer[size + 1] = 0;
+								fclose(fd);
+								
+								send_response(conn, buffer, size + 1, (char*)"text/html");
+								free(buffer);
+							}
+							else
+							{
+								char string2[TEXTLEN];
+								sprintf(string2, 
+									"The requested file '%s' was not found on this server.",
+									string);
+								error_report(conn, 
+									(char*)"404", 
+									(char*)"Not Found",
+			                    	string2);
+							}
+							
+						}
+						else
+						{
+							error_report(conn, 
+								(char*)"404", 
+								(char*)"Not Found",
+			                    (char*)"The requested URL was not found on this server.");
+						}
+					}
+				}
+			}
+			
+			close(conn);
+			exit(EXIT_SUCCESS);
+			
+		}
+		else
+		{
+// parent process
+			close(conn);
+			waitpid(-1, NULL, WNOHANG);
+		}
+	}
+}
+
+// http://www.paulgriffiths.net/program/c/srcs/webservsrc.html
+void init_httpd()
+{
+    listener = socket(AF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in servaddr;
+	memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family      = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	
+	int port = 8080;
+	for(port = 8080; port < 8100; port++)
+	{
+    	servaddr.sin_port = htons(port);
+    	if ( bind(listener, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0 )
+		{
+			printf("init_httpd %d: couldn't bind to port %d.\n", __LINE__, port);
+			if(port == 99) return;
+		}
+		else
+		{
+			printf("init_httpd %d: got port %d\n", __LINE__, port);
+			break;
+		}
+	}
+	
+	listen(listener, TEXTLEN);
+	
+	pthread_t tid;
+	pthread_attr_t  attr;
+	pthread_attr_init(&attr);
+	pthread_create(&tid, &attr, httpd_thread, 0);
 }
 
 void draw_pixel(vision_engine_t *engine, int x, int y)

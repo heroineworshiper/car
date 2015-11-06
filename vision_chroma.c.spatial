@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include "vision.h"
+#include "vision_chroma.h"
 
 
 // 640x480
@@ -227,25 +228,6 @@ int detect_blobs(vision_engine_t *engine, int fill_it)
 		{
 			engine->mask[best_fill_y[i] * vision.working_w + best_fill_x[i]] = 1;
 		}
-
-		// draw color key pixels
-		for(i = 0; i < vision.working_w * vision.working_h; i++)
-		{
-			int key_x = engine->key_x[i];
-			int key_y = engine->key_y[i];
-			if(key_x < 0)
-			{
-				break;
-			}
-			
-			if(key_x >= 0 && 
-				key_x < vision.working_w && 
-				key_y >= 0 && 
-				key_y < vision.working_h)
-			{
-				engine->mask[key_y * vision.working_w + key_x] = 2;
-			}
-		}
 	}
 
 	free(fill_x);
@@ -343,20 +325,20 @@ void edge_detection(vision_engine_t *engine)
 // calculate 1st pixel 
 		for(j = 0; j < vision.edge_size; j++)
 		{
-			left_accum += (row[j] ? 1 : 0);
+			left_accum += row[j];
 		}
 		
 		for(j = vision.edge_size; j < vision.edge_size * 2; j++)
 		{
-			right_accum += (row[j] ? 1 : 0);
+			right_accum += row[j];
 		}
 		
 		for(j = vision.edge_size; j < vision.working_w - vision.edge_size; j++)
 		{
-			left_accum -= (row[j - vision.edge_size] ? 1 : 0);
-			left_accum += (row[j] ? 1 : 0);
-			right_accum -= (row[j] ? 1 : 0);
-			right_accum += (row[j + vision.edge_size] ? 1 : 0);
+			left_accum -= row[j - vision.edge_size];
+			left_accum += row[j];
+			right_accum -= row[j];
+			right_accum += row[j + vision.edge_size];
 			*(dst++) = right_accum - left_accum;
 		}
 	}
@@ -528,181 +510,22 @@ void normalize()
 #endif // 0
 
 
-
-// chroma key based on a single color
-void chroma_key_single(vision_engine_t *engine, int key_r, int key_g, int key_b)
-{
-// mask based on the current color
-	int i, j;
-	for(i = 0; i < vision.working_h; i++)
-	{
-		int offset = i * vision.working_w;
-		unsigned char *mask_row = engine->mask + offset;
-		for(j = 0; j < vision.working_w; j++)
-		{
-			if(!(*mask_row))
-			{
-				int r = engine->in_y[offset];
-				int g = engine->in_u[offset];
-				int b = engine->in_v[offset];
-
-//				int distance = SQR(r - key_r);
- 				int distance = sqrt(SQR(r - key_r) +
- 					SQR(g - key_g) +
- 					SQR(b - key_b));
-				if(distance < threshold)
-				{
-					*mask_row = 1;
-				}
-			}
-
-			mask_row++;
-			offset++;
-		}
-	}
-}
-
-void chroma_key_history(vision_engine_t *engine)
-{
-	int i;
-	for(i = 0; i < HISTORY_SIZE; i++)
-	{
-		if(engine->r_keys[i] != 0)
-		{
-			chroma_key_single(engine, 
-				engine->r_keys[i], 
-				engine->g_keys[i], 
-				engine->b_keys[i]);
-		}
-	}
-}
-
-// chroma key based on a range of colors
-void chroma_key_rect(vision_engine_t *engine)
-{
-	int i, j;
-	int key_y, key_r, key_g, key_b;
-	float prev_x = vision.working_w / 2;
-	int key_index = 0;
-
-	bzero(engine->mask, vision.working_w * vision.working_h);
-	memset(engine->key_x, 0xff, vision.working_w * vision.working_h * sizeof(int));
-	memset(engine->key_y, 0xff, vision.working_w * vision.working_h * sizeof(int));
-
-	int x1 = vision.working_w / 3;
-	int x2 = vision.working_w * 2 / 3;
-	int y1 = vision.working_h * 3 / 4;
-	int y2 = vision.working_h;
-	
-	for(i = y1; i < y2; i += 1)
-	{
-		for(j = x1; j < x2; j += 1)
-		{
-			key_r = engine->in_y[i * vision.working_w + j];
-			key_g = engine->in_u[i * vision.working_w + j];
-			key_b = engine->in_v[i * vision.working_w + j];
-
-
-// mask based on the current key
-			chroma_key_single(engine, key_r, key_g, key_b);
-
-// store the current key in history
-			if(!(engine->total_frames % 3))
-			{
-				engine->r_keys[engine->key_ptr] = key_r;
-				engine->g_keys[engine->key_ptr] = key_g;
-				engine->b_keys[engine->key_ptr] = key_b;
-				engine->key_ptr++;
-				if(engine->key_ptr >= HISTORY_SIZE)
-				{
-					engine->key_ptr = 0;
-				}
-			}
-		}
-	}
-	
-// color searched pixels for debugging
-	for(i = x1; i < x2; i++)
-	{
-		engine->key_x[key_index] = i;
-		engine->key_y[key_index] = y1;
-		key_index++;
-		engine->key_x[key_index] = i;
-		engine->key_y[key_index] = y2;
-		key_index++;
-	}
-	
-	for(i = y1; i < y2; i++)
-	{
-		engine->key_x[key_index] = x1;
-		engine->key_y[key_index] = i;
-		key_index++;
-		engine->key_x[key_index] = x2;
-		engine->key_y[key_index] = i;
-		key_index++;
-	}
-}
-
-// chroma key based on a range of colors
-void chroma_key_triangle(vision_engine_t *engine)
-{
-	int i, j;
-	int key_y, key_r, key_g, key_b;
-	float prev_x = vision.working_w / 2;
-	int key_index = 0;
-
-	bzero(engine->mask, vision.working_w * vision.working_h);
-	memset(engine->key_x, 0xff, vision.working_w * vision.working_h * sizeof(int));
-	memset(engine->key_y, 0xff, vision.working_w * vision.working_h * sizeof(int));
-
-	int top_x = vision.working_w / 2;
-	int top_y = vision.working_h * 2 / 3;
-	int left_x = vision.working_w / 6;
-	int right_x = vision.working_w * 5 / 6;
-
-	float left_slope = (float)(top_y - vision.working_h) / (top_x - left_x);
-	float right_slope = (float)(vision.working_h - top_y) / (right_x - top_x);
-
-	for(i = top_y; i < vision.working_h; i += 2)
-	{
-// (y - b) / m = x
-		int x1 = (int)((i - top_y) / left_slope + top_x);
-		int x2 = (int)((i - top_y) / right_slope + top_x);
-		for(j = x1; j < x2; j += 2)
-		{
-			key_r = engine->in_y[i * vision.working_w + j];
-			key_g = engine->in_u[i * vision.working_w + j];
-			key_b = engine->in_v[i * vision.working_w + j];
-
-
-// mask based on the current key
-			chroma_key_single(engine, key_r, key_g, key_b);
-
-// color searched pixels for debugging
-			engine->key_x[key_index] = j;
-			engine->key_y[key_index] = i;
-			key_index++;
-		}
-	}
-}
-
-
-
-void chroma_key_mean(vision_engine_t *engine)
+void chroma_key(vision_engine_t *engine)
 {
 // Use center X pixels of current line as next keys
 // Advance 1 line up to get next key
 	int i, j;
 	int key_y, key_r, key_g, key_b;
 	float prev_x = vision.working_w / 2;
-	int key_index = 0;
 
 	bzero(engine->mask, vision.working_w * vision.working_h);
-	memset(engine->key_x, 0xff, vision.working_h * sizeof(int));
-	memset(engine->key_y, 0xff, vision.working_h * sizeof(int));
 
+//printf("chroma_key %d\n", __LINE__);
+	int prev_key_r = -1;
+	int prev_key_g = -1;
+	int prev_key_b = -1;
 
-	for(key_y = vision.working_h - 1; key_y > vision.horizon_y; key_y--)
+	for(key_y = vision.working_h - 1; key_y > vision.working_h / 2; key_y--)
 	{
 		float key_x1 = vision.working_w / 2;
 		float key_x2 = key_x1 + 1;
@@ -776,19 +599,59 @@ void chroma_key_mean(vision_engine_t *engine)
 				key_g = engine->in_u[key_y * vision.working_w + key_x];
 				key_b = engine->in_v[key_y * vision.working_w + key_x];
 
+/*
+ * printf("key_y=%d prev_key_r=%d distance=%d\n", key_y, prev_key_r, 
+ * sqrt(SQR(key_r - prev_key_r) + 
+ * SQR(key_g - prev_key_g) + 
+ * SQR(key_b - prev_key_b)));
+ */
+
+
 
 // mask based on the current key
-				chroma_key_single(engine, key_r, key_g, key_b);
+				for(i = 0; i < vision.working_h; i++)
+				{
+					int offset = i * vision.working_w;
+					unsigned char *mask_row = engine->mask + offset;
+					for(j = 0; j < vision.working_w; j++)
+					{
+						if(!(*mask_row))
+						{
+							int r = engine->in_y[offset];
+							int g = engine->in_u[offset];
+							int b = engine->in_v[offset];
+
+//							int distance = SQR(r - key_r);
+ 							int distance = sqrt(SQR(r - key_r) +
+ 								SQR(g - key_g) +
+ 								SQR(b - key_b));
+							if(distance < threshold)
+							{
+								*mask_row = 1;
+							}
+						}
+
+						mask_row++;
+						offset++;
+					}
+				}
+
+// color searched pixels for debugging
+//				engine->mask[key_y * vision.working_w + key_x] = 2;
+/*
+ * 				
+ * 				prev_key_r = key_r;
+ * 				prev_key_g = key_g;
+ * 				prev_key_b = key_b;
+ */
+//printf("detect_path %d\n", __LINE__);
 			}
 		}
 
-// color searched pixels for debugging
-		engine->key_x[key_index] = key_x1;
-		engine->key_y[key_index] = key_y1;
-		key_index++;
-
-// reset key_y
 		key_y = key_y2;
+		
+//		to_output();
+//		compress_jpeg();
 	}
 
 
@@ -889,17 +752,23 @@ void to_output(vision_engine_t *engine)
 // draw key pixel
 				if(*mask_row == 2)
 				{
-					*y = 0x80 + *y / 2;
-					*u = 0x0 + *u / 2;
-					*v = 0x80 + *v / 2;
+					*y = 0xff;
+					*u = 0x0;
+					*v = 0xff;
 				}
 				else
 // draw masked pixel
 				if(*mask_row == 1)
 				{
-					*y = *y / 2;
-					*u = 0x80 + *u / 2;
-					*v = 0x0 + *v / 2;
+					*y = 0;
+					*u = 0x80;
+					*v = 0x80;
+				}
+				else
+				{
+					*y = 0xff;
+					*u = 0x80;
+					*v = 0x80;
 				}
 			}
 			
@@ -963,7 +832,7 @@ void param_to_xy(int *x1_out,
 	*y2_out = y2;
 }
 
-void geometry_range_polar(vision_engine_t *engine,
+void geometry_range(vision_engine_t *engine,
 	int y_step, 
 	float a_step, 
 	int y_center, 
@@ -1012,182 +881,7 @@ void geometry_range_polar(vision_engine_t *engine,
 	}
 }
 
-void geometry_range_xy(vision_engine_t *engine,
-	int y_step, 
-	int x_step, 
-	int y_center, 
-	int y_range, 
-	int x_center, 
-	int x_range,
-	int *best_y,
-	int *best_x,
-	int *best_diff,
-	int want_greatest)
-{
-	int y;
-	for(y = y_center - y_range; y < y_center + y_range; y += y_step)
-	{
-		int x;
-		for(x = x_center - x_range; x < x_center + x_range; x += x_step)
-		{
-			int x1, y1, x2, y2;
-			if(want_greatest)
-			{
-// left edge
-				x1 = 0;
-				y1 = y;
-				x2 = x;
-				y2 = vision.working_h / 2;
-			}
-			else
-			{
-// right edge
-				x1 = x;
-				y1 = vision.working_h / 2;
-				x2 = vision.working_w;
-				y2 = y;
-			}
-			
-			int diff = test_line(engine, x1, y1, x2, y2);
-			if((want_greatest && diff > *best_diff) ||
-				(!want_greatest && diff < *best_diff))
-			{
-				*best_y = y;
-				*best_x = x;
-				*best_diff = diff;
-			}
-			
-// printf("geometry_range %d y=%d angle=%d %d %d %d %d\n", 
-// __LINE__, 
-// y, 
-// (int)TO_DEG(angle), 
-// (int)x1, 
-// (int)y1, 
-// (int)x2, 
-// (int)y2);
-//draw_line(engine, x1, y1, x2, y2);
-		}
-//return;
-	}
-}
-
-void geometry_xy(vision_engine_t *engine)
-{
-	int y_step;
-	int y_center = vision.working_h * 3 / 4;
-	int y_range = vision.working_h / 4;
-	int x_step;
-	int x_center = vision.working_w / 2;
-	int x_range = vision.working_w / 4;
-	int best_y = 0;
-	int best_x = 0;
-	int best_left_diff = -1;
-
-	int left_x1, left_x2, left_y1, left_y2;
-	int right_x1, right_x2, right_y1, right_y2;
-
-// right edge
-	for(y_step = 4, x_step = 4; y_step > 0; y_step >>= 1, x_step >>= 1)
-	{
-		geometry_range_xy(engine, 
-			y_step, 
-			x_step, 
-			y_center,
-			y_range, 
-			x_center, 
-			x_range,
-			&best_y,
-			&best_x,
-			&best_left_diff,
-			0);
-
-		y_center = best_y;
-		x_center = best_x;
-		y_range = y_step;
-		x_range = x_step;
-		y_step /= 2;
-		x_step /= 2;
-	}
-
-	right_x1 = x_center;
-	right_y1 = vision.working_h / 2;
-	right_x2 = vision.working_w;
-	right_y2 = y_center;
-
-// left edge
-	y_center = vision.working_h * 3 / 4;
-	y_range = vision.working_h / 4;
-	x_step;
-	x_center = vision.working_w / 2;
-	x_range = vision.working_w / 4;
-	best_y = 0;
-	best_x = 0;
-	int best_right_diff = 1;
-	for(y_step = 4, x_step = 4; y_step > 0; y_step >>= 1, x_step >>= 1)
-	{
-		geometry_range_xy(engine, 
-			y_step, 
-			x_step, 
-			y_center,
-			y_range, 
-			x_center, 
-			x_range,
-			&best_y,
-			&best_x,
-			&best_right_diff,
-			1);
-
-		y_center = best_y;
-		x_center = best_x;
-		y_range = y_step;
-		x_range = x_step;
-		y_step /= 2;
-		x_step /= 2;
-	}
-
-	left_x1 = 0;
-	left_y1 = y_center;
-	left_x2 = x_center;
-	left_y2 = vision.working_h / 2;
-
-
-
-
-// draw path
-	if(left_x2 != left_x1 && 
-		right_x2 != right_x1)
-	{
-		float left_slope = (float)(left_y2 - left_y1) / (left_x2 - left_x1);
-		float right_slope = (float)(right_y2 - right_y1) / (right_x2 - right_x1);
-		
-		if(fabs(left_slope) > 0.001 && 
-			fabs(right_slope) > 0.001 && 
-			fabs(left_slope - right_slope) > 0.001)
-		{
-			float vanish_x = 0;
-			float vanish_y = 0;
-			float left_intercept = -left_slope * left_x1 + left_y1;
-			float right_intercept = -right_slope * right_x1 + right_y1;
-			vanish_x = (right_intercept - left_intercept) / (left_slope - right_slope);
-			vanish_y = left_slope * vanish_x + left_intercept;
-			float bottom_left_x = ((vision.working_h - 1) - left_intercept) / left_slope;
-			float bottom_right_x = ((vision.working_h - 1) - right_intercept) / right_slope;
-			float bottom_x = (bottom_left_x + bottom_right_x) / 2;
-
-
-			draw_line(engine, vanish_x, vanish_y, bottom_x, vision.working_h - 1);
-			draw_line(engine, left_x1, left_y1, vanish_x, vanish_y);
-			draw_line(engine, vanish_x, vanish_y, right_x2, right_y2);
- 
- 			engine->vanish_x = (int)(vanish_x * 255 / vision.working_w);
-			engine->vanish_y = (int)(vanish_y * 255 / vision.working_h);
-			engine->bottom_x = (int)(bottom_x * 255 / vision.working_w);
-		}
-	}
-
-}
-
-void geometry_polar(vision_engine_t *engine)
+void geometry(vision_engine_t *engine)
 {
 	int y_step;
 	int y_center = vision.working_h / 2;
@@ -1205,7 +899,7 @@ void geometry_polar(vision_engine_t *engine)
 // right edge
 	for(y_step = 4; y_step > 0; y_step >>= 1)
 	{
-		geometry_range_polar(engine, 
+		geometry_range(engine, 
 			y_step, 
 			a_step, 
 			y_center,
@@ -1243,7 +937,7 @@ void geometry_polar(vision_engine_t *engine)
 	best_diff = 1;
 	for(y_step = 4; y_step > 0; y_step >>= 1)
 	{
-		geometry_range_polar(engine, 
+		geometry_range(engine, 
 			y_step, 
 			a_step, 
 			y_center,
@@ -1270,6 +964,7 @@ void geometry_polar(vision_engine_t *engine)
 		best_y, 
 		best_angle);
 
+#if 1
 // draw path
 	if(left_x2 != left_x1 && 
 		right_x2 != right_x1)
@@ -1277,9 +972,7 @@ void geometry_polar(vision_engine_t *engine)
 		float left_slope = (float)(left_y2 - left_y1) / (left_x2 - left_x1);
 		float right_slope = (float)(right_y2 - right_y1) / (right_x2 - right_x1);
 		
-		if(fabs(left_slope) > 0.001 && 
-			fabs(right_slope) > 0.001 && 
-			fabs(left_slope - right_slope) > 0.001)
+		if(fabs(left_slope) > 0.001 && fabs(right_slope) > 0.001)
 		{
 			float vanish_x = 0;
 			float vanish_y = 0;
@@ -1290,10 +983,24 @@ void geometry_polar(vision_engine_t *engine)
 			float bottom_left_x = ((vision.working_h - 1) - left_intercept) / left_slope;
 			float bottom_right_x = ((vision.working_h - 1) - right_intercept) / right_slope;
 			float bottom_x = (bottom_left_x + bottom_right_x) / 2;
+
+			float new_top_x = (float)vanish_x / vision.working_w;
+			float new_bottom_x = (float)bottom_x / vision.working_w;
 			
+/*
+ * 			vision.top_x = new_top_x * vision.geometry_bandwidth +
+ * 				vision.top_x * (1.0 - vision.geometry_bandwidth);
+ * 			vision.bottom_x = new_bottom_x * vision.geometry_bandwidth +
+ * 				vision.bottom_x * (1.0 - vision.geometry_bandwidth);
+ */
 
 			draw_line(engine, vanish_x, vanish_y, bottom_x, vision.working_h - 1);
-
+/*
+ * 			draw_line(vision.top_x * vision.working_w, 
+ * 				vanish_y, 
+ * 				vision.bottom_x * vision.working_w, 
+ * 				vision.working_h - 1);
+ */
 			draw_line(engine, left_x1, left_y1, vanish_x, vanish_y);
 			draw_line(engine, vanish_x, vanish_y, right_x2, right_y2);
  
@@ -1303,7 +1010,9 @@ void geometry_polar(vision_engine_t *engine)
 		}
 	}
 
+#endif // 0
 }
+
 
 
 void detect_path(vision_engine_t *engine)
@@ -1351,8 +1060,7 @@ void detect_path(vision_engine_t *engine)
  * 	}
  */
 
- 	chroma_key_rect(engine);
-	chroma_key_history(engine);
+ 	chroma_key(engine);
 
 //	printf("detect_path %d %d\n", __LINE__, get_timer_difference(&profiler));
 //	reset_timer(&profiler);
@@ -1374,11 +1082,10 @@ void detect_path(vision_engine_t *engine)
 //	printf("detect_path %d %d\n", __LINE__, get_timer_difference(&profiler));
 //	reset_timer(&profiler);
 
-	geometry_polar(engine);
+	geometry(engine);
 
 //	printf("detect_path %d %d\n", __LINE__, get_timer_difference(&profiler));
 //	reset_timer(&profiler);
-	engine->total_frames++;
 }
 
 

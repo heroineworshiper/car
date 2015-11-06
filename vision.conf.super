@@ -1,0 +1,47 @@
+# settings for vision
+# range of top X for the line 0 - 100
+TOP_X1 25
+TOP_X2 75
+TOP_Y 0
+# range of bottom X for the line 0 - 100
+BOTTOM_X1 0
+BOTTOM_X2 100
+BOTTOM_Y 100
+# range on each side of the line 0 - 100
+SIDE_W 25
+# pixels for initial search 1 - 320
+SEARCH_STEP 8
+
+# input image size
+CAM_W 640
+CAM_H 480
+
+# working image size, 640x480 or 320x240
+WORKING_W 640
+WORKING_H 480
+
+# output image size.  2x width for feature matching
+OUTPUT_W 640
+OUTPUT_H 480
+
+# input image size
+#CAM_W 160
+#CAM_H 120
+#WORKING_W 160
+#WORKING_H 120
+#OUTPUT_W 160
+#OUTPUT_H 120
+
+
+#CAM_W 3840
+#CAM_H 2160
+#WORKING_W 3840
+#WORKING_H 2160
+#OUTPUT_W 3840
+#OUTPUT_H 2160
+
+
+# for processing stored data
+READ_PATH downhill8.mov
+REF_PATH downhill7_1fps.mov
+WRITE_PATH downhill8.out

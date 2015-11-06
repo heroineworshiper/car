@@ -225,11 +225,11 @@ PI_OBJS := \
 all: truck.bin car_remote.hex
 
 # ODROID version
-#vision: $(VISION_OBJS)
-#	$(GCC_ODROID) -g -o vision $(VISION_OBJS) -lpthread -lm
+vision: $(VISION_OBJS)
+	$(GCC_ODROID) -g -o vision $(VISION_OBJS) -lpthread -lm
 
-#$(VISION_OBJS): 
-#	$(GCC_ODROID) -g  $(ODROID_CFLAGS) -c $*.c -o $*.o
+$(VISION_OBJS): 
+	$(GCC_ODROID) -g  $(ODROID_CFLAGS) -c $*.c -o $*.o
 
 
 # PI version
@@ -242,14 +242,14 @@ all: truck.bin car_remote.hex
 #	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
 
 # X86 version
-vision: $(VISION_OBJS)
+#vision: $(VISION_OBJS)
 #	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
-	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
+#	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
 
 
-$(VISION_OBJS):
+#$(VISION_OBJS):
 #	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
-	$(GXX) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
+#	$(GXX) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
 
 
 
