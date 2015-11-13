@@ -130,21 +130,21 @@ void* httpd_thread(void *ptr)
 						if(!strcmp(ptr, "/path_x.txt"))
 						{
 							char string[TEXTLEN];
-							sprintf(string, "%d", vision.path_x);
+							sprintf(string, "%d", vision.bottom_x);
 							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
 						}
 						else
 						if(!strcmp(ptr, "/bottom_x.txt"))
 						{
 							char string[TEXTLEN];
-							sprintf(string, "%f", vision.bottom_x);
+							sprintf(string, "%d", vision.bottom_x);
 							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
 						}
 						else
 						if(!strcmp(ptr, "/top_x.txt"))
 						{
 							char string[TEXTLEN];
-							sprintf(string, "%f", vision.top_x);
+							sprintf(string, "%d", vision.vanish_x);
 							send_response(conn, (unsigned char*)string, strlen(string) + 1, (char*)"text/html");
 						}
 						else

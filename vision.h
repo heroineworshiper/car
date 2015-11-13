@@ -68,7 +68,7 @@ typedef struct
 	int *key_x;
 	int *key_y;
 // past color keys
-#define HISTORY_SIZE 10 * 1600
+#define HISTORY_SIZE 0
 	unsigned char r_keys[HISTORY_SIZE];
 	unsigned char g_keys[HISTORY_SIZE];
 	unsigned char b_keys[HISTORY_SIZE];
@@ -86,10 +86,10 @@ typedef struct
 // frames processed by this engine
 	int total_frames;
 
-// scaled to 0-255
 	int vanish_x;
 	int vanish_y;
 	int bottom_x;
+	int failed;
 
 // raw coords
 	int prev_vanish_x;
@@ -131,10 +131,8 @@ typedef struct
 	float max_dx;
 	int edge_size;
 
-// the path
-	int path_x;
-// the vanishing points of the center line in range of 0 - 1.0
-	float bottom_x, top_x;
+// the output for the stm32
+	int vanish_x, vanish_y, bottom_x, failed;
 	float geometry_bandwidth;
 
 

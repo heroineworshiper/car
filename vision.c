@@ -58,11 +58,11 @@ void init_httpd();
 
 
 // Save unprocessed frames to files.
-#define RECORD_INPUT
+//#define RECORD_INPUT
 // Read JPEG from files instead of video device.
-//#define PLAYBACK
+#define PLAYBACK
 // Record the processed images.
-//#define RECORD_OUTPUT
+#define RECORD_OUTPUT
 
 
 // Camera type
@@ -2185,7 +2185,7 @@ void* vision_thread(void *ptr)
 		}
 
 // process it
-//		detect_path(engine);
+		detect_path(engine);
 
 		sem_post(&engine->complete_lock);
 	}
@@ -2332,6 +2332,75 @@ void* frame_writer(void *ptr)
 		}
 
 
+// filter geometry
+
+		if(engine->vanish_y > vision.horizon_y + vision.working_h / 8 ||
+ 			engine->vanish_y < vision.horizon_y - vision.working_h / 8 ||
+ 			engine->vanish_x < vision.working_w * 1 / 3 ||
+			engine->vanish_x > vision.working_w * 2 / 3)
+		{
+			vision.failed = 1;
+		}
+		else
+		{
+			vision.failed = 0;
+ 
+			if(abs(engine->vanish_x - vision.vanish_x) < 5)
+			{
+				vision.vanish_x = engine->vanish_x;
+			}
+			else
+			if(engine->vanish_x > vision.vanish_x)
+			{
+				vision.vanish_x++;
+			}
+			else
+			if(engine->vanish_x < vision.vanish_x)
+			{
+				vision.vanish_x--;
+			}
+
+			if(abs(engine->vanish_y - vision.vanish_y) < 5)
+			{
+				vision.vanish_y = engine->vanish_y;
+			}
+			else
+			if(engine->vanish_y > vision.vanish_y)
+			{
+				vision.vanish_y++;
+			}
+			else
+			if(engine->vanish_y < vision.vanish_y)
+			{
+				vision.vanish_y--;
+			}
+
+			if(abs(engine->bottom_x - vision.bottom_x) < 5)
+			{
+				vision.bottom_x = engine->bottom_x;
+			}
+			else
+			if(engine->bottom_x > vision.bottom_x)
+			{
+				vision.bottom_x++;
+			}
+			else
+			if(engine->bottom_x < vision.bottom_x)
+			{
+				vision.bottom_x--;
+			}
+
+
+		
+// 			draw_line(engine, 
+// 				vision.vanish_x, 
+// 				vision.vanish_y, 
+// 				vision.bottom_x, 
+// 				vision.working_h - 1);
+		}
+
+
+
 // send telemetry to microcontroller
 #ifndef X86
 #ifdef USE_ODROID_SPI
@@ -2344,7 +2413,7 @@ void* frame_writer(void *ptr)
 		vision.spi_tx_data[5] = (int)(engine->vanish_y * 255 / vision.working_h);
 		CLAMP(engine->bottom_x, 0, vision.working_w);
 		vision.spi_tx_data[6] = (int)(engine->bottom_x * 255 / vision.working_w);
-		vision.spi_tx_data[7] = 0;
+		vision.spi_tx_data[7] = engine->failed;
 		vision.spi_tx_size = 8;
 		write_spi();
 		vision.path_x = engine->vanish_x;
@@ -2368,20 +2437,21 @@ void* frame_writer(void *ptr)
 			reset_timer(&vision.timer);
 
 
-/*
- * 			compress_output(engine->out_y, 
- * 				engine->out_u, 
- * 				engine->out_v, 
- * 				vision.output_w, 
- * 				vision.output_h);
- */
+// pass output to web server
+//			compress_output(engine->out_y, 
+//				engine->out_u, 
+//				engine->out_v, 
+//				vision.output_w, 
+//				vision.output_h);
 
-// pass through to web server
+// pass input to web server
 			compress_output(engine->in_y, 
 				engine->in_u, 
 				engine->in_v, 
 				vision.output_w, 
 				vision.output_h);
+
+
 #ifdef RECORD_OUTPUT
 			append_file(vision.picture_out, vision.out_size);
 #endif
@@ -2460,13 +2530,14 @@ void init_vision()
 	strcpy(vision.read_path, "vision.in");
 	strcpy(vision.write_path, "vision.out");
 	strcpy(vision.ref_path, "downhill1.mov");
-	vision.bottom_x = 0.5;
-	vision.top_x = 0.5;
 	vision.record_period = 100;
 
 
 	parse_config(in);
-	
+    vision.bottom_x = vision.working_w / 2;
+    vision.vanish_x = vision.working_w / 2;
+    vision.vanish_y = vision.horizon_y / 2;
+
 	for(i = 0; i < TOTAL_CPUS; i++)
 	{
 		init_engine(&vision.engine[i]);
@@ -2707,7 +2778,7 @@ int main()
 		sem_wait(&engine->input_lock);
 
 //sleep(1);		
-		if(!read_frame(engine->in_y, engine->in_u, engine->in_v) <= 0)
+		if(read_frame(engine->in_y, engine->in_u, engine->in_v) > 0)
 		{
 
 
