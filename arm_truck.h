@@ -5,7 +5,33 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 #include "arm_math.h"
+#include "arm_nav.h"
+#include "arm_imu.h"
 
+
+
+
+#define USE_BRUSHLESS
+//#define SPI_NAV
+#define UART_NAV
+// pass bluetooth to debug port
+//#define BLUETOOTH_PASSTHROUGH
+
+
+// truck
+// use MPU6000
+#define I2C_IMU
+
+// reverse steering servo
+#define REVERSE_STEERING
+
+
+// gyro update rate
+#ifndef I2C_IMU
+#define NAV_HZ 320
+#else // !I2C_IMU
+#define NAV_HZ 1100
+#endif // I2C_IMU
 
 // timer for packet flashing
 #define LED_DELAY2 2
@@ -85,6 +111,7 @@ typedef struct
 // side of path feedback
 // P=1/16deg
 	pid_t side_pid;
+	imu_t imu;
 
 	int battery;
 	int battery_accum;
@@ -102,6 +129,10 @@ typedef struct
 	int motor_timer;
 	int bt_timeout;
 	int radio_timeout;
+// maximum analog amount gyros can move while calculating center
+	int gyro_center_max;
+	float gyro_center;
+	float prev_gyro_center;
 	int need_gyro_center;
 	int gyro_center_accum;
 	int gyro_center_count;
@@ -141,10 +172,7 @@ typedef struct
 	float ref;
 // the analog gyro reading
 	float gyro;
-// maximum analog amount gyros can move while calculating center
-	int gyro_center_max;
-	float gyro_center;
-	float prev_gyro_center;
+// conversion factor for the analog gyro
 	int angle_to_gyro;
 // throttle magnitude 0 - 100
 	int max_throttle_fwd;
@@ -162,7 +190,7 @@ typedef struct
 	int throttle_ramp_step;
 // PWM cycles between I steps
 	int pid_downsample;
-// in radians
+// purely gyro derived heading when not using mag, in radians
 	float current_heading;
 	float target_heading;
 // steering with throttle
@@ -178,6 +206,7 @@ typedef struct
 // enable RPM feedback
 	int auto_throttle;
 	int headlights_on;
+	int need_steering_feedback;
 
 	int rpm_time;
 	int rpm_status;
@@ -194,6 +223,8 @@ typedef struct
 #define SPI_SYNC_CODE 0
 #define SPI_PACKET 1
 
+// enable the ak8975
+	int enable_mag;
 // enable path following
 	int enable_vision;
 // where in the camera view the vanishing point should be 0 - 255
@@ -217,6 +248,7 @@ typedef struct
 	int debug_counter;
 	
 	bluetooth_t bluetooth;
+	nav_t nav;
 } truck_t;
 
 extern truck_t truck;

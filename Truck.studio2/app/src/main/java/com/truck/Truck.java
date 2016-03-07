@@ -49,7 +49,10 @@ public class Truck extends Thread {
 		socket = null;
 		istream = null;
 		ostream = null;
-		
+
+
+		printAlert("Trying to connect\n");
+
 		BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		if (mBluetoothAdapter == null) {
 	        printAlert("No bluetooth adapter\n");
@@ -70,8 +73,7 @@ public class Truck extends Thread {
 			if (pairedDevices.size() > 0) {
 			    // Loop through paired devices
 			    for (BluetoothDevice device : pairedDevices) {
-			        // Add the name and address to an array adapter to show in a ListView
-			        Log.v("Rover2", "initializeBluetooth " + device.getName());
+	//		        Log.v("Rover2", "initializeBluetooth " + device.getName());
 			        if(device.getName().equals(Settings.bluetooth_id))
 			        {
 			        	BluetoothSocket tmp = null;
@@ -87,7 +89,7 @@ public class Truck extends Thread {
 			
 			if(socket == null)
 			{
-				printAlert("No bluetooth device found\n");
+				printAlert("Bluetooth device not paired\n");
 
 				return true;
 			}
@@ -207,6 +209,7 @@ public class Truck extends Thread {
 						beacon[offset++] = (byte) (Settings.getFileFloat("PATH_CENTER")[0]);
 						beacon[offset++] = (byte) (Settings.getFileFloat("BOTTOM_CENTER")[0]);
 						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_VISION")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_MAG")[0]);
 						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("MANUAL_OVERRIDE_DELAY")[0]));
 
 
@@ -260,13 +263,21 @@ public class Truck extends Thread {
 
 
 
-
-
-
-
 		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
 		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
 		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+
+
+
+						offset = Math.write_int16(beacon, offset, mag_x_max);
+						offset = Math.write_int16(beacon, offset, mag_y_max);
+						offset = Math.write_int16(beacon, offset, mag_z_max);
+						offset = Math.write_int16(beacon, offset, mag_x_min);
+						offset = Math.write_int16(beacon, offset, mag_y_min);
+						offset = Math.write_int16(beacon, offset, mag_z_min);
+
+
+
 
 						float pid[] = Settings.getFileFloat("STEERING_PID");
 		    			offset = writePid(offset, pid);
@@ -298,7 +309,7 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte)(haveControls ? 1 : 0);
 		    			beacon[offset++] = (byte)throttleOut;
 		    			beacon[offset++] = (byte)steeringOut;
-		    			beacon[offset++] = 0;
+		    			beacon[offset++] = (byte)(needMag ? 1 : 0);
 		    			beacon[offset++] = 0;
 		    			beacon[offset++] = 0;
 	    			}
@@ -357,9 +368,19 @@ public class Truck extends Thread {
 		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
 		    								rpm = Math.read_uint16(receive_buf, offset + 20);
 		    								current_heading = Math.read_float32(receive_buf, offset + 22);
-											vanish_x = receive_buf[offset + 26];
-											vanish_y = receive_buf[offset + 27];
-											bottom_x = receive_buf[offset + 28];
+
+											mag_x_min = Math.read_int16(receive_buf, offset + 26);
+											mag_x_max = Math.read_int16(receive_buf, offset + 28);
+											mag_y_min = Math.read_int16(receive_buf, offset + 30);
+											mag_y_max = Math.read_int16(receive_buf, offset + 32);
+											mag_z_min = Math.read_int16(receive_buf, offset + 34);
+											mag_z_max = Math.read_int16(receive_buf, offset + 36);
+
+
+
+											vanish_x = receive_buf[offset + 38];
+											vanish_y = receive_buf[offset + 39];
+											bottom_x = receive_buf[offset + 40];
 
 		    								break;
 		    							}
@@ -423,7 +444,17 @@ public class Truck extends Thread {
     }
 
 	private int paceToRPM(float targetPace) {
-		return (int)(1609.0 / targetPace / (0.110 * Math.PI));
+		float diameter = Settings.getFileFloat("DIAMETER")[0] / 1000;
+
+
+		if(Settings.vehicle == Settings.TRUCK)
+		{
+			return (int) (1609.0 / targetPace / (diameter * Math.PI));
+		}
+		else
+		{
+			return (int) (1609.0 / targetPace / (diameter * Math.PI));
+		}
 	}
 
 
@@ -552,13 +583,17 @@ public class Truck extends Thread {
     static int gyro_center;
     static int gyro_range;
     static float current_heading;
-	static float power;
+//	static float power;
 	static int rpm;
+	static int mag_x_min, mag_x_max;
+	static int mag_y_min, mag_y_max;
+	static int mag_z_min, mag_z_max;
 	static int vanish_x, vanish_y, bottom_x;
     
     static boolean needReset = false;
     static boolean needConfig = false;
-    static boolean needSaveConfig = false;
+//    static boolean needSaveConfig = false;
+	static boolean needMag = false;
    
 // throttle to send -127 - 127
     static int throttleOut = 0;
@@ -567,7 +602,7 @@ public class Truck extends Thread {
 // steering to send -127 - 127
     static int steeringOut = 0;
 // steering to receive -127 - 127
-    static int steeringIn = 0;
+//    static int steeringIn = 0;
 // have control values to send from the drive window
     static boolean haveControls = false;
     

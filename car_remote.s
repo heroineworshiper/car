@@ -14,15 +14,42 @@
 ; usb_programmer -p 18f1320 -z 256 -r car_remote.hex
 
 
+
+; XBee radio configuration:
+; enter command mode
+; +++
+; set the frequency
+; atch17 or atch0c
+; set destination address to broadcast mode
+; atdlffff
+; set receive address to broadcast mode
+; atmyffff
+; packet timeout
+; atro03
+; baud rate  7=115200 6=57600 3=9600
+; atbd 3
+; change terminal baud rate now
+; flash configuration
+; atwr
+; exit command mode
+; atcn
+
+
+
+
+
 PROCESSOR 18f1220
 #include "p18f1220.inc"
 #include "util.inc"
 #include "chksum.inc"
 #include "cc1101.inc"
 
-; dead pins:
+; dead pins on through hole chip:
 ; B4
 ; A4
+
+
+;#define USE_XBEE
 
 
 #define DIRECTION_PIN 3
@@ -55,7 +82,7 @@ PROCESSOR 18f1220
 #define CS0_LAT LATA
 #define CS0_TRIS TRISA
 
-#define DEBUG_PIN 0
+#define DEBUG_PIN 7
 #define DEBUG_LAT LATA
 #define DEBUG_TRIS TRISA
 
@@ -65,13 +92,24 @@ PROCESSOR 18f1220
 
 #define CLOCKSPEED 8000000
 #define BUFFER_SIZE 12
+
+
 #define BAUD 9600
 #define BAUD_RATE_CODE (CLOCKSPEED / (BAUD * 4) - 1)
+
+#define TIMER_RELOAD (-40960)
+
+
 #define SYNC_CODE 0xe5
 
 
 	VARSTART H'00', H'100'
 	VARADD FLAGS, 1
+cblock 0x0
+	NEED_PACKET : 1
+endc
+
+
 	VARADD BUFFER, BUFFER_SIZE
 	VARADD BUFFER_PTR, 2
 	VARADD TEMP, 1
@@ -105,6 +143,7 @@ start:
 ; pin modes
 ; pin mode: 1 = digital  0 = analog
 	SET_REGISTER ADCON1, B'11111111'
+	clrf FLAGS
 
 	bcf DEBUG_TRIS, DEBUG_PIN
 	bcf DEBUG_LAT, DEBUG_PIN
@@ -115,6 +154,10 @@ start:
 	SET_REGISTER BAUDCTL, B'00001000'
 	SET_REGISTER16 SPBRG, BAUD_RATE_CODE
 
+; must delay between each packet
+#ifdef USE_XBEE
+	SET_REGISTER T0CON, B'10001000'
+#endif
 
 
 	SET_REGISTER16 BUFFER_PTR, BUFFER + BUFFER_SIZE
@@ -149,13 +192,24 @@ start:
 loop:
 	clrwdt
 
-	btg DEBUG_LAT, DEBUG_PIN
+
+#ifdef USE_XBEE
+	btfsc INTCON, TMR0IF
+	call handle_timer0
+#endif
 
 	btfsc PIR1, TXIF
 	call handle_uart
 	
 	bra loop
 
+#ifdef USE_XBEE
+handle_timer0:
+	SET_TIMER_LITERAL16 TMR0L, TIMER_RELOAD
+	bcf INTCON, TMR0IF
+	bsf FLAGS, NEED_PACKET
+	return
+#endif
 
 
 handle_uart:
@@ -166,7 +220,18 @@ handle_uart:
 		COPY_REGISTER16 BUFFER_PTR, POINTER0
 		return
 
+
+; start new packet
 handle_uart2:
+; wait to allow the xbee to transmit
+#ifdef USE_XBEE
+	btfss FLAGS, NEED_PACKET
+	return
+		bcf FLAGS, NEED_PACKET
+#endif
+
+	btg DEBUG_LAT, DEBUG_PIN
+
 		SET_REGISTER BUFFER + 0, 0x00
 		SET_REGISTER BUFFER + 1, 0xff
 		SET_REGISTER BUFFER + 2, 0x2d

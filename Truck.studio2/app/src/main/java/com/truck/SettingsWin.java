@@ -4,12 +4,15 @@ import com.truck.R;
 import java.util.Formatter;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
-public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeListener
+public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeListener, AdapterView.OnItemSelectedListener
 {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -27,6 +30,24 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
 
 		TextView text = (TextView)findViewById(R.id.message);
 		text.setText(Settings.message);
+
+
+		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.vehicle_options,
+                R.layout.spinner_layout);
+		Spinner vehicle = (Spinner)findViewById(R.id.vehicle);
+		vehicle.setAdapter(adapter);
+		vehicle.setOnItemSelectedListener(this);
+		switch(Settings.vehicle)
+		{
+			case Settings.TRUCK:
+				vehicle.setSelection(0);
+				break;
+			case Settings.CAR:
+				vehicle.setSelection(1);
+				break;
+		}
+
 
 		//CheckBox checkbox;
         //checkbox = (CheckBox) findViewById(R.id.headlights);
@@ -82,6 +103,45 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
 		}
 
 	}
+	
+	
+	@Override
+	public void onItemSelected(AdapterView<?> parent, 
+			View view, 
+            int pos, 
+            long id) 
+	{
+    	switch (parent.getId()){
+    	case R.id.vehicle:
+    		switch(pos)
+    		{
+    		case 0:
+        		Settings.vehicle = Settings.TRUCK;
+        		break;
+    		case 1:
+        		Settings.vehicle = Settings.CAR;
+        		break;
+    		}
+
+			if(Settings.vehicle != Settings.prevVehicle)
+			{
+				// Load the new settings, but user should restart anyway.
+				Settings.loadFile();
+				updatePaceText();
+				Truck.truck.initializeBluetooth();
+			}
+
+    		Settings.save();
+    		break;
+    	}
+    	
+	}
+
+	@Override
+	public void onNothingSelected(AdapterView<?> arg0) 
+	{
+	}
+
 
     public void onClick(View view)
     {
@@ -89,7 +149,7 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
   		{
         case R.id.send:
         	Settings.loadFile();
-			Truck.needSaveConfig = true;
+//			Truck.needSaveConfig = true;
         	Truck.needConfig = true;
         	break;
 //        case R.id.headlights:
@@ -105,6 +165,7 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
   		}
   	}
 
+	// user changed target speed
 	@Override
 	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
 	{

@@ -63,6 +63,8 @@ typedef struct
 	unsigned char *out_v;
 // the mask
 	unsigned char *mask;
+// shadows
+	unsigned char *shadows;
 	int *accum;
 // color key pixels
 	int *key_x;

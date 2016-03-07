@@ -21,7 +21,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import android.widget.TextView;
+import android.widget.CheckBox;
 import android.graphics.PorterDuff;
 
 public class MainActivity extends WindowBase implements OnTouchListener {
@@ -87,6 +87,14 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         case R.id.reset_gyro:
         	Truck.needReset = true;
         	break;
+		case R.id.do_mag:
+			Truck.needMag = ((CheckBox)view).isChecked();
+			if(!Truck.needMag)
+			{
+				// save the settings when exiting mag calibration
+				Truck.needConfig = true;
+			}
+			break;
   		}
   	}
     
@@ -108,7 +116,18 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
 				y += battery.getH(paint);
 				
-				int positions[] = new int[] { Settings.screenW * 1 / 3, Settings.screenW * 2 / 3 };
+				int positions[] = new int[]
+				{
+						Settings.screenW * 1 / 3,
+						Settings.screenW * 2 / 3
+				};
+				int positions2[] = new int[]
+				{
+						Settings.screenW * 1 / 4,
+						Settings.screenW * 2 / 4,
+						Settings.screenW * 3 / 4
+				};
+
 				readouts.add(batteryAnalog = new SmallReadout(x, y, 1));
 				batteryAnalog.setPositions(positions);
 				batteryAnalog.setTitle("Analog:");
@@ -151,7 +170,22 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				rpm.setPositions(positions);
 				rpm.update(0, "0.0");
 				y += rpm.getH(paint);
-				
+
+				readouts.add(mag_x = new SmallReadout(x, y, 3));
+				mag_x.setTitle("MAG X:");
+				mag_x.setPositions(positions2);
+				y += mag_x.getH(paint);
+
+				readouts.add(mag_y = new SmallReadout(x, y, 3));
+				mag_y.setTitle("MAG Y:");
+				mag_y.setPositions(positions2);
+				y += mag_y.getH(paint);
+
+				readouts.add(mag_z = new SmallReadout(x, y, 3));
+				mag_z.setTitle("MAG Z:");
+				mag_z.setPositions(positions2);
+				y += mag_z.getH(paint);
+
 				readouts.add(messages = new SmallReadout(x, y, 1));
 				messages.update(0, Settings.message);
 			}
@@ -183,6 +217,13 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 							.format("%d", Truck.rpm)
 							.toString());
 
+			mag_x.update(0, new Formatter(new StringBuilder()).format("%d", Truck.mag_x_min).toString());
+			mag_x.update(1, new Formatter(new StringBuilder()).format("%d", Truck.mag_x_max).toString());
+			mag_y.update(0, new Formatter(new StringBuilder()).format("%d", Truck.mag_y_min).toString());
+			mag_y.update(1, new Formatter(new StringBuilder()).format("%d", Truck.mag_y_max).toString());
+			mag_z.update(0, new Formatter(new StringBuilder()).format("%d", Truck.mag_z_min).toString());
+			mag_z.update(1, new Formatter(new StringBuilder()).format("%d", Truck.mag_z_max).toString());
+
 			
 			synchronized(Truck.truck)
 			{
@@ -204,7 +245,7 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;
-	SmallReadout gyro, heading, /* power, path_x, */ rpm;
+	SmallReadout gyro, heading, mag_x, mag_y, mag_z, rpm;
 	SmallReadout batteryAnalog;
 	SmallReadout messages;
     boolean initialized = false;

@@ -112,9 +112,9 @@ void init_httpd();
 // raspberry pi style SPI communication
 //#define USE_SPI
 // ODroid style SPI communication
-#define USE_ODROID_SPI
+//#define USE_ODROID_SPI
 // ODroid style UART communication
-//#define USE_UART
+#define USE_UART
 
 // quality of recorded JPEGs
 #define JPEG_QUALITY 90
@@ -2200,6 +2200,7 @@ void init_engine(vision_engine_t *engine)
 	engine->out_u = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->out_v = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->mask = (unsigned char*)malloc(vision.working_w * vision.working_h);
+	engine->shadows = (unsigned char*)malloc(vision.working_w * vision.working_h);
 	engine->accum = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
 	engine->key_x = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
 	engine->key_y = (int*)malloc(vision.working_w * vision.working_h * sizeof(int));
@@ -2438,18 +2439,18 @@ void* frame_writer(void *ptr)
 
 
 // pass output to web server
-//			compress_output(engine->out_y, 
-//				engine->out_u, 
-//				engine->out_v, 
-//				vision.output_w, 
-//				vision.output_h);
-
-// pass input to web server
-			compress_output(engine->in_y, 
-				engine->in_u, 
-				engine->in_v, 
+			compress_output(engine->out_y, 
+				engine->out_u, 
+				engine->out_v, 
 				vision.output_w, 
 				vision.output_h);
+
+// pass input to web server
+// 			compress_output(engine->in_y, 
+// 				engine->in_u, 
+// 				engine->in_v, 
+// 				vision.output_w, 
+// 				vision.output_h);
 
 
 #ifdef RECORD_OUTPUT
@@ -2755,9 +2756,11 @@ int main()
 	init_spi();
 	#endif
 
-	#ifdef USE_SERIAL
+	#ifdef USE_UART
 	init_serial_thread();
 	#endif
+
+
 //	init_gpio();
 #endif
 

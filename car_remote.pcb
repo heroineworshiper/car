@@ -1,0 +1,1206 @@
+# release: pcb 20100929
+# date:    Sat Dec  5 23:41:52 2015
+# user:    root (root)
+# host:    heroine
+
+# To read pcb files, the pcb version (or the git source date) must be >= the file version
+FileVersion[20100606]
+
+PCB["" 600000 500000]
+
+Grid[39.000000 0 0 0]
+Cursor[96252 99333 0.000000]
+PolyArea[3100.006104]
+Thermal[0.500000]
+DRC[1000 1000 1000 1000 1500 1000]
+Flags("nameonpcb,uniquename,clearnew")
+Groups("1,c:2:3:4:5:6,s:7:8")
+Styles["Signal,1000,3600,2000,1000:Power,2500,6000,3500,1000:Fat,4000,6000,3500,1000:Skinny,600,2402,1181,600"]
+
+Symbol(' ' 18)
+(
+)
+Symbol('!' 12)
+(
+	SymbolLine(0 45 0 50 8)
+	SymbolLine(0 10 0 35 8)
+)
+Symbol('"' 12)
+(
+	SymbolLine(0 10 0 20 8)
+	SymbolLine(10 10 10 20 8)
+)
+Symbol('#' 12)
+(
+	SymbolLine(0 35 20 35 8)
+	SymbolLine(0 25 20 25 8)
+	SymbolLine(15 20 15 40 8)
+	SymbolLine(5 20 5 40 8)
+)
+Symbol('$' 12)
+(
+	SymbolLine(15 15 20 20 8)
+	SymbolLine(5 15 15 15 8)
+	SymbolLine(0 20 5 15 8)
+	SymbolLine(0 20 0 25 8)
+	SymbolLine(0 25 5 30 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(20 35 20 40 8)
+	SymbolLine(15 45 20 40 8)
+	SymbolLine(5 45 15 45 8)
+	SymbolLine(0 40 5 45 8)
+	SymbolLine(10 10 10 50 8)
+)
+Symbol('%' 12)
+(
+	SymbolLine(0 15 0 20 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 10 10 8)
+	SymbolLine(10 10 15 15 8)
+	SymbolLine(15 15 15 20 8)
+	SymbolLine(10 25 15 20 8)
+	SymbolLine(5 25 10 25 8)
+	SymbolLine(0 20 5 25 8)
+	SymbolLine(0 50 40 10 8)
+	SymbolLine(35 50 40 45 8)
+	SymbolLine(40 40 40 45 8)
+	SymbolLine(35 35 40 40 8)
+	SymbolLine(30 35 35 35 8)
+	SymbolLine(25 40 30 35 8)
+	SymbolLine(25 40 25 45 8)
+	SymbolLine(25 45 30 50 8)
+	SymbolLine(30 50 35 50 8)
+)
+Symbol('&' 12)
+(
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 15 0 25 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(0 35 15 20 8)
+	SymbolLine(5 50 10 50 8)
+	SymbolLine(10 50 20 40 8)
+	SymbolLine(0 25 25 50 8)
+	SymbolLine(5 10 10 10 8)
+	SymbolLine(10 10 15 15 8)
+	SymbolLine(15 15 15 20 8)
+	SymbolLine(0 35 0 45 8)
+)
+Symbol(''' 12)
+(
+	SymbolLine(0 20 10 10 8)
+)
+Symbol('(' 12)
+(
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(0 15 0 45 8)
+)
+Symbol(')' 12)
+(
+	SymbolLine(0 10 5 15 8)
+	SymbolLine(5 15 5 45 8)
+	SymbolLine(0 50 5 45 8)
+)
+Symbol('*' 12)
+(
+	SymbolLine(0 20 20 40 8)
+	SymbolLine(0 40 20 20 8)
+	SymbolLine(0 30 20 30 8)
+	SymbolLine(10 20 10 40 8)
+)
+Symbol('+' 12)
+(
+	SymbolLine(0 30 20 30 8)
+	SymbolLine(10 20 10 40 8)
+)
+Symbol(',' 12)
+(
+	SymbolLine(0 60 10 50 8)
+)
+Symbol('-' 12)
+(
+	SymbolLine(0 30 20 30 8)
+)
+Symbol('.' 12)
+(
+	SymbolLine(0 50 5 50 8)
+)
+Symbol('/' 12)
+(
+	SymbolLine(0 45 30 15 8)
+)
+Symbol('0' 12)
+(
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 15 0 45 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(20 15 20 45 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 40 20 20 8)
+)
+Symbol('1' 12)
+(
+	SymbolLine(0 18 8 10 8)
+	SymbolLine(8 10 8 50 8)
+	SymbolLine(0 50 15 50 8)
+)
+Symbol('2' 12)
+(
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 20 10 8)
+	SymbolLine(20 10 25 15 8)
+	SymbolLine(25 15 25 25 8)
+	SymbolLine(0 50 25 25 8)
+	SymbolLine(0 50 25 50 8)
+)
+Symbol('3' 12)
+(
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 28 15 28 8)
+	SymbolLine(20 15 20 23 8)
+	SymbolLine(20 33 20 45 8)
+	SymbolLine(20 33 15 28 8)
+	SymbolLine(20 23 15 28 8)
+)
+Symbol('4' 12)
+(
+	SymbolLine(0 35 20 10 8)
+	SymbolLine(0 35 25 35 8)
+	SymbolLine(20 10 20 50 8)
+)
+Symbol('5' 12)
+(
+	SymbolLine(0 10 20 10 8)
+	SymbolLine(0 10 0 30 8)
+	SymbolLine(0 30 5 25 8)
+	SymbolLine(5 25 15 25 8)
+	SymbolLine(15 25 20 30 8)
+	SymbolLine(20 30 20 45 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 45 5 50 8)
+)
+Symbol('6' 12)
+(
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(0 15 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(15 28 20 33 8)
+	SymbolLine(0 28 15 28 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(20 33 20 45 8)
+)
+Symbol('7' 12)
+(
+	SymbolLine(5 50 25 10 8)
+	SymbolLine(0 10 25 10 8)
+)
+Symbol('8' 12)
+(
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 37 0 45 8)
+	SymbolLine(0 37 7 30 8)
+	SymbolLine(7 30 13 30 8)
+	SymbolLine(13 30 20 37 8)
+	SymbolLine(20 37 20 45 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 23 7 30 8)
+	SymbolLine(0 15 0 23 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(20 15 20 23 8)
+	SymbolLine(13 30 20 23 8)
+)
+Symbol('9' 12)
+(
+	SymbolLine(5 50 20 30 8)
+	SymbolLine(20 15 20 30 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(0 15 0 25 8)
+	SymbolLine(0 25 5 30 8)
+	SymbolLine(5 30 20 30 8)
+)
+Symbol(':' 12)
+(
+	SymbolLine(0 25 5 25 8)
+	SymbolLine(0 35 5 35 8)
+)
+Symbol(';' 12)
+(
+	SymbolLine(0 50 10 40 8)
+	SymbolLine(10 25 10 30 8)
+)
+Symbol('<' 12)
+(
+	SymbolLine(0 30 10 20 8)
+	SymbolLine(0 30 10 40 8)
+)
+Symbol('=' 12)
+(
+	SymbolLine(0 25 20 25 8)
+	SymbolLine(0 35 20 35 8)
+)
+Symbol('>' 12)
+(
+	SymbolLine(0 20 10 30 8)
+	SymbolLine(0 40 10 30 8)
+)
+Symbol('?' 12)
+(
+	SymbolLine(10 30 10 35 8)
+	SymbolLine(10 45 10 50 8)
+	SymbolLine(0 15 0 20 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(20 15 20 20 8)
+	SymbolLine(10 30 20 20 8)
+)
+Symbol('@' 12)
+(
+	SymbolLine(0 10 0 40 8)
+	SymbolLine(0 40 10 50 8)
+	SymbolLine(10 50 40 50 8)
+	SymbolLine(50 35 50 10 8)
+	SymbolLine(50 10 40 0 8)
+	SymbolLine(40 0 10 0 8)
+	SymbolLine(10 0 0 10 8)
+	SymbolLine(15 20 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(20 35 30 35 8)
+	SymbolLine(30 35 35 30 8)
+	SymbolLine(35 30 40 35 8)
+	SymbolLine(35 30 35 15 8)
+	SymbolLine(35 20 30 15 8)
+	SymbolLine(20 15 30 15 8)
+	SymbolLine(20 15 15 20 8)
+	SymbolLine(40 35 50 35 8)
+)
+Symbol('A' 12)
+(
+	SymbolLine(0 20 0 50 8)
+	SymbolLine(0 20 7 10 8)
+	SymbolLine(7 10 18 10 8)
+	SymbolLine(18 10 25 20 8)
+	SymbolLine(25 20 25 50 8)
+	SymbolLine(0 30 25 30 8)
+)
+Symbol('B' 12)
+(
+	SymbolLine(0 50 20 50 8)
+	SymbolLine(20 50 25 45 8)
+	SymbolLine(25 33 25 45 8)
+	SymbolLine(20 28 25 33 8)
+	SymbolLine(5 28 20 28 8)
+	SymbolLine(5 10 5 50 8)
+	SymbolLine(0 10 20 10 8)
+	SymbolLine(20 10 25 15 8)
+	SymbolLine(25 15 25 23 8)
+	SymbolLine(20 28 25 23 8)
+)
+Symbol('C' 12)
+(
+	SymbolLine(7 50 20 50 8)
+	SymbolLine(0 43 7 50 8)
+	SymbolLine(0 17 0 43 8)
+	SymbolLine(0 17 7 10 8)
+	SymbolLine(7 10 20 10 8)
+)
+Symbol('D' 12)
+(
+	SymbolLine(5 10 5 50 8)
+	SymbolLine(18 10 25 17 8)
+	SymbolLine(25 17 25 43 8)
+	SymbolLine(18 50 25 43 8)
+	SymbolLine(0 50 18 50 8)
+	SymbolLine(0 10 18 10 8)
+)
+Symbol('E' 12)
+(
+	SymbolLine(0 28 15 28 8)
+	SymbolLine(0 50 20 50 8)
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 10 20 10 8)
+)
+Symbol('F' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 10 20 10 8)
+	SymbolLine(0 28 15 28 8)
+)
+Symbol('G' 12)
+(
+	SymbolLine(20 10 25 15 8)
+	SymbolLine(5 10 20 10 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(0 15 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 20 50 8)
+	SymbolLine(20 50 25 45 8)
+	SymbolLine(25 35 25 45 8)
+	SymbolLine(20 30 25 35 8)
+	SymbolLine(10 30 20 30 8)
+)
+Symbol('H' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(25 10 25 50 8)
+	SymbolLine(0 30 25 30 8)
+)
+Symbol('I' 12)
+(
+	SymbolLine(0 10 10 10 8)
+	SymbolLine(5 10 5 50 8)
+	SymbolLine(0 50 10 50 8)
+)
+Symbol('J' 12)
+(
+	SymbolLine(7 10 15 10 8)
+	SymbolLine(15 10 15 45 8)
+	SymbolLine(10 50 15 45 8)
+	SymbolLine(5 50 10 50 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 45 0 40 8)
+)
+Symbol('K' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 30 20 10 8)
+	SymbolLine(0 30 20 50 8)
+)
+Symbol('L' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 50 20 50 8)
+)
+Symbol('M' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 10 15 30 8)
+	SymbolLine(15 30 30 10 8)
+	SymbolLine(30 10 30 50 8)
+)
+Symbol('N' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 10 25 50 8)
+	SymbolLine(25 10 25 50 8)
+)
+Symbol('O' 12)
+(
+	SymbolLine(0 15 0 45 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(20 15 20 45 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 45 5 50 8)
+)
+Symbol('P' 12)
+(
+	SymbolLine(5 10 5 50 8)
+	SymbolLine(0 10 20 10 8)
+	SymbolLine(20 10 25 15 8)
+	SymbolLine(25 15 25 25 8)
+	SymbolLine(20 30 25 25 8)
+	SymbolLine(5 30 20 30 8)
+)
+Symbol('Q' 12)
+(
+	SymbolLine(0 15 0 45 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 15 10 8)
+	SymbolLine(15 10 20 15 8)
+	SymbolLine(20 15 20 40 8)
+	SymbolLine(10 50 20 40 8)
+	SymbolLine(5 50 10 50 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(10 35 20 50 8)
+)
+Symbol('R' 12)
+(
+	SymbolLine(0 10 20 10 8)
+	SymbolLine(20 10 25 15 8)
+	SymbolLine(25 15 25 25 8)
+	SymbolLine(20 30 25 25 8)
+	SymbolLine(5 30 20 30 8)
+	SymbolLine(5 10 5 50 8)
+	SymbolLine(13 30 25 50 8)
+)
+Symbol('S' 12)
+(
+	SymbolLine(20 10 25 15 8)
+	SymbolLine(5 10 20 10 8)
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(0 15 0 25 8)
+	SymbolLine(0 25 5 30 8)
+	SymbolLine(5 30 20 30 8)
+	SymbolLine(20 30 25 35 8)
+	SymbolLine(25 35 25 45 8)
+	SymbolLine(20 50 25 45 8)
+	SymbolLine(5 50 20 50 8)
+	SymbolLine(0 45 5 50 8)
+)
+Symbol('T' 12)
+(
+	SymbolLine(0 10 20 10 8)
+	SymbolLine(10 10 10 50 8)
+)
+Symbol('U' 12)
+(
+	SymbolLine(0 10 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(20 10 20 45 8)
+)
+Symbol('V' 12)
+(
+	SymbolLine(0 10 10 50 8)
+	SymbolLine(10 50 20 10 8)
+)
+Symbol('W' 12)
+(
+	SymbolLine(0 10 0 30 8)
+	SymbolLine(0 30 5 50 8)
+	SymbolLine(5 50 15 30 8)
+	SymbolLine(15 30 25 50 8)
+	SymbolLine(25 50 30 30 8)
+	SymbolLine(30 30 30 10 8)
+)
+Symbol('X' 12)
+(
+	SymbolLine(0 50 25 10 8)
+	SymbolLine(0 10 25 50 8)
+)
+Symbol('Y' 12)
+(
+	SymbolLine(0 10 10 30 8)
+	SymbolLine(10 30 20 10 8)
+	SymbolLine(10 30 10 50 8)
+)
+Symbol('Z' 12)
+(
+	SymbolLine(0 10 25 10 8)
+	SymbolLine(0 50 25 10 8)
+	SymbolLine(0 50 25 50 8)
+)
+Symbol('[' 12)
+(
+	SymbolLine(0 10 5 10 8)
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 50 5 50 8)
+)
+Symbol('\' 12)
+(
+	SymbolLine(0 15 30 45 8)
+)
+Symbol(']' 12)
+(
+	SymbolLine(0 10 5 10 8)
+	SymbolLine(5 10 5 50 8)
+	SymbolLine(0 50 5 50 8)
+)
+Symbol('^' 12)
+(
+	SymbolLine(0 15 5 10 8)
+	SymbolLine(5 10 10 15 8)
+)
+Symbol('_' 12)
+(
+	SymbolLine(0 50 20 50 8)
+)
+Symbol('a' 12)
+(
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(20 30 20 45 8)
+	SymbolLine(20 45 25 50 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+)
+Symbol('b' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(20 35 20 45 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(0 35 5 30 8)
+)
+Symbol('c' 12)
+(
+	SymbolLine(5 30 20 30 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 20 50 8)
+)
+Symbol('d' 12)
+(
+	SymbolLine(20 10 20 50 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+)
+Symbol('e' 12)
+(
+	SymbolLine(5 50 20 50 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(0 40 20 40 8)
+	SymbolLine(20 40 20 35 8)
+)
+Symbol('f' 10)
+(
+	SymbolLine(5 15 5 50 8)
+	SymbolLine(5 15 10 10 8)
+	SymbolLine(10 10 15 10 8)
+	SymbolLine(0 30 10 30 8)
+)
+Symbol('g' 12)
+(
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(0 60 5 65 8)
+	SymbolLine(5 65 15 65 8)
+	SymbolLine(15 65 20 60 8)
+	SymbolLine(20 30 20 60 8)
+)
+Symbol('h' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(20 35 20 50 8)
+)
+Symbol('i' 10)
+(
+	SymbolLine(0 20 0 21 10)
+	SymbolLine(0 35 0 50 8)
+)
+Symbol('j' 10)
+(
+	SymbolLine(5 20 5 21 10)
+	SymbolLine(5 35 5 60 8)
+	SymbolLine(0 65 5 60 8)
+)
+Symbol('k' 12)
+(
+	SymbolLine(0 10 0 50 8)
+	SymbolLine(0 35 15 50 8)
+	SymbolLine(0 35 10 25 8)
+)
+Symbol('l' 10)
+(
+	SymbolLine(0 10 0 45 8)
+	SymbolLine(0 45 5 50 8)
+)
+Symbol('m' 12)
+(
+	SymbolLine(5 35 5 50 8)
+	SymbolLine(5 35 10 30 8)
+	SymbolLine(10 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(20 35 20 50 8)
+	SymbolLine(20 35 25 30 8)
+	SymbolLine(25 30 30 30 8)
+	SymbolLine(30 30 35 35 8)
+	SymbolLine(35 35 35 50 8)
+	SymbolLine(0 30 5 35 8)
+)
+Symbol('n' 12)
+(
+	SymbolLine(5 35 5 50 8)
+	SymbolLine(5 35 10 30 8)
+	SymbolLine(10 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(20 35 20 50 8)
+	SymbolLine(0 30 5 35 8)
+)
+Symbol('o' 12)
+(
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(20 35 20 45 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(0 45 5 50 8)
+)
+Symbol('p' 12)
+(
+	SymbolLine(5 35 5 65 8)
+	SymbolLine(0 30 5 35 8)
+	SymbolLine(5 35 10 30 8)
+	SymbolLine(10 30 20 30 8)
+	SymbolLine(20 30 25 35 8)
+	SymbolLine(25 35 25 45 8)
+	SymbolLine(20 50 25 45 8)
+	SymbolLine(10 50 20 50 8)
+	SymbolLine(5 45 10 50 8)
+)
+Symbol('q' 12)
+(
+	SymbolLine(20 35 20 65 8)
+	SymbolLine(15 30 20 35 8)
+	SymbolLine(5 30 15 30 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(0 35 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+)
+Symbol('r' 12)
+(
+	SymbolLine(5 35 5 50 8)
+	SymbolLine(5 35 10 30 8)
+	SymbolLine(10 30 20 30 8)
+	SymbolLine(0 30 5 35 8)
+)
+Symbol('s' 12)
+(
+	SymbolLine(5 50 20 50 8)
+	SymbolLine(20 50 25 45 8)
+	SymbolLine(20 40 25 45 8)
+	SymbolLine(5 40 20 40 8)
+	SymbolLine(0 35 5 40 8)
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(5 30 20 30 8)
+	SymbolLine(20 30 25 35 8)
+	SymbolLine(0 45 5 50 8)
+)
+Symbol('t' 10)
+(
+	SymbolLine(5 10 5 45 8)
+	SymbolLine(5 45 10 50 8)
+	SymbolLine(0 25 10 25 8)
+)
+Symbol('u' 12)
+(
+	SymbolLine(0 30 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+	SymbolLine(20 30 20 45 8)
+)
+Symbol('v' 12)
+(
+	SymbolLine(0 30 10 50 8)
+	SymbolLine(20 30 10 50 8)
+)
+Symbol('w' 12)
+(
+	SymbolLine(0 30 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(5 50 10 50 8)
+	SymbolLine(10 50 15 45 8)
+	SymbolLine(15 30 15 45 8)
+	SymbolLine(15 45 20 50 8)
+	SymbolLine(20 50 25 50 8)
+	SymbolLine(25 50 30 45 8)
+	SymbolLine(30 30 30 45 8)
+)
+Symbol('x' 12)
+(
+	SymbolLine(0 30 20 50 8)
+	SymbolLine(0 50 20 30 8)
+)
+Symbol('y' 12)
+(
+	SymbolLine(0 30 0 45 8)
+	SymbolLine(0 45 5 50 8)
+	SymbolLine(20 30 20 60 8)
+	SymbolLine(15 65 20 60 8)
+	SymbolLine(5 65 15 65 8)
+	SymbolLine(0 60 5 65 8)
+	SymbolLine(5 50 15 50 8)
+	SymbolLine(15 50 20 45 8)
+)
+Symbol('z' 12)
+(
+	SymbolLine(0 30 20 30 8)
+	SymbolLine(0 50 20 30 8)
+	SymbolLine(0 50 20 50 8)
+)
+Symbol('{' 12)
+(
+	SymbolLine(5 15 10 10 8)
+	SymbolLine(5 15 5 25 8)
+	SymbolLine(0 30 5 25 8)
+	SymbolLine(0 30 5 35 8)
+	SymbolLine(5 35 5 45 8)
+	SymbolLine(5 45 10 50 8)
+)
+Symbol('|' 12)
+(
+	SymbolLine(0 10 0 50 8)
+)
+Symbol('}' 12)
+(
+	SymbolLine(0 10 5 15 8)
+	SymbolLine(5 15 5 25 8)
+	SymbolLine(5 25 10 30 8)
+	SymbolLine(5 35 10 30 8)
+	SymbolLine(5 35 5 45 8)
+	SymbolLine(0 50 5 45 8)
+)
+Symbol('~' 12)
+(
+	SymbolLine(0 35 5 30 8)
+	SymbolLine(5 30 10 30 8)
+	SymbolLine(10 30 15 35 8)
+	SymbolLine(15 35 20 35 8)
+	SymbolLine(20 35 25 30 8)
+)
+Attribute("PCB::grid::unit" "mm")
+
+Element["" "Mini small outline package, .65mm" "" "MSOP8" 111433 84433 9900 3800 3 100 ""]
+(
+	Pad[-3500 0 700 0 1600 3000 2200 "1" "1" ""]
+	Pad[-3500 2600 700 2600 1600 3000 2200 "2" "2" "square"]
+	Pad[-3500 5100 700 5100 1600 3000 2200 "3" "3" "square"]
+	Pad[-3500 7700 700 7700 1600 3000 2200 "4" "4" "square"]
+	Pad[15200 7800 19400 7800 1600 3000 2200 "5" "5" "square,edge2"]
+	Pad[15200 5200 19400 5200 1600 3000 2200 "6" "6" "square,edge2"]
+	Pad[15200 2700 19400 2700 1600 3000 2200 "7" "7" "square,edge2"]
+	Pad[15200 100 19400 100 1600 3000 2200 "8" "8" "square,edge2"]
+	ElementLine [-3300 -2200 5400 -2200 1000]
+	ElementLine [10400 -2200 19200 -2200 1000]
+	ElementLine [19200 -2200 19200 10000 1000]
+	ElementLine [19200 10000 -3300 10000 1000]
+	ElementLine [-3300 10000 -3300 -2200 1000]
+	ElementArc [7900 -2200 2500 2500 0 180 1000]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 109434 73242 -3150 -3150 0 100 ""]
+(
+	Pad[-3000 -492 -3000 492 2952 2000 3552 "1" "1" "square"]
+	Pad[3000 -492 3000 492 2952 2000 3552 "2" "2" "square"]
+
+	)
+
+Element["" "Pad strip" "" "Pad strip" 87087 82520 14391 13498 0 100 ""]
+(
+	Pad[0 0 0 0 8000 3000 8600 "1" "1" "square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "2" "square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "3" "square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "4" "square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "5" "square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "6" "square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "7" "square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "8" "square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "9" "square"]
+	Pad[0 0 0 0 8000 3000 8600 "1" "10" "onsolder,square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "11" "onsolder,square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "12" "onsolder,square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "13" "onsolder,square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "14" "onsolder,square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "15" "onsolder,square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "16" "onsolder,square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "17" "onsolder,square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "18" "onsolder,square"]
+
+	)
+
+Element["" "0805" "" "0805" 124839 72462 15300 5000 3 100 ""]
+(
+	Pad[-4400 -500 -4400 500 4000 3000 4600 "1" "1" "square"]
+	Pad[4400 -500 4400 500 4000 3000 4600 "1" "2" "square"]
+
+	)
+
+Element["" "0805" "" "0805" 120978 105963 15300 5000 3 100 ""]
+(
+	Pad[-4400 -500 -4400 500 4000 3000 4600 "1" "1" "square"]
+	Pad[4400 -500 4400 500 4000 3000 4600 "1" "2" "square"]
+
+	)
+
+Element["" "PAD" "" "" 100620 109044 18400 5000 3 100 ""]
+(
+	Pad[-100 0 100 0 8000 3000 8600 "" "1" "square"]
+	Pad[-100 0 100 0 8000 3000 8600 "" "2" "onsolder,square"]
+
+	)
+
+Element["" "PIC18f1220" "" "SSOP20" 111219 115666 -615 32768 3 100 ""]
+(
+	Pad[-8000 0 0 0 1600 3000 2200 "1" "1" ""]
+	Pad[-8000 2600 0 2600 1600 3000 2200 "2" "2" "square"]
+	Pad[-8000 5200 0 5200 1600 3000 2200 "3" "3" "square"]
+	Pad[-8000 7800 0 7800 1600 3000 2200 "4" "4" "square"]
+	Pad[-8000 10400 0 10400 1600 3000 2200 "5" "5" "square"]
+	Pad[-8000 13000 0 13000 1600 3000 2200 "6" "6" "square"]
+	Pad[-8000 15600 0 15600 1600 3000 2200 "7" "7" "square"]
+	Pad[-8000 18200 0 18200 1600 3000 2200 "7" "8" "square"]
+	Pad[-8000 20800 0 20800 1600 3000 2200 "7" "9" "square"]
+	Pad[-8000 23400 0 23400 1600 3000 2200 "7" "10" "square"]
+	Pad[21200 23400 28200 23400 1600 3000 2200 "8" "11" "square,edge2"]
+	Pad[21200 20800 28200 20800 1600 3000 2200 "9" "12" "square,edge2"]
+	Pad[21200 18200 28200 18200 1600 3000 2200 "10" "13" "square,edge2"]
+	Pad[21200 15600 28200 15600 1600 3000 2200 "11" "14" "square,edge2"]
+	Pad[21200 13000 28200 13000 1600 3000 2200 "12" "15" "square,edge2"]
+	Pad[21200 10400 28200 10400 1600 3000 2200 "13" "16" "square,edge2"]
+	Pad[21200 7800 28200 7800 1600 3000 2200 "14" "17" "square,edge2"]
+	Pad[21200 5200 28200 5200 1600 3000 2200 "14" "18" "square,edge2"]
+	Pad[21200 2600 28200 2600 1600 3000 2200 "14" "19" "square,edge2"]
+	Pad[21200 0 28200 0 1600 3000 2200 "14" "20" "square,edge2"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 108420 102375 -3150 3150 1 100 ""]
+(
+	Pad[-492 3000 492 3000 2952 2000 3552 "1" "1" "square"]
+	Pad[-492 -3000 492 -3000 2952 2000 3552 "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "1206" 100893 90558 -3150 3150 1 100 ""]
+(
+	Pad[-1181 6405 1181 6405 4118 2000 5718 "1" "1" "square"]
+	Pad[-1181 -6405 1181 -6405 4118 2000 5718 "2" "2" "square"]
+	ElementLine [3740 -2362 3740 2362 800]
+	ElementLine [-3740 -2362 -3740 2362 800]
+
+	)
+
+Element["" "Pad strip" "" "Pad strip" 164736 72774 10000 19600 0 100 ""]
+(
+	Pad[0 0 0 0 8000 3000 8600 "1" "1" "square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "2" "square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "3" "square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "4" "square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "5" "square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "PGD" "6" "square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "7" "square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "PGC" "8" "square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "9" "square"]
+	Pad[0 0 0 0 8000 3000 8600 "1" "10" "onsolder,square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "11" "onsolder,square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "12" "onsolder,square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "13" "onsolder,square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "14" "onsolder,square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "15" "onsolder,square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "16" "onsolder,square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "17" "onsolder,square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "18" "onsolder,square"]
+
+	)
+
+Element["" "PAD" "" "" 154791 98202 18400 5000 3 100 ""]
+(
+	Pad[-100 0 100 0 8000 3000 8600 "" "1" "square"]
+	Pad[-100 0 100 0 8000 3000 8600 "" "2" "onsolder,square"]
+
+	)
+
+Element["" "PAD" "" "" 164775 162669 18400 5000 3 100 ""]
+(
+	Pad[-100 0 100 0 8000 3000 8600 "" "1" "square"]
+	Pad[-100 0 100 0 8000 3000 8600 "" "2" "onsolder,square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "1206" 148317 142896 -3150 3150 1 100 ""]
+(
+	Pad[-1181 6405 1181 6405 4118 2000 5718 "1" "1" "square"]
+	Pad[-1181 -6405 1181 -6405 4118 2000 5718 "2" "2" "square"]
+	ElementLine [3740 -2362 3740 2362 800]
+	ElementLine [-3740 -2362 -3740 2362 800]
+
+	)
+
+Element["" "Pad strip" "" "Pad strip" 111462 162513 19600 -10000 1 100 ""]
+(
+	Pad[0 0 0 0 8000 3000 8600 "1" "1" "square"]
+	Pad[10000 0 10000 0 8000 3000 8600 "1" "2" "square"]
+	Pad[20000 0 20000 0 8000 3000 8600 "1" "3" "square"]
+	Pad[30000 0 30000 0 8000 3000 8600 "1" "4" "square,edge2"]
+	Pad[40000 0 40000 0 8000 3000 8600 "1" "5" "square,edge2"]
+
+	)
+
+Element["" "PAD" "" "" 87126 72735 18400 5000 3 100 ""]
+(
+	Pad[-100 0 100 0 8000 3000 8600 "" "1" "square"]
+	Pad[-100 0 100 0 8000 3000 8600 "" "2" "onsolder,square"]
+
+	)
+
+Element["" "PAD" "" "" 145782 73359 18400 5000 3 100 ""]
+(
+	Pad[-100 0 100 0 8000 3000 8600 "" "1" "square"]
+	Pad[-100 0 100 0 8000 3000 8600 "" "2" "onsolder,square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 116727 98670 -3150 -3150 0 100 ""]
+(
+	Pad[-3000 -492 -3000 492 2952 2000 3552 "1" "1" "square"]
+	Pad[3000 -492 3000 492 2952 2000 3552 "2" "2" "square"]
+
+	)
+
+Element["" "Pad strip" "" "Pad strip" 172731 72774 10000 19600 0 100 ""]
+(
+	Pad[0 0 0 0 8000 3000 8600 "1" "1" "square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "2" "square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "3" "square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "4" "square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "5" "square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "6" "square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "7" "square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "8" "square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "9" "square"]
+	Pad[0 90000 0 90000 8000 3000 8600 "1" "10" "square"]
+	Pad[0 0 0 0 8000 3000 8600 "1" "11" "onsolder,square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "12" "onsolder,square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "13" "onsolder,square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "14" "onsolder,square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "15" "onsolder,square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "16" "onsolder,square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "17" "onsolder,square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "18" "onsolder,square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "19" "onsolder,square"]
+	Pad[0 90000 0 90000 8000 3000 8600 "1" "20" "onsolder,square"]
+
+	)
+
+Element["" "Pad strip" "" "Pad strip" 79131 72540 10000 19600 0 100 ""]
+(
+	Pad[0 0 0 0 8000 3000 8600 "1" "1" "square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "2" "square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "3" "square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "4" "square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "5" "square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "6" "square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "7" "square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "8" "square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "9" "square"]
+	Pad[0 90000 0 90000 8000 3000 8600 "1" "10" "square"]
+	Pad[0 0 0 0 8000 3000 8600 "1" "11" "onsolder,square"]
+	Pad[0 10000 0 10000 8000 3000 8600 "1" "12" "onsolder,square"]
+	Pad[0 20000 0 20000 8000 3000 8600 "1" "13" "onsolder,square"]
+	Pad[0 30000 0 30000 8000 3000 8600 "1" "14" "onsolder,square"]
+	Pad[0 40000 0 40000 8000 3000 8600 "1" "15" "onsolder,square"]
+	Pad[0 50000 0 50000 8000 3000 8600 "1" "16" "onsolder,square"]
+	Pad[0 60000 0 60000 8000 3000 8600 "1" "17" "onsolder,square"]
+	Pad[0 70000 0 70000 8000 3000 8600 "1" "18" "onsolder,square"]
+	Pad[0 80000 0 80000 8000 3000 8600 "1" "19" "onsolder,square"]
+	Pad[0 90000 0 90000 8000 3000 8600 "1" "20" "onsolder,square"]
+
+	)
+
+Element["" "Pad strip" "" "Pad strip" 111462 170313 19600 -10000 1 100 ""]
+(
+	Pad[0 0 0 0 8000 3000 8600 "1" "1" "square"]
+	Pad[10000 0 10000 0 8000 3000 8600 "1" "2" "square"]
+	Pad[20000 0 20000 0 8000 3000 8600 "1" "3" "square"]
+	Pad[30000 0 30000 0 8000 3000 8600 "1" "4" "square,edge2"]
+	Pad[40000 0 40000 0 8000 3000 8600 "1" "5" "square,edge2"]
+
+	)
+Layer(1 "top")
+(
+)
+Layer(2 "ground")
+(
+)
+Layer(3 "signal2")
+(
+)
+Layer(4 "signal3")
+(
+)
+Layer(5 "power")
+(
+	Line[109961 89528 98425 89528 1000 2000 "clearline"]
+	Line[98425 89528 90512 81614 1000 2000 "clearline"]
+	Line[110276 92047 86496 92047 1000 2000 "clearline"]
+	Line[149097 163800 149097 149682 1000 2000 "clearline"]
+	Line[88296 73827 88296 82251 1000 2000 "clearline"]
+	Line[112749 72696 120744 72696 1000 2000 "clearline"]
+	Line[129168 72813 135681 79326 1000 2000 "clearline"]
+	Line[135681 79326 135681 86970 1000 2000 "clearline"]
+	Line[131352 89661 131352 94380 1000 2000 "clearline"]
+	Line[131352 92040 131235 92157 1000 2000 "clearline"]
+	Line[147966 149760 123903 149760 1000 2000 "clearline"]
+	Line[123903 149760 116766 142623 1000 2000 "clearline"]
+	Line[128973 101361 145353 84981 1000 2000 "clearline"]
+	Line[133029 89544 135759 86814 1000 2000 "clearline"]
+	Line[125970 99645 131313 94302 1000 2000 "clearline"]
+	Line[145743 92664 156585 81822 1000 2000 "clearline"]
+	Line[123123 84552 129090 84552 1000 2000 "clearline"]
+	Line[115167 89661 110019 89661 1000 2000 "clearline"]
+	Line[143988 128388 143988 121290 1000 2000 "clearline"]
+	Line[130299 89583 133224 89583 1000 2000 "clearline"]
+	Line[143988 121290 163605 101673 1000 2000 "clearline"]
+	Line[112827 92040 112827 99177 1000 2000 "clearline"]
+	Line[130416 128622 138021 128622 1000 2000 "clearline"]
+	Line[116727 106236 116727 119769 1000 2000 "clearline"]
+	Line[130962 126087 135642 126087 1000 2000 "clearline"]
+	Line[133731 125931 133848 126048 1000 2000 "clearline"]
+	Line[116727 143091 116727 114738 1000 2000 "clearline"]
+	Line[116883 124371 112632 128622 1000 2000 "clearline"]
+	Line[112749 128622 105261 128622 1000 2000 "clearline"]
+	Line[105066 126009 115206 126009 1000 2000 "clearline"]
+	Line[158145 157833 163449 163137 1000 2000 "clearline"]
+	Line[155805 96213 165165 96213 1000 2000 "clearline"]
+	Line[126126 99528 126126 124176 1000 2000 "clearline"]
+	Line[125970 123942 130611 128583 1000 2000 "clearline"]
+	Line[126048 121134 130923 126009 1000 2000 "clearline"]
+	Line[145353 84981 145353 74412 1000 2000 "clearline"]
+	Line[110214 123513 113061 123513 1000 2000 "clearline"]
+	Line[113061 123513 114504 122070 1000 2000 "clearline"]
+	Line[114504 122070 114543 110994 1000 2000 "clearline"]
+	Line[109044 105768 114504 111228 1000 2000 "clearline"]
+	Line[102375 98514 109629 98514 1000 2000 "clearline"]
+	Line[111657 162942 150657 162942 1000 2000 "clearline"]
+	Line[114504 137748 114504 145704 1000 2000 "clearline"]
+	Line[129402 73944 124917 78429 1000 2000 "clearline"]
+	Line[124917 78429 105339 78429 1000 2000 "clearline"]
+	Line[105339 78429 100113 83655 1000 2000 "clearline"]
+	Line[150657 162942 150774 162825 1000 2000 "clearline"]
+	Line[87360 73008 106080 73008 1000 2000 "clearline"]
+	Line[96252 100113 86307 100113 1000 2000 "clearline"]
+	Line[114504 145587 98553 161655 1000 2000 "clearline"]
+	Line[98709 161538 86892 161538 1000 2000 "clearline"]
+	Line[107796 118131 94614 118131 1000 2000 "clearline"]
+	Line[94614 118131 89154 123591 1000 2000 "clearline"]
+	Line[107133 131313 88140 131313 1000 2000 "clearline"]
+	Line[107718 133770 98202 133770 1000 2000 "clearline"]
+	Line[98202 133770 88803 143169 1000 2000 "clearline"]
+	Line[107484 139035 103233 139035 1000 2000 "clearline"]
+	Line[103233 139035 88920 153348 1000 2000 "clearline"]
+	Line[108693 136500 113256 136500 1000 2000 "clearline"]
+	Line[113256 136500 114504 137748 1000 2000 "clearline"]
+	Line[102297 105768 108888 105768 1000 2000 "clearline"]
+	Line[138489 115596 138489 94848 1000 2000 "clearline"]
+	Line[138411 95043 162942 70512 1000 2000 "clearline"]
+	Line[138060 118248 143247 118248 1000 2000 "clearline"]
+	Line[143247 118248 145977 115518 1000 2000 "clearline"]
+	Line[145977 115479 145977 92274 1000 2000 "clearline"]
+	Line[158145 150033 158145 157911 1000 2000 "clearline"]
+	Line[136968 131235 141141 131235 1000 2000 "clearline"]
+	Line[141141 131235 143988 128388 1000 2000 "clearline"]
+	Line[137319 133809 142701 133809 1000 2000 "clearline"]
+	Line[142701 133809 153426 123084 1000 2000 "clearline"]
+	Line[153426 123084 165828 123084 1000 2000 "clearline"]
+	Line[134706 133887 130182 133887 1000 2000 "clearline"]
+	Line[130182 133887 128193 135876 1000 2000 "clearline"]
+	Line[128193 135876 128193 139620 1000 2000 "clearline"]
+	Line[128193 139620 131586 143013 1000 2000 "clearline"]
+	Line[131586 143013 154362 143013 1000 2000 "clearline"]
+	Line[154284 143013 164424 153153 1000 2000 "clearline"]
+	Line[134550 131235 129129 131235 1000 2000 "clearline"]
+	Line[129129 131235 125307 135057 1000 2000 "clearline"]
+	Line[125307 135057 125307 140517 1000 2000 "clearline"]
+	Line[125190 139620 130377 144807 1000 2000 "clearline"]
+	Line[130533 144846 153075 144846 1000 2000 "clearline"]
+	Line[153114 144924 158184 149994 1000 2000 "clearline"]
+	Line[163527 141063 144105 141063 1000 2000 "clearline"]
+	Line[144105 141063 142389 139347 1000 2000 "clearline"]
+	Line[142389 139347 142389 137904 1000 2000 "clearline"]
+	Line[142389 137904 140985 136500 1000 2000 "clearline"]
+	Line[140985 136500 135603 136500 1000 2000 "clearline"]
+	Line[149409 135213 164853 135213 1000 2000 "clearline"]
+	Line[112866 102453 96174 102453 1000 2000 "clearline"]
+	Line[96252 102531 94497 104286 1000 2000 "clearline"]
+	Line[94497 104286 94497 107796 1000 2000 "clearline"]
+	Line[94497 107796 88764 113529 1000 2000 "clearline"]
+	Line[156546 81900 163917 81900 1000 2000 "clearline"]
+	Line[96213 100113 99411 96915 1000 2000 "clearline"]
+	Line[136032 120900 130104 120900 1000 2000 "clearline"]
+	Line[130026 120822 128973 119769 1000 2000 "clearline"]
+	Line[128973 119769 128973 101361 1000 2000 "clearline"]
+	Line[116844 108069 116844 91611 1000 2000 "clearline"]
+	Line[116844 91611 114816 89583 1000 2000 "clearline"]
+	Line[119730 97227 119730 88218 1000 2000 "clearline"]
+	Line[119730 88218 123318 84630 1000 2000 "clearline"]
+	Line[116298 106158 112710 102570 1000 2000 "clearline"]
+)
+Layer(6 "bottom")
+(
+)
+Layer(7 "outline")
+(
+	Line[99489 108927 154635 99489 1000 2000 "clearline"]
+)
+Layer(8 "spare")
+(
+)
+Layer(9 "silk")
+(
+)
+Layer(10 "silk")
+(
+	Text[70395 90246 0 68 "BATT +" "clearline"]
+	Text[63648 80652 0 70 "BATT GND" "clearline"]
+	Text[108810 77337 0 68 "LP2989-3.3" "clearline"]
+	Text[104052 66261 0 70 "220R" "clearline"]
+	Text[122343 65013 0 70 "LED" "clearline"]
+	Text[117858 109707 0 68 "10uF" "clearline"]
+	Text[62712 131547 0 68 "RADIO SDO" "clearline"]
+	Text[137046 82875 0 68 "3.3V" "clearline"]
+	Text[62790 140946 0 68 "RADIO SCK" "clearline"]
+	Text[113568 142116 0 68 "18LF1220" "clearline"]
+	Text[63687 150111 0 68 "RADIO TX" "clearline"]
+	Text[147225 140790 0 68 "0R" "clearline"]
+	Text[64545 70785 0 70 "BATT GND" "clearline"]
+	Text[100230 99840 0 68 "10k" "clearline"]
+	Text[64857 160836 0 68 "THROTTLE" "clearline"]
+	Text[61503 100386 0 68 "RADIO 3.3V" "clearline"]
+	Text[61737 111306 0 68 "RADIO GND" "clearline"]
+	Text[98631 88686 0 68 "0R" "clearline"]
+	Text[61932 121368 0 68 "RADIO CS0" "clearline"]
+	Text[141570 64974 0 68 "DEBUG" "clearline"]
+	Text[179439 150267 0 68 "STEERING SLOW LEFT" "clearline"]
+	Text[179010 140673 0 68 "STEERING FULL LEFT" "clearline"]
+	Text[179595 161343 0 68 "STEERING SLOW RIGHT" "clearline"]
+	Text[125892 168324 0 68 "GND" "clearline"]
+	Text[177567 80691 0 68 "STEERING FULL RIGHT" "clearline"]
+	Text[179517 70941 0 68 "REVERSE" "clearline,selected"]
+	Text[122967 95472 0 68 "0R" "clearline"]
+	Text[178425 120666 0 68 "PGC" "clearline"]
+	Text[178425 101088 0 68 "PGD" "clearline"]
+	Text[178932 91338 0 68 "MCLR" "clearline"]
+	Text[178542 131118 0 68 "GND" "clearline"]
+)

@@ -3,7 +3,7 @@
 
 
 #define COPTER_MODE
-
+#define USE_NAV
 
 #endif
 

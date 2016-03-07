@@ -27,6 +27,7 @@ int search_h;
 
 void to_output(vision_engine_t *engine);
 void geometry_triangles(vision_engine_t *engine);
+void geometry_polar(vision_engine_t *engine);
 
 int vtor_tab[0x100], vtog_tab[0x100];
 int utog_tab[0x100], utob_tab[0x100];
@@ -535,6 +536,36 @@ void normalize()
 
 
 
+void detect_shadows(vision_engine_t *engine)
+{
+	int i, j;
+	int threshold = (int)(0.25 * 255);
+	for(i = 0; i < vision.working_h; i++)
+	{
+		unsigned char *y_row = engine->in_y + i * vision.working_w;
+		unsigned char *u_row = engine->in_u + i * vision.working_w;
+		unsigned char *v_row = engine->in_v + i * vision.working_w;
+		unsigned char *shadow_row = engine->shadows + i * vision.working_w;
+
+		for(j = 0; j < vision.working_w; j++)
+		{
+			if(*y_row < threshold)
+			{
+				*shadow_row = 1;
+			}
+			else
+			{
+				*shadow_row = 0;
+			}
+
+			shadow_row++;
+			y_row++;
+		}
+	}
+}
+
+
+
 // chroma key based on a single color
 void chroma_key_single(vision_engine_t *engine, int key_r, int key_g, int key_b)
 {
@@ -552,17 +583,21 @@ void chroma_key_single(vision_engine_t *engine, int key_r, int key_g, int key_b)
 				int g = engine->in_u[offset];
 				int b = engine->in_v[offset];
 
-//				int distance = SQR(r - key_r);
- 				int distance = sqrt(SQR(r - key_r) +
- 					SQR(g - key_g) +
- 					SQR(b - key_b));
-				if(distance < threshold)
-// sqrt is too slow & unnecessary for small thresholds
-//				if(abs(r - key_r) < threshold && 
-//					abs(g - key_g) < threshold &&
-//					abs(b - key_b) < threshold)
+				if(r > 0)
 				{
-					*mask_row = 1;
+			
+	//				int distance = SQR(r - key_r);
+ 					int distance = sqrt(SQR(r - key_r) +
+ 						SQR(g - key_g) +
+ 						SQR(b - key_b));
+					if(distance < threshold)
+	// sqrt is too slow & unnecessary for small thresholds
+	//				if(abs(r - key_r) < threshold && 
+	//					abs(g - key_g) < threshold &&
+	//					abs(b - key_b) < threshold)
+					{
+						*mask_row = 1;
+					}
 				}
 			}
 
@@ -746,15 +781,12 @@ void chroma_key_mean(vision_engine_t *engine)
   				key_x1 = prev_x - vision.max_dx;
   			}
   		
- 
-
-			key_x2 = key_x1 + 1;
+ 			prev_x = key_x1;
 
 			if(key_x1 < 0) key_x1 = 0;
 			if(key_x2 > vision.working_w) key_x2 = vision.working_w;
 		}
 		
-		prev_x = key_x1;
 //printf("detect_path %d key_x1=%d key_x2=%d\n", __LINE__, key_x1, key_x2);
 
 
@@ -808,7 +840,7 @@ void chroma_key_ray(vision_engine_t *engine, int top_x)
 	memset(engine->key_x, 0xff, vision.working_w * vision.working_h * sizeof(int));
 	memset(engine->key_y, 0xff, vision.working_w * vision.working_h * sizeof(int));
 
-	int key_y1 = vision.working_h / 2;
+	int key_y1 = vision.horizon_y;
 	for(key_y = vision.working_h - 1; key_y >= key_y1; key_y--)
 	{
 		float fraction = (float)(vision.working_h - key_y) / 
@@ -860,11 +892,12 @@ void chroma_key_rays(vision_engine_t *engine)
 	{
 		chroma_key_ray(engine, i);
 		detect_blobs(engine, 1);
-//		edge_detection(engine);
+		edge_detection(engine);
 		
 		draw_key(engine);
 		to_output(engine);
-		
+
+		geometry_polar(engine);		
 //		geometry_triangles(engine);
 
 		
@@ -993,6 +1026,30 @@ void to_output(vision_engine_t *engine)
 		}
 	}
 #endif // 0
+
+// overlay shadows on output image
+	for(i = 0; i < vision.working_h; i++)
+	{
+		unsigned char *shadow_row = engine->shadows + i * vision.working_w;
+		unsigned char *y = engine->out_y + i * vision.working_w;
+		unsigned char *u = engine->out_u + i * vision.working_w;
+		unsigned char *v = engine->out_v + i * vision.working_w;
+
+		for(j = 0; j < vision.working_w; j++)
+		{
+			if(*shadow_row)
+			{
+				*y = 0;
+				*u = 0x80;
+				*v = 0x80;
+			}
+
+			shadow_row++;
+			y++;
+			u++;
+			v++;
+		}
+	}
 
 }
 
@@ -1494,7 +1551,9 @@ void detect_path(vision_engine_t *engine)
 	memset(engine->key_x, 0xff, vision.working_w * vision.working_h * sizeof(int));
 	memset(engine->key_y, 0xff, vision.working_w * vision.working_h * sizeof(int));
 
- 	chroma_key_rect(engine);
+	detect_shadows(engine);
+
+	chroma_key_rect(engine);
 	chroma_key_mean(engine);
 //	chroma_key_rays(engine);
 //	chroma_key_history(engine);

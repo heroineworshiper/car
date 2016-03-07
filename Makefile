@@ -123,7 +123,6 @@ ARM_OBJS := \
 	../copter/stm32f4/startup_main.o \
 	cc1101.o \
 	../copter/arm/arm_math.o \
-	../copter/arm/hardi2c.o \
 	../copter/arm/uart.o \
 	../copter/arm/linux.o \
 	../copter/stm32f4/misc.o \
@@ -215,7 +214,10 @@ ARM_CAR_OBJS := \
 	arm_car.o \
 
 ARM_TRUCK_OBJS := \
+	arm_nav.o \
 	arm_truck.o \
+	arm_imu.o \
+	arm_hardi2c.o
 
 PI_OBJS := \
 	vision.o
@@ -225,11 +227,11 @@ PI_OBJS := \
 all: truck.bin car_remote.hex
 
 # ODROID version
-vision: $(VISION_OBJS)
-	$(GCC_ODROID) -g -o vision $(VISION_OBJS) -lpthread -lm
+#vision: $(VISION_OBJS)
+#	$(GCC_ODROID) -g -o vision $(VISION_OBJS) -lpthread -lm
 
-$(VISION_OBJS): 
-	$(GCC_ODROID) -g  $(ODROID_CFLAGS) -c $*.c -o $*.o
+#$(VISION_OBJS): 
+#	$(GCC_ODROID) -g  $(ODROID_CFLAGS) -c $*.c -o $*.o
 
 
 # PI version
@@ -242,14 +244,14 @@ $(VISION_OBJS):
 #	$(GCC_PI) $(PI_CFLAGS) -c $*.c -o $*.o
 
 # X86 version
-#vision: $(VISION_OBJS)
+vision: $(VISION_OBJS)
 #	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) $(OPENCV_LFLAGS) -lpthread -lm
-#	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
+	$(GXX) -DX86 -O2 -g -o vision $(VISION_OBJS) -lpthread -lm
 
 
-#$(VISION_OBJS):
+$(VISION_OBJS):
 #	$(GXX) -O2 $(OPENCV_CFLAGS) -g -c $*.c -o $*.o -DX86 -Ijpeg 
-#	$(GXX) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
+	$(GXX) -O2 -g -c $*.c -o $*.o -DX86 -Ijpeg 
 
 
 
@@ -461,7 +463,6 @@ oscilloscope: oscilloscope.c
 
 
 ../copter/arm/arm_math.o: 	     ../copter/arm/arm_math.c
-../copter/arm/hardi2c.o: 	     ../copter/arm/hardi2c.c
 ../copter/arm/uart.o: 		     ../copter/arm/uart.c
 ../copter/arm/linux.o:	       ../copter/arm/linux.c
 ../copter/stm32f4/startup_main.o:    ../copter/stm32f4/startup_main.s
@@ -480,9 +481,11 @@ oscilloscope: oscilloscope.c
 ../copter/stm32f4/stm32f4xx_exti.o: ../copter/stm32f4/stm32f4xx_exti.c
 ../copter/stm32f4/stm32f4xx_syscfg.o: ../copter/stm32f4/stm32f4xx_syscfg.c
 arm_car.o: 			     arm_car.c
+arm_nav.o:                           arm_nav.c
 arm_truck.o: 			     arm_truck.c
 cc1101.o: 			     cc1101.c
-imu.o: 			   	     imu.c
+arm_hardi2c.o:                       arm_hardi2c.c
+arm_imu.o: 			     arm_imu.c
 vision.o: vision.c
 vision_surface.o: vision_surface.c
 vision_engine.o: vision_engine.c

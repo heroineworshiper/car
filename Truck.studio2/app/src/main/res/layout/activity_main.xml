@@ -26,13 +26,24 @@
                 android:layout_weight="1"
                 android:onClick="onClick"
                 android:text="Settings" />
-            <Button
+         </TableRow>
+
+        <TableRow
+                 android:layout_width="wrap_content" >
+             <Button
                 android:id="@+id/reset_gyro"
                 android:layout_width="0dip"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:onClick="onClick"
                 android:text="Reset" />
+             <CheckBox
+                 android:id="@+id/do_mag"
+                 android:layout_width="0dip"
+                 android:layout_height="wrap_content"
+                 android:layout_weight="1"
+                 android:onClick="onClick"
+                 android:text="Do Mag" />
         </TableRow>
  
       
@@ -47,5 +58,5 @@
       
     </TableLayout>
 
-    
+
 </RelativeLayout>

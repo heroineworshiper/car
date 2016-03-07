@@ -45,7 +45,16 @@ public class Settings {
 	{
 // load internal guidance parameters from file
 		File dir = new File(DIR);
-		File file = new File(DIR + FILENAME);
+		File file = null;
+
+		if(vehicle == CAR)
+		{
+			file = new File(DIR + CAR_FILENAME);
+		}
+		else
+		{
+			file = new File(DIR + TRUCK_FILENAME);
+		}
 
 		keys.clear();
 		stringValues.clear();
@@ -114,6 +123,8 @@ public class Settings {
 		file = context.getSharedPreferences("truck", 0);
 		//headlights = file.getInt("headlights", 0) == 0 ? false : true;
 		targetPace = file.getFloat("targetPace", targetPace);
+		vehicle = file.getInt("vehicle", vehicle);
+		prevVehicle = vehicle;
 	}
 	
 	static void save()
@@ -125,6 +136,8 @@ public class Settings {
 		
 		//file.putInt("headlights", headlights ? 1 : 0);
 		file.putFloat("targetPace", targetPace);
+		file.putInt("vehicle", vehicle);
+		prevVehicle = vehicle;
 
 		file.commit();
 	}
@@ -210,7 +223,8 @@ public class Settings {
 	
 	
 	static final String DIR = "//sdcard//truck//";
-	static final String FILENAME = "settings.conf";
+	static final String CAR_FILENAME = "settings.car";
+	static final String TRUCK_FILENAME = "settings.truck";
 	static String bluetooth_id = "truck";
 //	static boolean headlights = false;
 	static float targetPace = 9.00f;
@@ -246,6 +260,12 @@ public class Settings {
 // message to display
 	static String message = null;
 	static boolean haveMessage = false;
+
+
+	static final int TRUCK = 0;
+	static final int CAR = 1;
+	static int vehicle = TRUCK;
+	static int prevVehicle = vehicle;
 
 
 	static Vector<String> keys = new Vector<String>();
