@@ -100,6 +100,7 @@
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
 #define TIMEOUT_RELOAD TIMER_HZ * 1
+#define STEERING_RELOAD TIMER_HZ * 10
 
 // PWM frequency
 #define PWM_HZ 50
@@ -1120,7 +1121,7 @@ void handle_analog()
 			
 			truck.gyro_accum = 0;
 			truck.gyro_count = 0;
-TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
+//TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 
 
 
@@ -1574,6 +1575,7 @@ void TIM2_IRQHandler()
 				}
 #endif
 
+				truck.steering_timeout = STEERING_RELOAD;
 
 				int throttle_base;
 				if(truck.throttle_reverse)
@@ -1911,7 +1913,7 @@ print_number(truck.throttle_pwm);
 						truck.steering_first = 1;
 						truck.need_steering_feedback = 0;
 						break;
-// no steering
+// no steering command
 					default:
 						truck.steering_pwm = mid_steering_pwm;
 						truck.steering_first = 0;
@@ -1935,6 +1937,16 @@ print_float(truck.need_steering_feedback);
 }
 				if(truck.need_steering_feedback)
 				{
+					if(truck.steering_timeout > 0)
+					{
+						truck.steering_timeout--;
+					}
+					else
+					{
+// disable heading hold after a certain time with no throttle
+						truck.need_steering_feedback = 0;
+					}					
+
 // -100 - 100
 					float steering_feedback = 0;
 #ifdef I2C_IMU

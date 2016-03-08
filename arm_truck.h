@@ -18,8 +18,7 @@
 //#define BLUETOOTH_PASSTHROUGH
 
 
-// truck
-// use MPU6000
+// truck uses MPU6000
 #define I2C_IMU
 
 // reverse steering servo
@@ -30,7 +29,8 @@
 #ifndef I2C_IMU
 #define NAV_HZ 320
 #else // !I2C_IMU
-#define NAV_HZ 1100
+//#define NAV_HZ 1100
+#define NAV_HZ 366
 #endif // I2C_IMU
 
 // timer for packet flashing
@@ -127,8 +127,12 @@ typedef struct
 // Make the interrupt handler not copy the radio to the steering PWM
 	int writing_settings;
 	int motor_timer;
+// timeout for loss of bluetooth
 	int bt_timeout;
+// timeout for loss of 433Mhz radio
 	int radio_timeout;
+// timeout for end of heading hold, to avoid burning out the servo
+	int steering_timeout;
 // maximum analog amount gyros can move while calculating center
 	int gyro_center_max;
 	float gyro_center;

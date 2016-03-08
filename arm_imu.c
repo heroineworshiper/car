@@ -19,6 +19,9 @@
 #define CALIBRATE_IMU_DOWNSAMPLE (NAV_HZ / 10)
 #define MAG_TIMEOUT_MAX 100
 
+#define DEBUG_PIN GPIO_Pin_4
+#define DEBUG_GPIO GPIOB
+
 static int debug_counter = 0;
 
 static void imu_status1(void *ptr);
@@ -112,6 +115,9 @@ static void mag_status1(void *ptr)
 static void imu_read_gyros(void *ptr)
 {
 	imu_t *imu = (imu_t*)ptr;
+TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
+
+
 	int offset_x = 8 + imu->gyro_x_axis * 2;
 	int offset_y = 8 + imu->gyro_y_axis * 2;
 	int offset_z = 8 + imu->gyro_z_axis * 2;
@@ -396,7 +402,7 @@ static void imu_read_gyros(void *ptr)
 
 
 // start mag conversion
-	if(!(imu->total_gyro % 100) && truck.enable_mag)
+	if(!(imu->total_gyro % (NAV_HZ / 10)) && truck.enable_mag)
 	{
 		imu->want_mag = 1;
 		imu->mag_timeout = 0;
@@ -484,7 +490,8 @@ static void imu_config1(void *ptr)
 // sample rate divider
 // high enough to keep i2c from dropping samples
 	imu_t *imu = (imu_t*)ptr;
-	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 0x6);
+//	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 6);
+	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 18);
 	imu->current_function = imu_config2;
 	
 }

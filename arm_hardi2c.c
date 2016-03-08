@@ -443,9 +443,9 @@ void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs)
 	I2C_InitStructure.I2C_OwnAddress1 = 0xFE;
 	I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
 	I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-//	I2C_InitStructure.I2C_ClockSpeed = 150000;
+	I2C_InitStructure.I2C_ClockSpeed = 150000;
 //	I2C_InitStructure.I2C_ClockSpeed = 200000;
-	I2C_InitStructure.I2C_ClockSpeed = 400000;
+//	I2C_InitStructure.I2C_ClockSpeed = 400000;
 	/* Apply i2c->regs configuration after enabling it */
 	I2C_Init(i2c->regs, &I2C_InitStructure);
 	i2c->state = hardi2c_idle;
