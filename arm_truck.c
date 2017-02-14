@@ -314,65 +314,57 @@ void radio_led_toggle()
 	}
 }
 
-void handle_radio()
+void handle_radio_packet(unsigned char *ptr)
 {
-	if(radio.packet[0] != SYNC_CODE) return;
-
-	uint16_t chksum = get_chksum(radio.packet, PACKET_SIZE - 2);
-
-	if((chksum & 0xff) == radio.packet[PACKET_SIZE - 2] &&
-		((chksum >> 8) & 0xff) == radio.packet[PACKET_SIZE - 1])
-	{
 // packet good
-		radio_led_toggle();
+	radio_led_toggle();
 
 //TRACE2
-//print_hex2(radio.packet[2]);
-		DISABLE_INTERRUPTS
+//print_hex2(*ptr);
+	DISABLE_INTERRUPTS
 
-		truck.radio_timeout = TIMEOUT_RELOAD;
-		truck.throttle_reverse = BIT_IS_CLEAR(radio.packet[2], 0) ? 0 : 1;
-		truck.throttle = BIT_IS_CLEAR(radio.packet[2], 1) ? THROTTLE_MAX : 0;
-		truck.steering = STEERING_MID;
+	truck.radio_timeout = TIMEOUT_RELOAD;
+	truck.throttle_reverse = BIT_IS_CLEAR(*ptr, 0) ? 0 : 1;
+	truck.throttle = BIT_IS_CLEAR(*ptr, 1) ? THROTTLE_MAX : 0;
+	truck.steering = STEERING_MID;
 
 // low speed steering
-		if(BIT_IS_CLEAR(radio.packet[2], 3)) truck.steering = 2;
-		else
-		if(BIT_IS_CLEAR(radio.packet[2], 4)) truck.steering = 3;
-		else
+	if(BIT_IS_CLEAR(*ptr, 3)) truck.steering = 2;
+	else
+	if(BIT_IS_CLEAR(*ptr, 4)) truck.steering = 3;
+	else
 // high speed steering
-		if(BIT_IS_CLEAR(radio.packet[2], 2)) truck.steering = 1;
-		else
-		if(BIT_IS_CLEAR(radio.packet[2], 5)) truck.steering = 4;
+	if(BIT_IS_CLEAR(*ptr, 2)) truck.steering = 1;
+	else
+	if(BIT_IS_CLEAR(*ptr, 5)) truck.steering = 4;
 
-		ENABLE_INTERRUPTS
+	ENABLE_INTERRUPTS
 
 
 /*
- * TRACE2
- * print_text("reverse=");
- * print_number(truck.throttle_reverse);
- * print_text("throttle=");
- * print_number(truck.throttle);
- * print_text("steering=");
- * print_number(truck.steering);
- */
+* TRACE2
+* print_text("reverse=");
+* print_number(truck.throttle_reverse);
+* print_text("throttle=");
+* print_number(truck.throttle);
+* print_text("steering=");
+* print_number(truck.steering);
+*/
 
 
 
 // begin gyro calibration		
-		if(truck.throttle >= THROTTLE_MAX && 
-			!truck.have_gyro_center && 
-			!truck.need_gyro_center)
-		{
+	if(truck.throttle >= THROTTLE_MAX && 
+		!truck.have_gyro_center && 
+		!truck.need_gyro_center)
+	{
 #ifndef I2C_IMU
-			begin_gyro_calibration();
+		begin_gyro_calibration();
 #else
-			calibrate_imu(&truck.imu);
+		calibrate_imu(&truck.imu);
 #endif
 
-		}
-		
+	}
 //TRACE2
 //print_text("mode=");
 //print_number(truck.mode);
@@ -382,6 +374,19 @@ void handle_radio()
 //print_number_nospace(left_motor->power);
 //print_text(",");
 //print_number(right_motor->power);
+}
+
+void handle_radio()
+{
+	if(radio.packet[0] != SYNC_CODE) return;
+
+	uint16_t chksum = get_chksum(radio.packet, PACKET_SIZE - 2);
+
+	if((chksum & 0xff) == radio.packet[PACKET_SIZE - 2] &&
+		((chksum >> 8) & 0xff) == radio.packet[PACKET_SIZE - 1])
+	{
+		handle_radio_packet(radio.packet + 2);
+		
 	}
 }
 
@@ -679,8 +684,8 @@ static void handle_beacon()
 // battery voltage
 			case 0:
 			{
-// get controls
-				if(receive_buf[8])
+// get fully manual controls
+				if(receive_buf[8] == 1)
 				{
 					DISABLE_INTERRUPTS
 					truck.bt_throttle = receive_buf[9];
@@ -713,6 +718,12 @@ static void handle_beacon()
  * print_number(truck.bt_steering);
  */
 
+				}
+				else
+// nested radio packet
+				if(receive_buf[8] == 2)
+				{
+					handle_radio_packet(receive_buf + 10);
 				}
 				else
 				{
@@ -880,6 +891,7 @@ static void handle_beacon()
 				dump_config();
 				break;
 			}
+
 		}
 	}
 }

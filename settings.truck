@@ -18,6 +18,8 @@ VISION_BANDWIDTH 0.10
 # PWM_HZ * seconds
 MANUAL_OVERRIDE_DELAY 50
 
+# wheel diameter in mm
+DIAMETER 110
 # if nonzero, replaces TARGET_REVERSE_RPM
 TARGET_REVERSE_PACE 20.00
 
@@ -27,7 +29,7 @@ POWER_BASE 15
 RPM_SLOPE 0
 
 # PWM positions 0 - 100
-MID_STEERING 46
+MID_STEERING 55
 MID_THROTTLE 46
 # Maximum throttle for bluetooth driving
 MAX_THROTTLE_FWD 40
@@ -48,8 +50,8 @@ AUTO_STEERING 1
 # enable RPM hold
 AUTO_THROTTLE 1
 # maximum analog amount gyros can move while calculating center
-GYRO_CENTER_MAX 100
-MAX_GYRO_DRIFT 0.2
+GYRO_CENTER_MAX 200
+MAX_GYRO_DRIFT 0.4
 # analog reading to radians
 ANGLE_TO_GYRO 450
 # number of PWM cycles for each throttle step

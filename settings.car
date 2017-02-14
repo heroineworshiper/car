@@ -1,6 +1,6 @@
-# settings for truck
+# settings for car
 #            P      I      D     I limit O limit
-STEERING_PID 200    0.5    0     100     100
+STEERING_PID 100    2.0    10    100     100
 THROTTLE_PID 0.1    0.02   0     100     100
 #RPM_PID      1      0.20   1     100     100
 RPM_PID      40     0.50   5     100     100
@@ -18,6 +18,8 @@ VISION_BANDWIDTH 0.10
 # PWM_HZ * seconds
 MANUAL_OVERRIDE_DELAY 50
 
+# wheel diameter in mm
+DIAMETER 105
 # if nonzero, replaces TARGET_REVERSE_RPM
 TARGET_REVERSE_PACE 20.00
 
@@ -27,14 +29,14 @@ POWER_BASE 15
 RPM_SLOPE 0
 
 # PWM positions 0 - 100
-MID_STEERING 46
-MID_THROTTLE 46
+MID_STEERING 50
+MID_THROTTLE 50
 # Maximum throttle for bluetooth driving
 MAX_THROTTLE_FWD 40
 # Reverse throttle
 MAX_THROTTLE_REV 30
 # Starting PWM position in feedback mode
-THROTTLE_BASE 30
+THROTTLE_BASE 40
 THROTTLE_REVERSE_BASE 10
 # Power in W for feedback
 TARGET_POWER 15
@@ -49,9 +51,9 @@ AUTO_STEERING 1
 AUTO_THROTTLE 1
 # maximum analog amount gyros can move while calculating center
 GYRO_CENTER_MAX 100
-MAX_GYRO_DRIFT 0.2
+MAX_GYRO_DRIFT 0.1
 # analog reading to radians
-ANGLE_TO_GYRO 450
+ANGLE_TO_GYRO -450
 # number of PWM cycles for each throttle step
 THROTTLE_RAMP_DELAY 1
 THROTTLE_RAMP_STEP 30

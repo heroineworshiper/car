@@ -1,3 +1,14 @@
+# the leg tester
+AVR_DIR := /root/arduino-1.6.7/hardware/tools/avr/bin/
+AVR_GCC := $(AVR_DIR)avr-gcc
+AVR_CFLAGS := -O2 -mmcu=atmega8
+AVR_LFLAGS := -O2 -mmcu=atmega8 -Wl,--section-start=.text=0x0000 -nostdlib
+AVR_OBJCOPY := $(AVR_DIR)avr-objcopy -j .text -j .data -O ihex
+AVR_DUDE := avrdude -v -patmega8 -cstk500v1 -P/dev/ttyACM0 -b19200
+
+
+
+# other vehicles
 PICMODEL := 18f26k20
 SDCC_PATH := /root/sdcc
 SDCC := $(SDCC_PATH)/bin/sdcc
@@ -44,9 +55,9 @@ ARM_LFLAGS := -mcpu=cortex-m4 \
 	$(ARM_LIBM) $(ARM_LIBC)
 GCC_PI := /opt/pi/bin/bcm2708hardfp-g++
 
-OPENCV_DIR := ../opencv-2.4.11/bin/
-OPENCV_CFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --cflags opencv )
-OPENCV_LFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --libs opencv )
+#OPENCV_DIR := ../opencv-2.4.11/bin/
+#OPENCV_CFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --cflags opencv )
+#OPENCV_LFLAGS := $(shell PKG_CONFIG_PATH=$(OPENCV_DIR)/lib/pkgconfig pkg-config --libs opencv )
 
 OPENCV_PI_DIR := ../opencv-2.4.11.arm/
 OPENCV_PI_CFLAGS := -I$(OPENCV_PI_DIR)/build/ \
@@ -222,9 +233,27 @@ ARM_TRUCK_OBJS := \
 PI_OBJS := \
 	vision.o
 
-#all: speedo.hex interval.hex interval_rec.hex usb_download usb_programmer parse
+
+
+
+
 
 all: truck.bin car_remote.hex
+
+
+
+
+
+leg.hex: leg.c avr_debug.c
+	$(AVR_GCC) $(AVR_CFLAGS) -o leg.o leg.c avr_debug.c
+	$(AVR_GCC) $(AVR_LFLAGS) -o leg.elf leg.o
+	$(AVR_OBJCOPY) leg.elf leg.hex
+
+# program leg.hex
+leg_isp: leg.hex
+	$(AVR_DUDE) -Uflash:w:leg.hex:i -Ulock:w:0x0F:m
+
+
 
 # ODROID version
 #vision: $(VISION_OBJS)
@@ -431,6 +460,8 @@ speedo.o:
 
 speedo.o: speedo.c
 
+tables: tables.c
+	gcc -o tables tables.c -lm
 
 teleprompt.hex: teleprompt.s pic_util.inc
 	gpasm -o teleprompt.hex teleprompt.s

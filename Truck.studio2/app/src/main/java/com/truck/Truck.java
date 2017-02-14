@@ -306,10 +306,35 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) 0;
 		    			beacon[offset++] = (byte) 0;
 // offset = 8
-		    			beacon[offset++] = (byte)(haveControls ? 1 : 0);
-		    			beacon[offset++] = (byte)throttleOut;
-		    			beacon[offset++] = (byte)steeringOut;
-		    			beacon[offset++] = (byte)(needMag ? 1 : 0);
+						if(haveControls)
+						{
+							beacon[offset++] = (byte)1;
+							beacon[offset++] = (byte)throttleOut;
+							beacon[offset++] = (byte)steeringOut;
+							beacon[offset++] = (byte)(needMag ? 1 : 0);
+						}
+						else
+						if(haveControls2)
+						{
+							beacon[offset++] = (byte)2;
+							beacon[offset++] = (byte)0;
+							// nested radio packet
+							beacon[offset++] = (byte)((reverse ? 1 : 0) |
+									(throttleOut2 ? 0 : 2) |
+									(steeringOut2 == FAST_LEFT ? 0 : 4) |
+									(steeringOut2 == SLOW_LEFT ? 0 : 8) |
+									(steeringOut2 == SLOW_RIGHT ? 0 : 16) |
+									(steeringOut2 == FAST_RIGHT ? 0 : 32));
+							beacon[offset++] = (byte)0;
+						}
+						else
+						{
+							beacon[offset++] = (byte)0;
+							beacon[offset++] = (byte)0;
+							beacon[offset++] = (byte)0;
+							beacon[offset++] = (byte)0;
+						}
+
 		    			beacon[offset++] = 0;
 		    			beacon[offset++] = 0;
 	    			}
@@ -594,7 +619,8 @@ public class Truck extends Thread {
     static boolean needConfig = false;
 //    static boolean needSaveConfig = false;
 	static boolean needMag = false;
-   
+
+	// full manual controls
 // throttle to send -127 - 127
     static int throttleOut = 0;
 // throttle received -127 - 127
@@ -603,9 +629,22 @@ public class Truck extends Thread {
     static int steeringOut = 0;
 // steering to receive -127 - 127
 //    static int steeringIn = 0;
-// have control values to send from the drive window
-    static boolean haveControls = false;
-    
+// have fully manual control values to send from the drive window
+	static boolean haveControls = false;
+
+
+	// semi automatic controls
+	static boolean throttleOut2 = false;
+	static int NO_STEERING = 0;
+	static int FAST_LEFT = 1;
+	static int SLOW_LEFT = 2;
+	static int SLOW_RIGHT = 3;
+	static int FAST_RIGHT = 4;
+	static int steeringOut2 = NO_STEERING;
+	static boolean reverse = false;
+	// have semi automatic control values to send from the drive2 window
+	static boolean haveControls2 = false;
+
     
     long lastSentTime;
     boolean initialized = false;

@@ -78,9 +78,12 @@ public class MainActivity extends WindowBase implements OnTouchListener {
     {
         switch (view.getId())
   		{
-        case R.id.drive:
-        	startActivity(new Intent(this, DriveWin.class));
-        	break;
+			case R.id.drive:
+				startActivity(new Intent(this, DriveWin.class));
+				break;
+			case R.id.drive2:
+				startActivity(new Intent(this, DriveWin2.class));
+				break;
         case R.id.settings:
         	startActivity(new Intent(this, SettingsWin.class));
         	break;

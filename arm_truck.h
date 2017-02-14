@@ -18,8 +18,8 @@
 //#define BLUETOOTH_PASSTHROUGH
 
 
-// truck uses MPU6000
-#define I2C_IMU
+// truck uses MPU6000.  Comment this out if car.
+//#define I2C_IMU
 
 // reverse steering servo
 #define REVERSE_STEERING

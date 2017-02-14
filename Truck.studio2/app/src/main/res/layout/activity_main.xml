@@ -43,7 +43,16 @@
                  android:layout_height="wrap_content"
                  android:layout_weight="1"
                  android:onClick="onClick"
-                 android:text="Do Mag" />
+                 android:text="Do Mag"
+                 android:visibility="gone"/>
+            <Button
+                android:id="@+id/drive2"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Auto Drive" />
+
         </TableRow>
  
       

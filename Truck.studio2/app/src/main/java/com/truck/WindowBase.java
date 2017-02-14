@@ -19,9 +19,10 @@ public class WindowBase extends Activity implements Runnable {
         super.onCreate(savedInstanceState);
 // get rid of title bar
 // SDK version 9 is required in the manifest to display a menu
-//        this.requestWindowFeature(Window.FEATURE_NO_TITLE);
-//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-//                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+		this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
     }
 	

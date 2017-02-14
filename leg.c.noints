@@ -1,0 +1,225 @@
+/*
+ * Leg test program
+ *
+ * Copyright (C) 2017 Adam Williams <broadcast at earthling dot net>
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+
+// compile with make leg.hex
+// program with make leg_isp
+
+
+// pin functions
+// 1 - field 3 N
+// 2 - field 3 P
+// 9 - field 1 P
+// 11 - field 2 P
+// 30 - field 1 N
+// 31 - field 2 N
+// 32 - debug TX
+
+
+
+#include "leg.h"
+#include "avr_debug.h"
+
+
+const uint8_t sin_table[] = {
+    0x00, 0x06, 0x0c, 0x12, 0x18, 0x1f, 0x25, 0x2b, 0x31, 0x37, 0x3d, 0x44, 0x4a, 0x4f, 0x55, 0x5b, 
+    0x61, 0x67, 0x6d, 0x72, 0x78, 0x7d, 0x83, 0x88, 0x8d, 0x92, 0x97, 0x9c, 0xa1, 0xa6, 0xab, 0xaf, 
+    0xb4, 0xb8, 0xbc, 0xc1, 0xc5, 0xc9, 0xcc, 0xd0, 0xd4, 0xd7, 0xda, 0xdd, 0xe0, 0xe3, 0xe6, 0xe9, 
+    0xeb, 0xed, 0xf0, 0xf2, 0xf4, 0xf5, 0xf7, 0xf8, 0xfa, 0xfb, 0xfc, 0xfd, 0xfd, 0xfe, 0xfe, 0xfe, 
+    0xff, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfc, 0xfb, 0xfa, 0xf8, 0xf7, 0xf5, 0xf4, 0xf2, 0xf0, 0xed, 
+    0xeb, 0xe9, 0xe6, 0xe3, 0xe0, 0xdd, 0xda, 0xd7, 0xd4, 0xd0, 0xcc, 0xc9, 0xc5, 0xc1, 0xbc, 0xb8, 
+    0xb4, 0xaf, 0xab, 0xa6, 0xa1, 0x9c, 0x97, 0x92, 0x8d, 0x88, 0x83, 0x7d, 0x78, 0x72, 0x6d, 0x67, 
+    0x61, 0x5b, 0x55, 0x4f, 0x4a, 0x44, 0x3d, 0x37, 0x31, 0x2b, 0x25, 0x1f, 0x18, 0x12, 0x0c, 0x06
+};
+
+#define SIN_TABLE_SIZE (sizeof(sin_table))
+// pins for the FETs
+#define A_P_FET	5
+#define B_P_FET	7
+#define C_P_FET	4
+#define A_N_FET	0
+#define B_N_FET	1
+#define C_N_FET	3
+
+
+
+// the motor phase 0 - 255
+uint8_t phase;
+// the power 0 - 255
+uint8_t power;
+
+// pwm values derived from the motor phase 0 - 255
+uint8_t pwm1;
+uint8_t pwm2;
+uint8_t pwm3;
+
+
+
+void phase_to_pwm()
+{
+	pwm1 = (uint16_t)sin_table[(uint8_t)(phase)] * power / 255;
+	pwm2 = (uint16_t)sin_table[(uint8_t)(phase + 85)] * power / 255;
+	pwm3 = (uint16_t)sin_table[(uint8_t)(phase + 170)] * power / 255;
+}
+
+
+void jump()
+{
+	int counter = 0;
+
+	phase = 0;
+	phase_to_pwm();
+	while(counter < 500)
+	{
+// handle the timer overflow
+// turn off the N's
+		if(bitIsSet(TIFR, TOV2))
+		{
+			bitSet(TIFR, TOV2);
+
+// turn off the N's
+			PORTD = 0;
+
+			delayMicroseconds(8);
+// turn on the P's
+			PORTD = (1 << A_P_FET) |
+				(1 << B_P_FET) |
+				(1 << C_P_FET);
+
+			counter++;
+//			phase += 4;
+//			phase_to_pwm();
+		}
+
+
+// handle the output compare
+		uint8_t current_time = TCNT2;
+		uint8_t new_d = 0;
+		if(current_time > pwm1)
+		{
+			bitClear(PORTD, A_P_FET);
+			new_d |= (1 << A_N_FET);
+		}
+
+		if(current_time > pwm2)
+		{
+			bitClear(PORTD, B_P_FET);
+			new_d |= (1 << B_N_FET);
+		}
+
+		if(current_time > pwm3)
+		{
+			bitClear(PORTD, C_P_FET);
+			new_d |= (1 << C_N_FET);
+		}
+
+		if(new_d > 0)
+		{
+			delayMicroseconds(8);
+			PORTD |= new_d;
+		}
+	}
+
+	PORTD = 0;
+}
+
+
+int main()
+{
+// disable watchdog.  Disabled by default.
+//	WDTCR = (1 << 4) | (1 << 3);
+//	WDTCR = (1 << 3) | (1);
+	
+
+
+
+	
+
+	init_serial();
+	print_text("****\nWelcome to the leg controller\n");
+	flush_serial();
+
+// set up the FETs
+	bitClear(PORTD, A_N_FET);
+	bitClear(PORTD, B_N_FET);
+	bitClear(PORTD, C_N_FET);
+	bitClear(PORTD, A_P_FET);
+	bitClear(PORTD, B_P_FET);
+	bitClear(PORTD, C_P_FET);
+	bitSet(DDRD, A_N_FET);
+	bitSet(DDRD, B_N_FET);
+	bitSet(DDRD, C_N_FET);
+	bitSet(DDRD, A_P_FET);
+	bitSet(DDRD, B_P_FET);
+	bitSet(DDRD, C_P_FET);
+	power = 255;
+	phase = 0;
+
+	phase_to_pwm();
+
+// delay
+	int i;
+	for(i = 0; i < 1000; i++)
+	{
+		delayMicroseconds(1000);
+	}
+
+
+// set the prescaler
+	TCCR2 = 0x3;
+// no interrupts
+	TIMSK = 0;
+	
+	while(1)
+	{
+		PORTD = 0;
+		for(i = 0; i < 1000; i++)
+		{
+			delayMicroseconds(1000);
+		}
+
+		
+		jump();
+	}
+	
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
