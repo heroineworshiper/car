@@ -5,7 +5,52 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 #include "arm_math.h"
+#include "arm_nav.h"
+#include "arm_imu.h"
 
+
+// select the vehicle
+//#define IS_CAR
+
+// all vehicles use brushless motors
+#define USE_BRUSHLESS
+
+// external navigation using a raspberry pi
+//#define SPI_NAV
+// external navigation using an Odroid
+//#define UART_NAV
+// pass bluetooth to debug port
+//#define BLUETOOTH_PASSTHROUGH
+
+
+#ifndef IS_CAR
+
+// truck uses MPU6000.  Car uses analog gyro.  Comment this out if car.
+	#define I2C_IMU
+// truck's ESC pin
+	#define ESC_PIN GPIO_Pin_6
+// reverse steering servo on truck
+	#define REVERSE_STEERING
+
+#else  // !IS_CAR
+// car's ESC pin burned out.  Use a different pin in the same port.
+	#define ESC_PIN GPIO_Pin_5
+
+#endif // IS_CAR
+
+
+
+
+
+
+
+// gyro update rate
+#ifndef I2C_IMU
+#define NAV_HZ 320
+#else // !I2C_IMU
+//#define NAV_HZ 1100
+#define NAV_HZ 366
+#endif // I2C_IMU
 
 // timer for packet flashing
 #define LED_DELAY2 2
@@ -69,6 +114,7 @@ typedef struct
 	int led_counter;
 // throttle starts at this level when using feedback
 	int throttle_base;
+	int throttle_reverse_base;
 	int throttle_state;
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
@@ -78,7 +124,13 @@ typedef struct
 	pid_t heading_pid;
 	pid_t throttle_pid;
 	pid_t rpm_pid;
+// vanishing point feedback
+// P=1/16deg
 	pid_t path_pid;
+// side of path feedback
+// P=1/16deg
+	pid_t side_pid;
+	imu_t imu;
 
 	int battery;
 	int battery_accum;
@@ -94,8 +146,16 @@ typedef struct
 // Make the interrupt handler not copy the radio to the steering PWM
 	int writing_settings;
 	int motor_timer;
+// timeout for loss of bluetooth
 	int bt_timeout;
+// timeout for loss of 433Mhz radio
 	int radio_timeout;
+// timeout for end of heading hold, to avoid burning out the servo
+	int steering_timeout;
+// maximum analog amount gyros can move while calculating center
+	int gyro_center_max;
+	float gyro_center;
+	float prev_gyro_center;
 	int need_gyro_center;
 	int gyro_center_accum;
 	int gyro_center_count;
@@ -107,6 +167,8 @@ typedef struct
 	float max_gyro_drift;
 	int ref_accum;
 	int ref_count;
+
+
 	int current_accum;
 	int current_count;
 // ADC value of current based on voltage drop
@@ -121,10 +183,15 @@ typedef struct
 	float power_base;
 // power above & below power_base makes the RPM fall & rise by this amount per watt
 	float rpm_slope;
+
+
+
 // RPM feedback mode only
 	int target_rpm;
 // RPM feedback after rolling back for power
 	int target_rpm2;
+// reverse RPM
+	int target_reverse_rpm;
 // result of PID controller
 	float throttle_feedback;
 // currently sampling the ref pin
@@ -133,10 +200,7 @@ typedef struct
 	float ref;
 // the analog gyro reading
 	float gyro;
-// maximum analog amount gyros can move while calculating center
-	int gyro_center_max;
-	float gyro_center;
-	float prev_gyro_center;
+// conversion factor for the analog gyro
 	int angle_to_gyro;
 // throttle magnitude 0 - 100
 	int max_throttle_fwd;
@@ -154,8 +218,9 @@ typedef struct
 	int throttle_ramp_step;
 // PWM cycles between I steps
 	int pid_downsample;
-// in radians
+// purely gyro derived heading when not using mag, in radians
 	float current_heading;
+	float target_heading;
 // steering with throttle
 // number of PWM cycles for each steering step
 	int steering_step_delay;
@@ -169,6 +234,7 @@ typedef struct
 // enable RPM feedback
 	int auto_throttle;
 	int headlights_on;
+	int need_steering_feedback;
 
 	int rpm_time;
 	int rpm_status;
@@ -184,15 +250,33 @@ typedef struct
     uint32_t spi_buffer;
 #define SPI_SYNC_CODE 0
 #define SPI_PACKET 1
-    int path_center;
-	int path_x;
+
+// enable the ak8975
+	int enable_mag;
+// enable path following
+	int enable_vision;
+// where in the camera view the vanishing point should be 0 - 255
+    int vanish_center;
+// where in the camera view the bottom of the center line should be 0 - 255
+	int bottom_center;
+// raw data from vision program 0 - 255
+	int vanish_x;
+	int vanish_y;
+	int bottom_x;
+	float vanish_lowpass;
+	float bottom_lowpass;
+	float vision_bandwidth;
 	derivative_t path_dx;
 	int path_dx_size;
+// delay between manual steering & path following
+	int manual_override_delay;
+	int manual_override_counter;
 	
 	int throttle_time;
 	int debug_counter;
 	
 	bluetooth_t bluetooth;
+	nav_t nav;
 } truck_t;
 
 extern truck_t truck;

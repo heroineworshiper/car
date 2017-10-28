@@ -69,6 +69,7 @@
 #define DEBUG_GPIO GPIOB
 
 #ifdef USE_BRUSHLESS
+// tachometer
 	#define RPM_PIN GPIO_Pin_7
 	#define RPM_GPIO GPIOA
 #else // USE_BRUSHLESS
@@ -120,23 +121,10 @@
 
 #define MAX_PERIOD 65535
 
-//#define DO_THROTTLE_TEST
-#define THROTTLE_POWER1 10
-#define THROTTLE_RPM2 350
-#define POWER_STEP 5
-#define THROTTLE_DELAY 5
 
-//#define DO_RPM_TEST
-#define RPM1 300
-#define RPM2 700
 
-//#define POWER_FEEDBACK
 #define RPM_FEEDBACK
 
-//#define DO_PWM_TEST
-#define PWM1 0
-#define PWM2 20
-#define TEST_TIME (5 * TIMER_HZ * 60)
 
 truck_t truck;
 
@@ -397,14 +385,6 @@ void dump_config()
 	print_number(truck.mid_steering);
 	print_text("\nmid_throttle=");
 	print_number(truck.mid_throttle);
-	print_text("\nmax_throttle_fwd=");
-	print_number(truck.max_throttle_fwd);
-	print_text("\nmax_throttle_rev=");
-	print_number(truck.max_throttle_rev);
-	print_text("\nthrottle_base=");
-	print_number(truck.throttle_base);
-	print_text("\nthrottle_reverse_base=");
-	print_number(truck.throttle_reverse_base);
 	print_text("\nmax_steering=");
 	print_number(truck.max_steering);
 	print_text("\nmin_steering=");
@@ -423,10 +403,32 @@ void dump_config()
 	print_float(truck.max_gyro_drift);
 	print_text("\nangle_to_gyro=");
 	print_number(truck.angle_to_gyro);
+	print_text("\ngyro_bandwidth=");
+	print_number((int)(truck.imu.gyro_bandwidth * 255));
+
+
+	print_text("\nmin_throttle_fwd=");
+	print_number(truck.min_throttle_fwd);
+	print_text("\nmin_throttle_rev=");
+	print_number(truck.min_throttle_rev);
+
+	print_text("\nmax_throttle_fwd=");
+	print_number(truck.max_throttle_fwd);
+	print_text("\nmax_throttle_rev=");
+	print_number(truck.max_throttle_rev);
+
+	print_text("\nthrottle_base=");
+	print_number(truck.throttle_base);
+	print_text("\nthrottle_reverse_base=");
+	print_number(truck.throttle_reverse_base);
+
 	print_text("\nthrottle_ramp_delay=");
 	print_number(truck.throttle_ramp_delay);
 	print_text("\nthrottle_ramp_step=");
 	print_number(truck.throttle_ramp_step);
+
+
+
 	print_text("\npid_downsample=");
 	print_number(truck.pid_downsample);
 	print_text("\nsteering_step_delay=");
@@ -499,10 +501,16 @@ int read_config_packet(const unsigned char *buffer)
 
 	truck.mid_steering = buffer[offset++];
 	truck.mid_throttle = buffer[offset++];
+	
 	truck.max_throttle_fwd = buffer[offset++];
 	truck.max_throttle_rev = buffer[offset++];
+	
+	truck.min_throttle_fwd = buffer[offset++];
+	truck.min_throttle_rev = buffer[offset++];
+	
 	truck.throttle_base = buffer[offset++];
 	truck.throttle_reverse_base = buffer[offset++];
+	
 	truck.max_steering = buffer[offset++];
 	truck.min_steering = buffer[offset++];
 	truck.auto_steering = buffer[offset++];
@@ -513,6 +521,10 @@ int read_config_packet(const unsigned char *buffer)
 	truck.gyro_center_max = READ_UINT16(buffer, offset);
 	truck.max_gyro_drift = (float)READ_UINT16(buffer, offset) / 256;
 	truck.angle_to_gyro = READ_INT16(buffer, offset);
+	truck.imu.gyro_bandwidth = (float)buffer[offset++] / 0xff;
+
+
+
 	truck.throttle_ramp_delay = READ_UINT16(buffer, offset);
 	truck.throttle_ramp_step = READ_UINT16(buffer, offset);
 	truck.pid_downsample = READ_UINT16(buffer, offset);
@@ -1118,7 +1130,7 @@ void handle_analog()
 
 #ifndef I2C_IMU
 
-// Gyro
+// Analog gyro
 	if((ADC2->SR & ADC_FLAG_EOC))
 	{
 		truck.gyro_accum += ADC2->DR;
@@ -1234,73 +1246,30 @@ void handle_analog()
 
 	if((ADC3->SR & ADC_FLAG_EOC))
 	{
-		if(truck.sample_ref)
+		truck.ref_accum += ADC3->DR;
+
+		ADC_SoftwareStartConv(ADC3);
+
+		truck.ref_count++;
+		if(truck.ref_count >= GYRO_OVERSAMPLE)
 		{
-			truck.ref_accum += ADC3->DR;
+			DISABLE_INTERRUPTS
+			truck.ref = (float)truck.ref_accum / truck.ref_count;
+			ENABLE_INTERRUPTS
 
-			ADC_RegularChannelConfig(ADC3, 
-				ADC_Channel_13, 
-				1, 
-				ADC_SampleTime_480Cycles);
-			ADC_SoftwareStartConv(ADC3);
-
-			truck.sample_ref = 0;
-			truck.ref_count++;
-			if(truck.ref_count >= GYRO_OVERSAMPLE)
-			{
-				DISABLE_INTERRUPTS
-				truck.ref = (float)truck.ref_accum / truck.ref_count;
-				ENABLE_INTERRUPTS
-
-				truck.ref_count = 0;
-				truck.ref_accum = 0;
+			truck.ref_count = 0;
+			truck.ref_accum = 0;
 
 
-	/*
-	 * 			truck.debug_counter++;
-	 * 			if(truck.debug_counter >= 128)
-	 * 			{
-	 * 				truck.debug_counter = 0;
-	 * 				TRACE2
-	 * 				print_float(truck.ref);
-	 * 			}
-	 */
-			}
-		}
-		else
-		{
-			truck.current_accum += ADC3->DR;
-			ADC_RegularChannelConfig(ADC3, 
-				ADC_Channel_2, 
-				1, 
-				ADC_SampleTime_480Cycles);
-			ADC_SoftwareStartConv(ADC3);
-			truck.sample_ref = 1;
-			truck.current_count++;
-
-			if(truck.current_count >= CURRENT_OVERSAMPLE)
-			{
-				truck.raw_current = (float)truck.current_accum / truck.current_count;
-
-				DISABLE_INTERRUPTS
-//				truck.current = (truck.raw_current - CURRENT_BASE) / CURRENT_SCALE;
-// battery_voltage is only a few hundreths off
-//				truck.power = truck.current * truck.battery_voltage;
-// Not connected
-				truck.current = 0;
-				truck.power = 0;
-				ENABLE_INTERRUPTS
-
-				truck.current_accum = 0;
-				truck.current_count = 0;
-
-//				TRACE2
-//				print_float(truck.current);
-//				print_float(truck.battery_voltage);
-//				print_float(truck.power);
-//				print_number(truck.target_rpm2);
-//				print_float(truck.throttle_feedback);
-			}
+/*
+ * 			truck.debug_counter++;
+ * 			if(truck.debug_counter >= 128)
+ * 			{
+ * 				truck.debug_counter = 0;
+ * 				TRACE2
+ * 				print_float(truck.ref);
+ * 			}
+ */
 		}
 	}
 #endif //  !I2C_IMU
@@ -1378,10 +1347,12 @@ void init_analog()
 
 
 #ifndef I2C_IMU
+// The gyro channel
 	ADC_RegularChannelConfig(ADC2, 
 		ADC_Channel_1, 
 		1, 
 		ADC_SampleTime_480Cycles);
+// The ref voltage channel
 	ADC_RegularChannelConfig(ADC3, 
 		ADC_Channel_2, 
 		1, 
@@ -1393,7 +1364,6 @@ void init_analog()
 #endif
 
 	
-	truck.sample_ref = 1;
 
 }
 
@@ -1407,7 +1377,7 @@ void TIM2_IRQHandler()
 	{
 		TIM2->SR = ~TIM_FLAG_Update;
 #ifdef USE_BRUSHLESS
-		SET_PIN(GPIOA, GPIO_Pin_6);
+		SET_PIN(GPIOA, ESC_PIN);
 #endif
 		SET_PIN(GPIOC, GPIO_Pin_4);
 
@@ -1452,13 +1422,24 @@ void TIM2_IRQHandler()
 			if((truck.throttle > 0 && truck.throttle2 <= 0) ||
 				(truck.throttle < 0 && truck.throttle2 >= 0))
 			{
-#ifdef DO_THROTTLE_TEST
-				truck.target_power = THROTTLE_POWER1;
-				truck.throttle_time = truck.timer_high;
-#endif
 				truck.throttle_state = THROTTLE_RAMP;
 				truck.throttle_pwm = mid_throttle_pwm;
 				truck.current_heading = 0;
+
+
+				if(truck.throttle_reverse)
+				{
+					truck.throttle_pwm += (MAX_PWM - MIN_PWM) / 2 *
+						truck.min_throttle_rev / 
+						100;
+				}
+				else
+				{
+					truck.throttle_pwm -= (MAX_PWM - MIN_PWM) / 2 *
+						truck.min_throttle_fwd / 
+						100;
+				}
+
 
 #ifdef I2C_IMU
 				if(truck.enable_mag)
@@ -1473,7 +1454,6 @@ void TIM2_IRQHandler()
 
 				truck.throttle_ramp_counter = 0;
 				reset_pid(&truck.heading_pid);
-				reset_pid(&truck.throttle_pid);
 				reset_pid(&truck.rpm_pid);
 				reset_pid(&truck.path_pid);
 				reset_pid(&truck.side_pid);
@@ -1563,7 +1543,8 @@ void TIM2_IRQHandler()
 // no bluetooth throttle
 					truck.throttle_pwm = mid_throttle_pwm;
 				}
-				
+
+
 				truck.steering_pwm = mid_steering_pwm +
 					max_steering_magnitude *
 					truck.bt_steering / 
@@ -1573,19 +1554,6 @@ void TIM2_IRQHandler()
 // stick controller
 			if(truck.throttle > 0)
 			{
-#ifdef DO_THROTTLE_TEST
-				need_steering_feedback = 0;
-				if(truck.timer_high - truck.throttle_time >= 
-					THROTTLE_DELAY * TIMER_HZ)
-				{
-					if(truck.rpm < THROTTLE_RPM2)
-					{
-						truck.target_power += POWER_STEP;
-					}
-
-					truck.throttle_time = truck.timer_high;
-				}
-#endif
 
 				truck.steering_timeout = STEERING_RELOAD;
 
@@ -1645,9 +1613,6 @@ void TIM2_IRQHandler()
 							{
 								truck.throttle_state = THROTTLE_WAIT;
 								truck.start_time = truck.timer_high;
-	#ifdef DO_RPM_TEST
-								truck.target_rpm = RPM1;
-	#endif
 							}
 
 							truck.throttle_pwm = MAX(mid_throttle_pwm -
@@ -1656,9 +1621,9 @@ void TIM2_IRQHandler()
 						}
 					}
 
-TRACE2
-print_text("throttle_pwm=");
-print_number(truck.throttle_pwm);
+// TRACE2
+// print_text("throttle_pwm=");
+// print_number(truck.throttle_pwm);
 
 				}
 				else
@@ -1674,48 +1639,22 @@ print_number(truck.throttle_pwm);
 				else
 // THROTTLE_AUTO
 				{
-#ifdef POWER_FEEDBACK
-// forward based on power feedback
-// scale target power based on voltage & target power
-					truck.throttle_feedback = do_pid(&truck.throttle_pid,
-						truck.target_power - truck.power,
-						0);
-
-					truck.throttle_pwm = mid_throttle_pwm - 
-						(MAX_PWM - MIN_PWM) / 2 *
-						(throttle_base + truck.throttle_feedback) /
-						100;
-#else // POWER_FEEDBACK
 					if(truck.auto_throttle)
 					{
+						int target_rpm;
 
 
-#ifdef DO_RPM_TEST
-						truck.target_rpm = RPM1 + 
-							(RPM2 - RPM1) *
-							(truck.timer_high - truck.start_time) /
-							(60 * TIMER_HZ);
-#endif
-
-// adjust RPM for power
 						if(truck.throttle_reverse)
 						{
-							truck.target_rpm2 = truck.target_reverse_rpm;
+							target_rpm = truck.target_reverse_rpm;
 						}
 						else
 						{
-							truck.target_rpm2 = truck.target_rpm;
+							target_rpm = truck.target_rpm;
 						}
 						
-						if(truck.power > truck.power_base)
-						{
-							truck.target_rpm2 += (truck.power - truck.power_base) *
-								truck.rpm_slope;
-							truck.target_rpm2 = MAX(0, truck.target_rpm2);
-						}
-
 						truck.throttle_feedback = do_pid(&truck.rpm_pid,
-							(float)(truck.target_rpm2 - truck.rpm) / 1000,
+							(float)(target_rpm - truck.rpm) / 1000,
 							-get_derivative(&truck.rpm_dv) / 1000);
 
 						if(truck.throttle_reverse)
@@ -1724,6 +1663,11 @@ print_number(truck.throttle_pwm);
 								(MAX_PWM - MIN_PWM) / 2 *
 								(throttle_base + truck.throttle_feedback) /
 								100;
+// don't go into braking region
+							if(truck.throttle_pwm < mid_throttle_pwm)
+							{
+								truck.throttle_pwm = mid_throttle_pwm;
+							}
 						}
 						else
 						{
@@ -1731,15 +1675,12 @@ print_number(truck.throttle_pwm);
 								(MAX_PWM - MIN_PWM) / 2 *
 								(throttle_base + truck.throttle_feedback) /
 								100;
+// don't go into braking region
+							if(truck.throttle_pwm > mid_throttle_pwm)
+							{
+								truck.throttle_pwm = mid_throttle_pwm;
+							}
 						}
-#ifdef DO_PWM_TEST
-						truck.throttle_pwm = mid_throttle_pwm - 
-							(MAX_PWM - MIN_PWM) / 2 *
-							(PWM2 - PWM1) *
-							(truck.timer_high - truck.start_time) /
-							TEST_TIME / 
-							100;
-#endif
 					}
 					else
 					{
@@ -1759,7 +1700,6 @@ print_number(truck.throttle_pwm);
 								100;
 						}
 					}
-#endif // !POWER_FEEDBACK
 				}
 
 // steering with throttle
@@ -1839,55 +1779,6 @@ print_number(truck.throttle_pwm);
 							truck.need_steering_feedback = 0;
 							truck.steering_pwm = mid_steering_pwm;
 						}
-						else
-						if(truck.enable_vision)
-						{
-// path following
-							if(truck.manual_override_counter <= 0)
-							{
-
-//  								truck.steering_step_counter++;
-//  								if(truck.steering_step_counter >= truck.steering_step_delay)
-//  								{
-
-  									truck.steering_step_counter = 0;
-// amount of offset required to steer towards vanishing point, in degrees
-									float heading_offset = do_pid(&truck.path_pid,
-										truck.vanish_lowpass - truck.vanish_center,
-										0);
-
-// add offset to stay on right side
-									heading_offset += do_pid(&truck.side_pid,
-										truck.bottom_lowpass - truck.bottom_center,
-										0);
-
-// convert to absolute heading in rads
-									float path_heading = TO_RAD(heading_offset) +
-										truck.current_heading;
-
-
-									float angle_change = get_angle_change(truck.target_heading, path_heading);
-									truck.target_heading = fix_angle(path_heading);
-
-
-
-
-
-// truck.debug_counter++;
-// if(truck.debug_counter >= 16)
-// {
-// TRACE2
-// print_float(TO_DEG(truck.current_heading));
-// print_float(TO_DEG(truck.target_heading));
-// }
-
-// 								}
-							}
-							else
-							{
-								truck.manual_override_counter--;
-							}
-						}
 						break;
 				}
 
@@ -1934,19 +1825,26 @@ print_number(truck.throttle_pwm);
 
 			}
 
-truck.debug_counter++;
-if(truck.debug_counter >= 16)
-{
-truck.debug_counter = 0;
-TRACE2
-print_text("need_steering_feedback=");
-print_float(truck.need_steering_feedback);
+/*
+ * truck.debug_counter++;
+ * if(truck.debug_counter >= 10)
+ * {
+ * truck.debug_counter = 0;
+ * TRACE2
+ * print_text("throttle_state=");
+ * print_number(truck.throttle_state);
+ * print_text(" throttle_pwm=");
+ * print_number(truck.throttle_pwm);
+ * }
+ */
+
+// print_text("need_steering_feedback=");
+// print_float(truck.need_steering_feedback);
 
 // print_text("current_heading=");
 // print_float(truck.current_heading);
 // print_text("target_heading=");
 // print_float(truck.target_heading);
-}
 				if(truck.need_steering_feedback)
 				{
 					if(truck.steering_timeout > 0)
@@ -2026,7 +1924,7 @@ print_float(truck.need_steering_feedback);
 	{
 		TIM2->SR = ~TIM_FLAG_CC1;
 #ifdef USE_BRUSHLESS
-		CLEAR_PIN(GPIOA, GPIO_Pin_6);
+		CLEAR_PIN(GPIOA, ESC_PIN);
 #endif
 	}
 
@@ -2112,7 +2010,7 @@ void init_pwm()
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
 #ifdef USE_BRUSHLESS
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+	GPIO_InitStructure.GPIO_Pin = ESC_PIN;
 	GPIO_ResetBits(GPIOA, GPIO_InitStructure.GPIO_Pin);
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 #endif
@@ -2138,7 +2036,7 @@ void init_pwm()
   	TIM_Cmd(TIM2, ENABLE);
 
 #ifndef USE_BRUSHLESS
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+	GPIO_InitStructure.GPIO_Pin = ESC_PIN;
 	GPIO_InitStructure.GPIO_Pin |= GPIO_Pin_7;
 
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -2206,23 +2104,6 @@ void handle_rpm()
 		truck.rpm_counter = 0;
 		ENABLE_INTERRUPTS
 
-#ifdef DO_RPM_TEST
-		TRACE
-		print_number(truck.target_rpm);
-		print_number(truck.rpm);
-		if(truck.rpm > 10)
-			print_float((float)60 * 1609363 / (float)(truck.rpm * 110 * 3.141 * 60));
-		else
-			print_float(0);
-#endif
-
-#ifdef DO_PWM_TEST
-		TRACE
-		print_number(TIM3->CCR1);
-		print_number(TIM3->CCR2);
-		print_number(truck.throttle_pwm);
-		print_number(truck.rpm);
-#endif
 
 		update_derivative(&truck.rpm_dv, truck.rpm);
 
@@ -2406,9 +2287,15 @@ int main(void)
 	truck.angle_to_gyro = 450;
 	truck.throttle_ramp_delay = 0;
 	truck.throttle_ramp_step = 1;
-	truck.target_power = 15.0f;
-	truck.power_base = 20.0f;
-	truck.rpm_slope = 0;
+	
+	
+	
+//	truck.target_power = 15.0f;
+//	truck.power_base = 20.0f;
+//	truck.rpm_slope = 0;
+	
+	
+	
 	truck.target_rpm = 500;
 	truck.pid_downsample = 1;
 	truck.steering_step_delay = 0;
@@ -2425,13 +2312,6 @@ int main(void)
 		100, // I limit
 		100); // O limit
 
-// power error -> throttle
-	init_pid(&truck.throttle_pid, 
-		0, // P gain
-		1.0f, // I gain	
-		0, // D gain
-		100, // I limit
-		100); // O limit
 
 // RPM error -> throttle
 	init_pid(&truck.rpm_pid, 
@@ -2529,6 +2409,8 @@ int main(void)
 //	GPIO_Init(HEADLIGHT_GPIO, &GPIO_InitStructure);
 	
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+// ESC is connected via a diode to prevent explosion if it's plugged into a servo signal
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
 	GPIO_InitStructure.GPIO_Pin = RPM_PIN;
 	GPIO_Init(RPM_GPIO, &GPIO_InitStructure);
 	truck.rpm_time = truck.timer_high;

@@ -28,15 +28,19 @@
 
 
 
+void (*volatile uart_state)();
+uint8_t current_bit;
+uint8_t uart_data;
+
+#define UART_PERIOD (-1600) // 9600
+//#define UART_PERIOD (-800) // 19200
 
 // only 1024 bytes of SRAM on the ATMega8
 #define UART_SIZE 128
 uint8_t uart_buffer[UART_SIZE];
 int uart_used = 0;
-int uart_write_ptr = 0;
-int uart_read_ptr = 0;
-int have_uart_in = 0;
-uint8_t uart_in = 0;
+volatile uint8_t have_uart_in = 0;
+volatile uint8_t uart_in = 0;
 
 void print_text(const char *string)
 {
@@ -45,9 +49,7 @@ void print_text(const char *string)
 	for(i = 0; uart_used < UART_SIZE && string[i] != 0; i++)
 	{
 //bitClear(TX_PORT, TX_PIN);
-		uart_buffer[uart_write_ptr++] = string[i];
-		uart_used++;
-		if(uart_write_ptr >= UART_SIZE) uart_write_ptr = 0;
+		uart_buffer[uart_used++] = string[i];
 	}
 }
 
@@ -282,12 +284,77 @@ static void uart_delay2()
 }
 
 
+void stop_bit_tx()
+{
+	bitSet(TX_PORT, TX_PIN);
+// clear the start bit interrupt
+	bitSet(GIFR, INTF0);
+// disable the data interrupt
+	bitClear(TIMSK, TOIE1);
+// enable start bit interrupt
+	bitSet(GICR, INT0);
+	uart_state = 0;
+}
+
+void data_bit_tx()
+{
+	if(uart_data & 0x1)
+	{
+		bitSet(TX_PORT, TX_PIN);
+	}
+	else
+	{
+		bitClear(TX_PORT, TX_PIN);
+	}
+	uart_data >>= 1;
+	current_bit++;
+	if(current_bit >= 8)
+	{
+		uart_state = stop_bit_tx;
+	}
+	TCNT1H = UART_PERIOD >> 8;
+	TCNT1L = UART_PERIOD & 0xff;
+}
+
+void start_bit_tx()
+{
+// send start bit
+	bitClear(TX_PORT, TX_PIN);
+	current_bit = 0;
+	TCNT1H = UART_PERIOD >> 8;
+	TCNT1L = UART_PERIOD & 0xff;
+	uart_state = data_bit_tx;
+}
+
+
 // send RS232 byte
 void send_byte(unsigned char x)
 {
 // disable interrupts
 //	cli();
+	bitSet(TX_PORT, TX_PIN);
 	
+	uart_data = x;
+// disable start bit interrupt
+	bitClear(GICR, INT0);
+	uart_state = start_bit_tx;
+	TCNT1H = UART_PERIOD >> 8;
+	TCNT1L = UART_PERIOD & 0xff;
+// clear the data bit interrupt
+	bitSet(TIFR, TOV1);
+// enable data bit clock & interrupt
+// no prescaler
+	TCCR1B = 0x1;
+	bitSet(TIMSK, TOIE1);
+
+
+	while(uart_state != 0)
+	{
+	}
+
+
+
+#if 0
 // start bit
 	bitClear(TX_PORT, TX_PIN);
 	uart_delay();
@@ -312,6 +379,8 @@ void send_byte(unsigned char x)
 
 // need a stop bit
 	uart_delay();
+#endif
+
 
 // enable interrupts
 //	sei();
@@ -319,47 +388,124 @@ void send_byte(unsigned char x)
 
 
 // handle input
-void handle_serial()
-{
-// got a character
-	if(bitIsClear(RX_INPORT, RX_PIN))
-	{
-// very important to wait for the middle of the start bit
-		uart_delay2();
-
-		uint8_t i;
-		for(i = 0; i < 8; i++)
-		{
-			uart_in >>= 1;
-			uart_delay();
-			if(bitIsSet(RX_INPORT, RX_PIN))
-			{
-				uart_in |= 0x80;
-			}
-		}
-
-// wait for the end of the last bit
-		uart_delay();
-
-		have_uart_in = 1;
-	}
-	
-	
-	
-}
+// void handle_serial()
+// {
+// // got a character
+// 	if(bitIsClear(RX_INPORT, RX_PIN))
+// 	{
+// // very important to wait for the middle of the start bit
+// 		uart_delay2();
+// 
+// 		uint8_t i;
+// 		for(i = 0; i < 8; i++)
+// 		{
+// 			uart_in >>= 1;
+// 			uart_delay();
+// 			if(bitIsSet(RX_INPORT, RX_PIN))
+// 			{
+// 				uart_in |= 0x80;
+// 			}
+// 		}
+// 
+// // wait for the end of the last bit
+// 		uart_delay();
+// 
+// 		have_uart_in = 1;
+// 	}	
+// }
 
 // handle output
 void flush_serial()
 {
-	while(uart_used > 0)
+	uint8_t i;
+	for(i = 0; i < uart_used; i++)
 	{
-		send_byte(uart_buffer[uart_read_ptr++]);
-		if(uart_read_ptr >= UART_SIZE) uart_read_ptr = 0; 
-		uart_used--; 
+		send_byte(uart_buffer[i]);
 	}
+
+	uart_used = 0; 
 }
 
 
+
+
+
+
+
+
+
+// wait for end of last bit
+void stop_bit()
+{
+//bitToggle(TX_PORT, TX_PIN); // DEBUG
+// clear the start bit interrupt
+	bitSet(GIFR, INTF0);
+// disable the data interrupt
+	bitClear(TIMSK, TOIE1);
+// enable start bit interrupt
+	bitSet(GICR, INT0);
+
+	uart_in = uart_data;
+	have_uart_in = 1;
+	uart_state = 0;
+}
+
+void data_bits()
+{
+//bitToggle(TX_PORT, TX_PIN); // DEBUG
+	uart_data >>= 1;
+	if(bitIsSet(RX_INPORT, RX_PIN))
+	{
+		uart_data |= 0x80;
+	}
+	current_bit++;
+	TCNT1H = (UART_PERIOD >> 8);
+	TCNT1L = (UART_PERIOD & 0xff);
+
+	if(current_bit >= 8)
+	{
+		uart_state = stop_bit;
+	}
+}
+
+void start_bit()
+{
+//bitToggle(TX_PORT, TX_PIN); // DEBUG
+// wait for 1st bit
+	current_bit = 0;
+	uart_state = data_bits;
+	uart_data = 0;
+	TCNT1H = (UART_PERIOD >> 8);
+	TCNT1L = (UART_PERIOD & 0xff);
+}
+
+// detect start bit using INT0 transition
+ISR(INT0_vect)
+{
+//bitToggle(TX_PORT, TX_PIN); // DEBUG
+// disable start bit interrupt
+	bitClear(GICR, INT0);
+
+// wait 1/2 a clockcycle
+	uart_state = start_bit;
+	TCNT1H = (UART_PERIOD / 2) >> 8;
+	TCNT1L = ((UART_PERIOD / 2) & 0xff);
+// clear the data bit interrupt
+	bitSet(TIFR, TOV1);
+
+// enable data bit clock & interrupt
+// no prescaler
+	TCCR1B = 0x1;
+	bitSet(TIMSK, TOIE1);
+}
+
+
+
+// detect data bits using timer 2 overflows
+ISR(TIMER1_OVF_vect)
+{
+	uart_state();
+}
 
 
 void init_serial()
@@ -368,9 +514,17 @@ void init_serial()
 	bitSet(TX_DDR, TX_PIN);
 	bitSet(TX_PORT, TX_PIN);
 
-// receive pin with pullup
+// receive pin with pullup.  PWM routine needs to keep its PORT bit high
 	bitClear(RX_DDR, RX_PIN);
 	bitSet(RX_PORT, RX_PIN);
+
+// falling edge interrupt for start bit
+	bitSet(MCUCR, ISC01);
+	bitClear(MCUCR, ISC00);
+// enable interrupt for the start bit
+	bitSet(GICR, INT0);
+	
+	
 }
 
 

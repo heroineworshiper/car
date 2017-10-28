@@ -9,20 +9,39 @@
 #include "arm_imu.h"
 
 
+// select the vehicle
+#define IS_CAR
 
-
+// all vehicles use brushless motors
 #define USE_BRUSHLESS
+
+// external navigation using a raspberry pi
 //#define SPI_NAV
-#define UART_NAV
+// external navigation using an Odroid
+//#define UART_NAV
 // pass bluetooth to debug port
 //#define BLUETOOTH_PASSTHROUGH
 
 
-// truck uses MPU6000.  Comment this out if car.
-//#define I2C_IMU
+#ifndef IS_CAR
 
-// reverse steering servo
-#define REVERSE_STEERING
+// truck uses MPU6000.  Car uses analog gyro.  Comment this out if car.
+	#define I2C_IMU
+// truck's ESC pin
+	#define ESC_PIN GPIO_Pin_6
+// reverse steering servo on truck
+	#define REVERSE_STEERING
+
+#else  // !IS_CAR
+// car's ESC pin burned out.  Use a different pin in the same port.
+	#define ESC_PIN GPIO_Pin_5
+
+#endif // IS_CAR
+
+
+
+
+
 
 
 // gyro update rate
@@ -93,14 +112,31 @@ typedef struct
 	int throttle_pwm;
 	int steering_pwm;
 	int led_counter;
-// throttle starts at this level when using feedback
+
+// starting PWM for THROTTLE_RAMP state & minimum throttle setting
+	int min_throttle_fwd;
+	int min_throttle_rev;
+
+// PWM for THROTTLE_WAIT state
 	int throttle_base;
 	int throttle_reverse_base;
+
+// maximum throttle setting
+	int max_throttle_fwd;
+	int max_throttle_rev;
+
 	int throttle_state;
 #define THROTTLE_OFF 0 
 #define THROTTLE_RAMP 1
 #define THROTTLE_WAIT 2
 #define THROTTLE_AUTO 3
+
+// number of PWM cycles for each throttle step
+	int throttle_ramp_delay;
+	int throttle_ramp_counter;
+	int throttle_ramp_step;
+
+
 
 	pid_t heading_pid;
 	pid_t throttle_pid;
@@ -148,39 +184,20 @@ typedef struct
 	float max_gyro_drift;
 	int ref_accum;
 	int ref_count;
-	int current_accum;
-	int current_count;
-// ADC value of current based on voltage drop
-	float raw_current;
-// measured current in A
-	float current;
-// power in W based on battery voltage & current
-	float power;
-// power feedback mode only
-	float target_power;
-// wattage of no rpm_slope
-	float power_base;
-// power above & below power_base makes the RPM fall & rise by this amount per watt
-	float rpm_slope;
+
+
 // RPM feedback mode only
 	int target_rpm;
-// RPM feedback after rolling back for power
-	int target_rpm2;
 // reverse RPM
 	int target_reverse_rpm;
 // result of PID controller
 	float throttle_feedback;
-// currently sampling the ref pin
-	int sample_ref;
 // the voltage reference
 	float ref;
 // the analog gyro reading
 	float gyro;
 // conversion factor for the analog gyro
 	int angle_to_gyro;
-// throttle magnitude 0 - 100
-	int max_throttle_fwd;
-	int max_throttle_rev;
 // steering magnitude 0 - 100
 	int max_steering;
 	int min_steering;
@@ -188,10 +205,9 @@ typedef struct
 	int mid_steering;
 // center position 0 - 100
 	int mid_throttle;
-// number of PWM cycles for each throttle step
-	int throttle_ramp_delay;
-	int throttle_ramp_counter;
-	int throttle_ramp_step;
+
+
+
 // PWM cycles between I steps
 	int pid_downsample;
 // purely gyro derived heading when not using mag, in radians

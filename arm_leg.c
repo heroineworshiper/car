@@ -1,5 +1,5 @@
 /*
- * Leg
+ * Leg test program
  *
  * Copyright (C) 2017 Adam Williams <broadcast at earthling dot net>
  * 
@@ -19,28 +19,57 @@
  * 
  */
 
-#ifndef AVR_DEBUG_H
-#define AVR_DEBUG_H
-
-extern int uart_used;
-extern volatile uint8_t have_uart_in;
-extern volatile uint8_t uart_in;
-
-void print_text(const char *string);
-void print_bin(uint8_t number);
-void print_hex(int number);
-void print_number(int number);
-void print_number_unsigned(uint16_t number);
-void flush_serial();
-void handle_serial();
-void init_serial();
-void send_byte(unsigned char x);
 
 
 
 
+// ARM segment of leg controller
+// compile with make leg
 
+
+#include "leg.h"
+
+void delayMicroseconds(unsigned int us)
+{
+}
+
+void workaround()
+{
+}
+
+#include "pwm_routines.c"
+
+void main()
+{
+	int i;
+
+
+	power = MAX_POWER;
+	phase = 0;
+
+#if 0
+	phase_to_pwm();
+	dump_events();
+	dump_pwm();
 #endif
+
+
+#if 1
+	for(i = 0; i < 512; i++)
+	{
+		phase = i;
+//		phase = 235;
+		phase_to_pwm();
+//		dump_events();
+//		dump_delays();
+		dump_pwm();
+	}
+#endif
+
+}
+
+
+
 
 
 

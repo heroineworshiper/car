@@ -215,8 +215,10 @@ public class Truck extends Thread {
 
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_FWD")[0]);
+						beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_REV")[0]);
 						beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
 						beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
@@ -229,7 +231,11 @@ public class Truck extends Thread {
 						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
 						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
+						beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
+
+
+
+						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
 		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
@@ -275,6 +281,8 @@ public class Truck extends Thread {
 						offset = Math.write_int16(beacon, offset, mag_x_min);
 						offset = Math.write_int16(beacon, offset, mag_y_min);
 						offset = Math.write_int16(beacon, offset, mag_z_min);
+
+
 
 
 

@@ -19,7 +19,9 @@
  * 
  */
 
-// compile with make leg.hex
+
+// Runs on the ATmega
+// compile with make leg
 // program with make leg_isp
 // UART is 9600 baud
 
@@ -37,283 +39,166 @@
 
 #include "leg.h"
 #include "avr_debug.h"
-
-
-// created by tables.c
-const uint8_t sin_table[] = {
-	0x80, 0x83, 0x86, 0x89, 0x8c, 0x8f, 0x92, 0x95, 
-	0x98, 0x9c, 0x9f, 0xa2, 0xa5, 0xa8, 0xab, 0xae, 
-	0xb0, 0xb3, 0xb6, 0xb9, 0xbc, 0xbf, 0xc1, 0xc4, 
-	0xc7, 0xc9, 0xcc, 0xce, 0xd1, 0xd3, 0xd5, 0xd8, 
-	0xda, 0xdc, 0xde, 0xe0, 0xe2, 0xe4, 0xe6, 0xe8, 
-	0xea, 0xec, 0xed, 0xef, 0xf0, 0xf2, 0xf3, 0xf5, 
-	0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfc, 
-	0xfd, 0xfe, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xfe, 
-	0xfd, 0xfc, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 
-	0xf6, 0xf5, 0xf3, 0xf2, 0xf0, 0xef, 0xed, 0xec, 
-	0xea, 0xe8, 0xe6, 0xe4, 0xe2, 0xe0, 0xde, 0xdc, 
-	0xda, 0xd8, 0xd5, 0xd3, 0xd1, 0xce, 0xcc, 0xc9, 
-	0xc7, 0xc4, 0xc1, 0xbf, 0xbc, 0xb9, 0xb6, 0xb3, 
-	0xb0, 0xae, 0xab, 0xa8, 0xa5, 0xa2, 0x9f, 0x9c, 
-	0x98, 0x95, 0x92, 0x8f, 0x8c, 0x89, 0x86, 0x83, 
-	0x80, 0x7c, 0x79, 0x76, 0x73, 0x70, 0x6d, 0x6a, 
-	0x67, 0x63, 0x60, 0x5d, 0x5a, 0x57, 0x54, 0x51, 
-	0x4f, 0x4c, 0x49, 0x46, 0x43, 0x40, 0x3e, 0x3b, 
-	0x38, 0x36, 0x33, 0x31, 0x2e, 0x2c, 0x2a, 0x27, 
-	0x25, 0x23, 0x21, 0x1f, 0x1d, 0x1b, 0x19, 0x17, 
-	0x15, 0x13, 0x12, 0x10, 0x0f, 0x0d, 0x0c, 0x0a, 
-	0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x03, 
-	0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
-	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
-	0x02, 0x03, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 
-	0x09, 0x0a, 0x0c, 0x0d, 0x0f, 0x10, 0x12, 0x13, 
-	0x15, 0x17, 0x19, 0x1b, 0x1d, 0x1f, 0x21, 0x23, 
-	0x25, 0x27, 0x2a, 0x2c, 0x2e, 0x31, 0x33, 0x36, 
-	0x38, 0x3b, 0x3e, 0x40, 0x43, 0x46, 0x49, 0x4c, 
-	0x4f, 0x51, 0x54, 0x57, 0x5a, 0x5d, 0x60, 0x63, 
-	0x67, 0x6a, 0x6d, 0x70, 0x73, 0x76, 0x79, 0x7c
-};
+#include <string.h> // memcpy
 
 
 
-#define SIN_TABLE_SIZE (sizeof(sin_table))
-// pins for the FETs
-#define P_FET1	5
-#define P_FET2	7
-#define P_FET3	4
-#define N_FET1	0
-#define N_FET2	1
-#define N_FET3	3
-
-typedef struct
-{
-// time until the next interrupt
-	uint8_t time;
-// value that turns off the P's
-	uint8_t port_value1;
-// value that turns on the N's
-	uint8_t port_value2;
-} pwm_table_t;
-
-
-// the motor phase 0 - 255
-uint8_t phase;
-// the power 0 - 255
-const uint8_t power = 255;
-
-// pwm values derived from the motor phase 0 - 255
-uint8_t pwm1;
-uint8_t pwm2;
-uint8_t pwm3;
-
-// the PWM program
-// 1 for overflow, 3 for phases, 1 for ending
-#define TABLE_SIZE 5
-pwm_table_t pwm_table[TABLE_SIZE];
-// entry in pwm_table we're on
+volatile uint8_t have_new_table = 0;
+// entry in pwm_table we're playing back
 pwm_table_t *pwm_ptr;
-pwm_table_t new_table[TABLE_SIZE];
-uint8_t have_new_table = 0;
 
+#include "pwm_routines.c"
 
 // timer 2 overflow
 ISR(TIMER2_OVF_vect)
 {
-// turn off the P's
-	PORTD = pwm_ptr->port_value1;
-// wait for the FETs
-	delayMicroseconds(8);
-// turn off the P's & turn on the N's
-	PORTD = pwm_ptr->port_value2;
+
+// set the FET gates
+	PORTD = pwm_ptr->value;
 // set the next delay
 	TCNT2 = pwm_ptr->time;
+
 
 // next program line
 	pwm_ptr++;
 
 // new cycle begins
-	if(pwm_ptr->time == 0)
+	if(pwm_ptr >= &pwm_table[TABLE_SIZE])
 	{
 		pwm_ptr = &pwm_table[0];
-		
+
 // copy new program in
 		if(have_new_table)
 		{
-			int i;
-			for(i = 0; i < TABLE_SIZE; i++)
-			{
-				pwm_table[i] = new_table[i];
-			}
+			memcpy(pwm_table, new_table, TABLE_SIZE * sizeof(pwm_table_t));
 			have_new_table = 0;
 		}
-
 	}
 }
 
-
-void phase_to_pwm()
+void pwm_on()
 {
-	pwm1 = sin_table[(uint8_t)(phase)];
-	pwm2 = sin_table[(uint8_t)(phase + 85)];
-	pwm3 = sin_table[(uint8_t)(phase + 170)];
-
-
-//pwm1 = 128;
-
-
-// construct the new PWM program
-	pwm_table_t *ptr;
-
-// RX_PIN must always be high to enable the pullup
-	uint8_t current_port = (1 << RX_PIN) |
-		(1 << P_FET1) |
-		(1 << P_FET2) |
-		(1 << P_FET3);
-	uint8_t i;
-// fixed lines
-	new_table[4].time = 0;
-	new_table[4].port_value1 = (1 << RX_PIN);
-	new_table[4].port_value2 = (1 << RX_PIN);
-// 1st interrupt
-	ptr = &new_table[0];
-	ptr->time = 0;
-	ptr->port_value1 = (1 << RX_PIN);
-	ptr->port_value2 = current_port;
-	
-	ptr++;
-	
-	uint8_t new_time;
-	uint8_t new_port1;
-	uint8_t new_port2;
-//	for(i = 0; i < 1; i++) // DEBUG
-	for(i = 0; i < 3; i++)
-	{
-		uint8_t min = 0xff;
-		if(bitIsSet(current_port, P_FET1) &&
-			pwm1 <= min)
-		{
-			min = pwm1;
-			new_time = pwm1;
-			new_port1 = current_port;
-			bitClear(new_port1, P_FET1);
-			new_port2 = new_port1;
-			bitSet(new_port2, N_FET1);
-		}
-
-
-#if 1 // DEBUG
-		if(bitIsSet(current_port, P_FET2) &&
-			pwm2 <= min)
-		{
-			min = pwm2;
-			new_time = pwm2;
-			new_port1 = current_port;
-			bitClear(new_port1, P_FET2);
-			new_port2 = new_port1;
-			bitSet(new_port2, N_FET2);
-		}
-		
-		if(bitIsSet(current_port, P_FET3) &&
-			pwm3 <= min)
-		{
-			min = pwm3;
-			new_time = pwm3;
-			new_port1 = current_port;
-			bitClear(new_port1, P_FET3);
-			new_port2 = new_port1;
-			bitSet(new_port2, N_FET3);
-		}
-#endif
-
-		ptr->time = new_time;
-		ptr->port_value1 = new_port1;
-		ptr->port_value2 = new_port2;
-		current_port = new_port2;
-		ptr++;
-	}
-
-
-// convert absolute times to 0xff - delays
-	for(i = 0; i < 3; i++)
-	{
-		pwm_table_t *ptr1 = &new_table[i];
-		pwm_table_t *ptr2 = &new_table[i + 1];
-		uint8_t diff = ptr2->time - ptr1->time;
-		ptr1->time = 0xff - diff;
-	}
-
-
-
-
-	have_new_table = 1;	
+// enable the overflow interrupt
+	bitSet(TIMSK, TOIE2);
 }
 
-
-void dump_pwm()
+void pwm_off()
 {
-	print_text("dump_pwm \n");
-	flush_serial();
-	print_text("pwm1=");
-	print_number(pwm1);
-	print_text("pwm2=");
-	print_number(pwm2);
-	print_text("pwm3=");
-	print_number(pwm3);
-	flush_serial();
-	send_byte('\n');
-
-	uint8_t i;
-	for(i = 0; i < TABLE_SIZE; i++)
-	{
-		print_text("time=");
-		print_number(new_table[i].time);
-		print_text("\tport_value1=");
-		print_bin(new_table[i].port_value1);
-		print_text("\tport_value2=");
-		print_bin(new_table[i].port_value2);
-		flush_serial();
-		send_byte('\n');
-	}
+// disable the overflow interrupt & clear the FETs
+	bitClear(TIMSK, TOIE2);
+	PORTD = (1 << RX_PIN);
 }
 
+void print_menu()
+{
+	print_text("1 - turn\n");
+	print_text("2 - jump\n");
+	print_text("3 - hold\n");
+	print_text("4 - print pwm\n");
+	flush_serial();
+}
 
 void jump()
 {
-	int i;
-	sei();
-//	while(1)
-//	{
-		
-		phase = 0;
+	int i, j;
+	phase = 0;
+	power = MAX_POWER / 2;
+	print_text("jumping\n");
+	flush_serial();
+	pwm_on();
+
+
+
+	for(i = 0; i < 100; i++)
+	{
+		delayMicroseconds(1000);
+		uint8_t step = i / 8;
+		if(step > 12) step = 12;
+		if(step < 1) step = 1;
+		phase += step;
 		phase_to_pwm();
-		for(i = 0; i < 100; i++)
+	}
+
+
+	for(i = 0; i < 50; i++)
+	{
+		delayMicroseconds(1000);
+	}
+
+	pwm_off();
+	print_text("done\n");
+	flush_serial();
+	print_menu();
+}
+
+void hold()
+{
+	int i;
+	print_text("holding\n");
+	flush_serial();
+	phase = 0;
+	power = MAX_POWER / 8;
+	pwm_on();
+
+	for(i = 0; i < 600; i++)
+	{
+		delayMicroseconds(1000);
+		phase += 1;
+		if(i == 599) power = MAX_POWER / 10;
+		
+
+		phase_to_pwm();
+
+	}
+
+	
+	
+// hold it
+	for(i = 0; i < 1000; i++)
+	{
+		delayMicroseconds(1000);
+	}
+
+	pwm_off();
+//	dump_pwm();
+	print_text("done\n");
+	flush_serial();
+	print_menu();
+}
+
+
+void turn()
+{
+	print_text("press any key to stop\n");
+	flush_serial();
+	phase = 0;
+	power = MAX_POWER / 16;
+	pwm_on();
+	phase_to_pwm();
+	
+	int i;
+	while(1)
+	{
+		delayMicroseconds(1000);
+
+		if(have_uart_in)
 		{
-			delayMicroseconds(1000);
+			have_uart_in = 0;
+			break;
 		}
 
+		phase += 4;
+		phase_to_pwm();
+	}
+	
+	pwm_off();
+	print_text("done\n");
+	flush_serial();
+	print_menu();
+}
 
-		for(i = 0; i < 160; i++)
-		{
-			delayMicroseconds(1000);
-			uint8_t step = i / 10;
-			if(step < 1) step = 1;
-			phase += step;
-			phase_to_pwm();
-		}
-
-/*
- * 		cli();
- * 		PORTD = 0;
- * 		for(i = 0; i < 3000; i++)
- * 		{
- * 			delayMicroseconds(1000);
- * 		}
- * 		sei();
- */
-//	}
-	cli();
-	PORTD = (1 << RX_PIN);
+void workaround()
+{
 }
 
 int main()
@@ -323,35 +208,24 @@ int main()
 //	WDTCR = (1 << 3) | (1);
 	
 
+// clear the FETs.  Must clear pins as soon as it boots or current from
+// the serial port will retain the SRAM values from when it was powered down &
+// fry the MOSFETs.
+	PORTD = 0;
+
+// enable the FET outputs.  Makes no difference, because of pullups.
+ 	bitSet(DDRD, N_FET1);
+ 	bitSet(DDRD, N_FET2);
+ 	bitSet(DDRD, N_FET3);
+ 	bitSet(DDRD, P_FET1);
+ 	bitSet(DDRD, P_FET2);
+ 	bitSet(DDRD, P_FET3);
+
 
 
 	
 
 	init_serial();
-	print_text("****\nWelcome to the leg controller\n");
-	flush_serial();
-
-// set up the FETs
-	bitClear(PORTD, N_FET1);
-	bitClear(PORTD, N_FET2);
-	bitClear(PORTD, N_FET3);
-	bitClear(PORTD, P_FET1);
-	bitClear(PORTD, P_FET2);
-	bitClear(PORTD, P_FET3);
-	bitSet(DDRD, N_FET1);
-	bitSet(DDRD, N_FET2);
-	bitSet(DDRD, N_FET3);
-	bitSet(DDRD, P_FET1);
-	bitSet(DDRD, P_FET2);
-	bitSet(DDRD, P_FET3);
-//	power = 255;
-	phase = 0;
-
-
-
-	phase_to_pwm();
-	pwm_ptr = &pwm_table[0];
-	dump_pwm();
 
 // delay
 	int i;
@@ -360,26 +234,112 @@ int main()
 		delayMicroseconds(1000);
 	}
 
-// set the prescaler
-	TCCR2 = 0x3;
-// enable the overflow interrupt
-	TIMSK = (1 << TOIE2);
+
+
+
+	power = MIN_POWER;
+//	phase = 0xc0 + 85;
+//	phase = 235;
+	phase = 0;
+	pwm_ptr = &pwm_table[0];
+	pwm_off();
+
+
+
+
+// set the PWM prescaler
+//	TCCR2 = 0x1;
+	TCCR2 = 0x2;
+//	TCCR2 = 0x7;
 
 // enable interrupts
-//	sei();
+	sei();
+	
 
-// user input
+	print_text("****\nWelcome to the leg controller\n");
+	flush_serial();
+
+
+#if 0
+	power = MIN_POWER;
+	phase_to_pwm();
+	dump_pwm();
+
+	pwm_on();
+
+
 	while(1)
 	{
-		handle_serial();
+		for(i = 0; i < 1; i++)
+		{
+			delayMicroseconds(1000);
+		}
 		
+		phase += 1;
+		phase_to_pwm();
+
 		if(have_uart_in)
 		{
 			have_uart_in = 0;
+			
+			send_byte(uart_in);
+			switch(uart_in)
+			{
+				case '+':
+					phase++;
+					phase_to_pwm();
+					dump_pwm();
+					break;
+				case '-':
+					phase--;
+					phase_to_pwm();
+					dump_pwm();
+					break;
+			}
+		}
+	}
+#endif // 0
+
+
+
+// user input
+	print_menu();
+	while(1)
+	{
+		if(have_uart_in)
+		{
+			have_uart_in = 0;
+			
+			send_byte(uart_in);
+			
+			switch(uart_in)
+			{
+				case '1':
+					turn();
+					break;
+			
+				case '2':
+					jump();
+					break;
+
+				case '3':
+					hold();
+					break;
+
+				case '4':
+					phase_to_pwm();
+					dump_pwm();
+					break;
+
+// can't receive when PWM is on, so just take any character
+//				default:
+//					pwm_off();
+//					break;
+			}
+			
 //			print_hex(uart_in);
 //			flush_serial();
-			send_byte(uart_in);
-			jump();
+//			jump();
 		}
 	}
 
@@ -399,9 +359,6 @@ int main()
 #endif
 
 
-#if 0
-#endif // 0
-	
 }
 
 
