@@ -47,15 +47,23 @@ public class Settings {
 		File dir = new File(DIR);
 		File file = null;
 
-		if(vehicle == CAR)
+		switch(vehicle)
 		{
-			file = new File(DIR + CAR_FILENAME);
+			case TRUCK:
+				file = new File(DIR + TRUCK_FILENAME);
+				break;
+			
+			case TRUCKCAM:
+				file = new File(DIR + TRUCKCAM_FILENAME);
+				break;
+			
+			case CAR:
+			default:
+				file = new File(DIR + CAR_FILENAME);
+				break;
+			
 		}
-		else
-		{
-			file = new File(DIR + TRUCK_FILENAME);
-		}
-
+		
 		keys.clear();
 		stringValues.clear();
 		
@@ -225,6 +233,7 @@ public class Settings {
 	static final String DIR = "//sdcard//truck//";
 	static final String CAR_FILENAME = "settings.car";
 	static final String TRUCK_FILENAME = "settings.truck";
+	static final String TRUCKCAM_FILENAME = "settings.truckcam";
 	static String bluetooth_id = "truck";
 //	static boolean headlights = false;
 	static float targetPace = 9.00f;
@@ -264,6 +273,7 @@ public class Settings {
 
 	static final int TRUCK = 0;
 	static final int CAR = 1;
+	static final int TRUCKCAM = 2;
 	static int vehicle = TRUCK;
 	static int prevVehicle = vehicle;
 

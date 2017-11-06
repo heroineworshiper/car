@@ -1,6 +1,6 @@
 # settings for truck with no camera
 #            P      I      D     I limit O limit
-STEERING_PID 200    0.5    0     100     100
+STEERING_PID 200    0.5    -128     100     100
 THROTTLE_PID 0.1    0.02   0     100     100
 #RPM_PID      1      0.20   1     100     100
 RPM_PID      40     0.50   5     100     100
@@ -60,7 +60,7 @@ MAX_GYRO_DRIFT 0.4
 # analog reading to radians
 ANGLE_TO_GYRO 450
 # lowpass filtering 1-255  Not used for car.
-GYRO_BANDWIDTH 255
+GYRO_BANDWIDTH 32
 
 
 

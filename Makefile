@@ -244,16 +244,20 @@ all: truck.bin car_remote.hex
 
 
 
-leg.hex: leg.c avr_debug.c
+leg: arm_leg.c arm_debug.c leg.c avr_debug.c pwm_routines.c leg.h
+	$(GCC) -O3 -o leg arm_leg.c arm_debug.c
 	$(AVR_GCC) $(AVR_CFLAGS) -o leg.o leg.c avr_debug.c
 	$(AVR_GCC) $(AVR_LFLAGS) -o leg.elf leg.o
 	$(AVR_OBJCOPY) leg.elf leg.hex
 
 # program leg.hex
-leg_isp: leg.hex
+leg_isp: leg
 	$(AVR_DUDE) -Uflash:w:leg.hex:i -Ulock:w:0x0F:m
 
 
+# reset it
+reset:
+	avrdude -v -patmega8 -cstk500v1 -P/dev/ttyACM0 -b19200
 
 # ODROID version
 #vision: $(VISION_OBJS)

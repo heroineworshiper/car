@@ -6,6 +6,7 @@
     <string-array name="vehicle_options">
         <item>Truck</item>
         <item>Car</item>
+        <item>Spherecam truck</item>
     </string-array>
 
 </resources>

@@ -10,7 +10,7 @@
 
 
 // select the vehicle
-#define IS_CAR
+//#define IS_CAR
 
 // all vehicles use brushless motors
 #define USE_BRUSHLESS
@@ -51,6 +51,12 @@
 //#define NAV_HZ 1100
 #define NAV_HZ 366
 #endif // I2C_IMU
+
+
+// how fast the feedback loop fires
+#define PWM_HZ 150
+// what the feedback is calibrated for
+#define PWM_BASE 50
 
 // timer for packet flashing
 #define LED_DELAY2 2
@@ -114,16 +120,16 @@ typedef struct
 	int led_counter;
 
 // starting PWM for THROTTLE_RAMP state & minimum throttle setting
-	int min_throttle_fwd;
-	int min_throttle_rev;
+	int min_throttle_fwd100;
+	int min_throttle_rev100;
 
 // PWM for THROTTLE_WAIT state
 	int throttle_base;
 	int throttle_reverse_base;
 
 // maximum throttle setting
-	int max_throttle_fwd;
-	int max_throttle_rev;
+	int max_throttle_fwd100;
+	int max_throttle_rev100;
 
 	int throttle_state;
 #define THROTTLE_OFF 0 
@@ -134,7 +140,7 @@ typedef struct
 // number of PWM cycles for each throttle step
 	int throttle_ramp_delay;
 	int throttle_ramp_counter;
-	int throttle_ramp_step;
+	int throttle_ramp_step100;
 
 
 
@@ -199,12 +205,12 @@ typedef struct
 // conversion factor for the analog gyro
 	int angle_to_gyro;
 // steering magnitude 0 - 100
-	int max_steering;
-	int min_steering;
+	int max_steering100;
+	int min_steering100;
 // center position 0 - 100
-	int mid_steering;
+	int mid_steering100;
 // center position 0 - 100
-	int mid_throttle;
+	int mid_throttle100;
 
 
 
@@ -228,6 +234,19 @@ typedef struct
 	int headlights_on;
 	int need_steering_feedback;
 
+// PWM values recalculated in timer units
+	int mid_steering_pwm;
+	int mid_throttle_pwm;
+	int min_throttle_reverse;
+	int min_throttle_fwd;
+	int max_steering_magnitude;
+	int min_steering_magnitude;
+	int throttle_ramp_step;
+
+
+
+
+
 	int rpm_time;
 	int rpm_status;
 	int rpm_counter;
@@ -246,23 +265,23 @@ typedef struct
 // enable the ak8975
 	int enable_mag;
 // enable path following
-	int enable_vision;
+//	int enable_vision;
 // where in the camera view the vanishing point should be 0 - 255
-    int vanish_center;
+//    int vanish_center;
 // where in the camera view the bottom of the center line should be 0 - 255
-	int bottom_center;
+//	int bottom_center;
 // raw data from vision program 0 - 255
 	int vanish_x;
 	int vanish_y;
 	int bottom_x;
 	float vanish_lowpass;
 	float bottom_lowpass;
-	float vision_bandwidth;
+//	float vision_bandwidth;
 	derivative_t path_dx;
 	int path_dx_size;
 // delay between manual steering & path following
-	int manual_override_delay;
-	int manual_override_counter;
+//	int manual_override_delay;
+//	int manual_override_counter;
 	
 	int throttle_time;
 	int debug_counter;

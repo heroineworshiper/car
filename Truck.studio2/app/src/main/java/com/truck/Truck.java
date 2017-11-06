@@ -124,7 +124,7 @@ public class Truck extends Thread {
 			ostream = socket.getOutputStream();
 		} catch (IOException e) {
 //			alert("run: couldn't get bluetooth ostream");
-			Log.v("Rover2", "run: ostream failed");
+			Log.v("Truck", "run: ostream failed");
 			e.printStackTrace();
 	        printAlert("Couldn't get bluetooth ostream\n");
 			return true;
@@ -134,7 +134,7 @@ public class Truck extends Thread {
         try {
 			istream = socket.getInputStream();
 		} catch (IOException e) {
-			Log.v("Rover2", "run: istream failed");
+			Log.v("Truck", "run: istream failed");
 	        printAlert("Couldn't get bluetooth istream\n");
 			e.printStackTrace();
 			return true;
@@ -478,16 +478,7 @@ public class Truck extends Thread {
 
 	private int paceToRPM(float targetPace) {
 		float diameter = Settings.getFileFloat("DIAMETER")[0] / 1000;
-
-
-		if(Settings.vehicle == Settings.TRUCK)
-		{
-			return (int) (1609.0 / targetPace / (diameter * Math.PI));
-		}
-		else
-		{
-			return (int) (1609.0 / targetPace / (diameter * Math.PI));
-		}
+		return (int) (1609.0 / targetPace / (diameter * Math.PI));
 	}
 
 

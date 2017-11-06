@@ -38,15 +38,7 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
 		Spinner vehicle = (Spinner)findViewById(R.id.vehicle);
 		vehicle.setAdapter(adapter);
 		vehicle.setOnItemSelectedListener(this);
-		switch(Settings.vehicle)
-		{
-			case Settings.TRUCK:
-				vehicle.setSelection(0);
-				break;
-			case Settings.CAR:
-				vehicle.setSelection(1);
-				break;
-		}
+		vehicle.setSelection(Settings.vehicle);
 
 
 		//CheckBox checkbox;
@@ -113,16 +105,8 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
 	{
     	switch (parent.getId()){
     	case R.id.vehicle:
-    		switch(pos)
-    		{
-    		case 0:
-        		Settings.vehicle = Settings.TRUCK;
-        		break;
-    		case 1:
-        		Settings.vehicle = Settings.CAR;
-        		break;
-    		}
-
+			Settings.vehicle = pos;
+			
 			if(Settings.vehicle != Settings.prevVehicle)
 			{
 				// Load the new settings, but user should restart anyway.
