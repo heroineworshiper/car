@@ -60,7 +60,7 @@ public class Truck extends Thread {
 		}
 		
 		
-		
+		BluetoothDevice device = null;
 		if (!mBluetoothAdapter.isEnabled()) {
 	        printAlert("Bluetooth not enabled\n");
 			return true;
@@ -69,20 +69,21 @@ public class Truck extends Thread {
 		else
 		{
 			Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-			// If there are paired devices
-			if (pairedDevices.size() > 0) {
-			    // Loop through paired devices
-			    for (BluetoothDevice device : pairedDevices) {
-	//		        Log.v("Rover2", "initializeBluetooth " + device.getName());
-			        if(device.getName().equals(Settings.bluetooth_id))
-			        {
-			        	BluetoothSocket tmp = null;
-			        	try {
-			                tmp = device.createRfcommSocketToServiceRecord(uuid);
-			            } catch (IOException e) { }
+			// Loop through paired devices
+			for (int i = 0; i < pairedDevices.size(); i++) {
+				device = (BluetoothDevice)pairedDevices.toArray()[i];
 
-			        	socket = tmp;
-			        }
+//		        Log.i("Truck", "initializeBluetooth " + device.getName());
+			    if(device.getName().equals(Settings.bluetooth_id))
+			    {
+			        try {
+			            socket = device.createRfcommSocketToServiceRecord(uuid);
+			        } catch (IOException e) 
+					{ 
+            			e.printStackTrace();
+					}
+
+					break;
 			    }
 			}
 			
@@ -103,7 +104,11 @@ public class Truck extends Thread {
             // Connect the device through the socket. This will block
             // until it succeeds or throws an exception
             socket.connect();
-        } catch (IOException connectException) {
+        } catch (IOException e) {
+            e.printStackTrace();
+			
+			
+			
             // Unable to connect; close the socket and get out
             try {
                 socket.close();
@@ -111,12 +116,28 @@ public class Truck extends Thread {
             { 
             	
             }
-            
-            connectException.printStackTrace();
-//			alert("run: couldn't connect to bluetooth device");
-			Log.v("Rover2", "run: connect failed ");
-	        printAlert("Couldn't open bluetooth socket\n");
-	        return true;
+
+
+        	try 
+			{
+              Log.i("", "Truck.run: Trying plan B");
+              socket =(BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[] {int.class}).invoke(device, 1);
+              socket.connect();
+        	} catch (Exception e2) 
+			{
+               	e2.printStackTrace();
+              	try {
+            		socket.close();
+              	} catch (IOException e3) 
+				{
+              	}
+				
+				
+ 				socket = null;
+				Log.i("", "Truck.run: connect failed ");
+	       		printAlert("Couldn't open bluetooth socket\n");
+	     	   	return true;
+	       	}
         }
 
         
@@ -124,7 +145,7 @@ public class Truck extends Thread {
 			ostream = socket.getOutputStream();
 		} catch (IOException e) {
 //			alert("run: couldn't get bluetooth ostream");
-			Log.v("Truck", "run: ostream failed");
+			Log.i("Truck", "run: ostream failed");
 			e.printStackTrace();
 	        printAlert("Couldn't get bluetooth ostream\n");
 			return true;
@@ -134,7 +155,7 @@ public class Truck extends Thread {
         try {
 			istream = socket.getInputStream();
 		} catch (IOException e) {
-			Log.v("Truck", "run: istream failed");
+			Log.i("Truck", "run: istream failed");
 	        printAlert("Couldn't get bluetooth istream\n");
 			e.printStackTrace();
 			return true;
@@ -146,6 +167,38 @@ public class Truck extends Thread {
 		
 		
 		return false;
+	}
+	
+	
+	public void closeBT()
+	{
+
+
+		if(socket != null)
+		{
+            try {
+
+				if(istream != null)
+				{
+					istream.close();
+				}
+
+				if(ostream != null) {
+					ostream.close();
+				}
+
+				socket.close();
+            } catch (IOException closeException) 
+            { 
+            	
+            }
+		}
+
+
+
+		socket = null;
+		istream = null;
+		ostream = null;
 	}
 	
 	
@@ -174,7 +227,7 @@ public class Truck extends Thread {
 	    	if(result == false)
 	    	{
 	   		
-	    		while(!lostContact)
+	    		while(!lostContact && !vehicleChanged)
 	    		{
 	    			int offset = 0;
 	    			beacon[offset++] = (byte) 0xff;
@@ -247,7 +300,7 @@ public class Truck extends Thread {
                         {
                             // meters per minute/wheel circumference in meters
                             offset = Math.write_int16(beacon, offset, paceToRPM(targetPace));
-//Log.v("Truck", "run targetRPM=" + targetRpm);
+//Log.i("Truck", "run targetRPM=" + targetRpm);
                         }
                         else
                         {
@@ -260,7 +313,7 @@ public class Truck extends Thread {
 						{
 							// meters per minute/wheel circumference in meters
 							offset = Math.write_int16(beacon, offset, paceToRPM(targetReversePace));
-//Log.v("Truck", "run targetRPM=" + targetRpm);
+//Log.i("Truck", "run targetRPM=" + targetRpm);
 						}
 						else
 						{
@@ -388,7 +441,7 @@ public class Truck extends Thread {
 									printBuffer("run 1", receive_buf, 0, totalReceived);
 
 									checksum = Math.getChecksum(receive_buf, offset, size - 2);
-    			    				Log.v("Truck.run 1", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math.read_uint16(receive_buf, offset + size - 2));
+    			    				Log.i("Truck.run 1", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math.read_uint16(receive_buf, offset + size - 2));
 	    							if(checksum == Math.read_uint16(receive_buf, offset + size - 2))
 	    							{
 // packet is intact
@@ -446,7 +499,7 @@ public class Truck extends Thread {
 	    					offset++;
 	    				}
 
-//	    				Log.v("run 2", "drop_bytes=" + drop_bytes + " offset=" + offset);
+//	    				Log.i("run 2", "drop_bytes=" + drop_bytes + " offset=" + offset);
 	    				for(int i = 0; i < totalReceived - drop_bytes; i++)
 	    				{
 	    					receive_buf[i] = receive_buf[i + drop_bytes];
@@ -459,18 +512,7 @@ public class Truck extends Thread {
 	    		}
 	    		
 	    		
-	    		
-	    	}
-	    	
-	    	if(socket != null)
-	    	{
-	            try {
-	                socket.close();
-	                socket = null;
-	            } catch (IOException closeException) 
-	            { 
-	            	
-	            }
+	    		closeBT();
 	    	}
 	    	
 	    }
@@ -498,7 +540,7 @@ public class Truck extends Thread {
 		if(nextSentTime - lastSentTime < 1000 / Settings.BEACON_HZ)
 		{
 			long difference = lastSentTime + 1000 / Settings.BEACON_HZ - nextSentTime;
-//    				Log.v("Copter", "run difference=" + difference);
+//    				Log.i("Copter", "run difference=" + difference);
 			
 			try {
 				Thread.sleep(difference);
@@ -577,7 +619,7 @@ public class Truck extends Thread {
 		{
 		formatter.format("%02x ", buffer[i + offset]);
 		}
-		Log.v(string, sb.toString());
+		Log.i(string, sb.toString());
 	}
 
     
@@ -649,6 +691,7 @@ public class Truck extends Thread {
     boolean initialized = false;
     int droppedPackets = 0;
     boolean lostContact = false;
+	boolean vehicleChanged = false;
 
 	byte[] beacon = new byte[Settings.RADIO_BUFSIZE];
 	byte[] receive_buf = new byte[Settings.RADIO_BUFSIZE];

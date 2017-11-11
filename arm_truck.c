@@ -100,8 +100,8 @@
 
 // TIM10 wraps at this frequency
 #define TIMER_HZ 100
-#define TIMEOUT_RELOAD TIMER_HZ * 1
-#define STEERING_RELOAD TIMER_HZ * 10
+#define TIMEOUT_RELOAD (TIMER_HZ * 1)
+#define STEERING_RELOAD (10 * PWM_HZ)
 
 // timer for LED flashing
 #define LED_DELAY (NAV_HZ / 2)
@@ -175,6 +175,7 @@ void reset_pid(pid_t *pid)
 	pid->error_accum = 0;
 	pid->accum = 0;
 	pid->counter = 0;
+	pid->ignore_i = 0;
 }
 
 void dump_pid(pid_t *pid)
@@ -217,7 +218,14 @@ float do_pid(pid_t *pid, float p_error, float d_error)
 		pid->error_accum /= pid->counter;
 
 // proportional I factor
-		pid->accum += pid->error_accum * pid->i_gain;
+		if(!pid->ignore_i)
+		{
+			pid->accum += pid->error_accum * pid->i_gain;
+		}
+		else
+		{
+			pid->ignore_i = 0;
+		}
 
 // fixed I factor
 /*
@@ -1446,7 +1454,7 @@ void TIM2_IRQHandler()
 				(truck.throttle < 0 && truck.throttle2 >= 0))
 			{
 				truck.throttle_state = THROTTLE_RAMP;
-				truck.current_heading = 0;
+//				truck.current_heading = 0;
 
 
 				if(truck.throttle_reverse)
@@ -1459,16 +1467,16 @@ void TIM2_IRQHandler()
 				}
 
 
-#ifdef I2C_IMU
-				if(truck.enable_mag)
-				{
-					truck.target_heading = truck.imu.current_heading;
-				}
-				else
-#endif
-				{
-					truck.target_heading = 0;
-				}
+// #ifdef I2C_IMU
+// 				if(truck.enable_mag)
+// 				{
+// 					truck.target_heading = truck.imu.current_heading;
+// 				}
+// 				else
+// #endif
+// 				{
+// 					truck.target_heading = 0;
+// 				}
 
 				truck.throttle_ramp_counter = 0;
 				reset_pid(&truck.heading_pid);
@@ -1686,6 +1694,7 @@ void TIM2_IRQHandler()
 // don't go into braking region
 							if(truck.throttle_pwm < truck.min_throttle_reverse)
 							{
+								truck.rpm_pid.ignore_i = 1;
 								truck.throttle_pwm = truck.min_throttle_reverse;
 							}
 						}
@@ -1698,6 +1707,7 @@ void TIM2_IRQHandler()
 // don't go into braking region
 							if(truck.throttle_pwm > truck.min_throttle_fwd)
 							{
+								truck.rpm_pid.ignore_i = 1;
 								truck.throttle_pwm = truck.min_throttle_fwd;
 							}
 						}

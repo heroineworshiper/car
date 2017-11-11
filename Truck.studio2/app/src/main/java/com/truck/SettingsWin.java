@@ -112,7 +112,9 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
 				// Load the new settings, but user should restart anyway.
 				Settings.loadFile();
 				updatePaceText();
-				Truck.truck.initializeBluetooth();
+//				Truck.truck.initializeBluetooth();
+// force it to reconnect without crashing the mane loop
+				Truck.truck.vehicleChanged = true;
 			}
 
     		Settings.save();

@@ -77,6 +77,7 @@ typedef struct
 	int counter;
 	float error_accum;
 	float accum;
+	int ignore_i; // don't wind up if over the output limit
 } pid_t;
 
 
@@ -145,7 +146,6 @@ typedef struct
 
 
 	pid_t heading_pid;
-	pid_t throttle_pid;
 	pid_t rpm_pid;
 // vanishing point feedback
 // P=1/16deg
