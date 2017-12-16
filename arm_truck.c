@@ -176,6 +176,7 @@ void reset_pid(pid_t *pid)
 	pid->accum = 0;
 	pid->counter = 0;
 	pid->ignore_i = 0;
+	pid->stiction_sign = 0;
 }
 
 void dump_pid(pid_t *pid)
@@ -244,6 +245,47 @@ float do_pid(pid_t *pid, float p_error, float d_error)
 		CLAMP(pid->accum, -pid->i_limit, pid->i_limit);
 		pid->counter = 0;
 		pid->error_accum = 0;
+	}
+	
+	
+	if(pid->stiction_amount > 0.0001)
+	{
+		if(pid->stiction_sign > 0)
+		{
+// kick I in the opposite direction
+			if(p_error < -pid->stiction_threshold)
+			{
+				pid->stiction_sign = -1;
+// I has the same sign as the error
+				pid->accum -= pid->stiction_amount;
+				CLAMP(pid->accum, -pid->i_limit, pid->i_limit);
+			}
+		}
+		else
+		if(pid->stiction_sign < 0)
+		{
+// kick I in the opposite direction
+			if(p_error > pid->stiction_threshold)
+			{
+				pid->stiction_sign = 1;
+// I has the same sign as the error
+				pid->accum += pid->stiction_amount;
+				CLAMP(pid->accum, -pid->i_limit, pid->i_limit);
+			}
+		}
+		else
+		{
+// get the starting direction of the error
+			if(p_error > 0)
+			{
+				pid->stiction_sign = 1;
+			}
+			else
+			if(p_error < 0)
+			{
+				pid->stiction_sign = -1;
+			}
+		}
 	}
 
 	float result = p_result + d_result + pid->accum;
@@ -501,6 +543,10 @@ void dump_config()
 	print_float(TO_DEG(truck.steering_step));
 	print_text("\nsteering_overshoot=");
 	print_float(TO_DEG(truck.steering_overshoot));
+	print_text("\nstiction_threshold=");
+	print_float(TO_DEG(truck.stiction_threshold));
+	print_text("\nstiction_amount=");
+	print_float(truck.stiction_amount);
 
 	print_text("\nSTEERING PID=");
 	dump_pid(&truck.heading_pid);
@@ -508,11 +554,11 @@ void dump_config()
 	print_text("RPM PID=");
 	dump_pid(&truck.rpm_pid);
 
-	print_text("PATH PID=");
-	dump_pid(&truck.path_pid);
-
-	print_text("SIDE PID=");
-	dump_pid(&truck.side_pid);
+// 	print_text("PATH PID=");
+// 	dump_pid(&truck.path_pid);
+// 
+// 	print_text("SIDE PID=");
+// 	dump_pid(&truck.side_pid);
 }
 
 int read_config_packet(const unsigned char *buffer)
@@ -558,6 +604,8 @@ int read_config_packet(const unsigned char *buffer)
 	truck.throttle_ramp_step100 = READ_UINT16(buffer, offset);
 	truck.pid_downsample = READ_UINT16(buffer, offset);
 	truck.steering_step_delay = READ_UINT16(buffer, offset);
+	
+	
 	truck.battery_analog = READ_UINT16(buffer, offset);
 	truck.target_rpm = READ_UINT16(buffer, offset);
 	truck.target_reverse_rpm = READ_UINT16(buffer, offset);
@@ -566,6 +614,8 @@ int read_config_packet(const unsigned char *buffer)
 	truck.battery_v0 = READ_FLOAT32(buffer, offset);
 	truck.steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
+	truck.stiction_threshold = READ_FLOAT32(buffer, offset);
+	truck.stiction_amount = READ_FLOAT32(buffer, offset);
 
 
 // phone sends back the status packet here to have it saved
@@ -578,9 +628,13 @@ int read_config_packet(const unsigned char *buffer)
 
 	offset = read_pid(&truck.heading_pid, buffer, offset);
 	offset = read_pid(&truck.rpm_pid, buffer, offset);
-	offset = read_pid(&truck.path_pid, buffer, offset);
-	offset = read_pid(&truck.side_pid, buffer, offset);
+//	offset = read_pid(&truck.path_pid, buffer, offset);
+//	offset = read_pid(&truck.side_pid, buffer, offset);
 	
+	
+	
+	truck.heading_pid.stiction_threshold = truck.stiction_threshold;
+	truck.heading_pid.stiction_amount = truck.stiction_amount;
 	resize_derivative(&truck.rpm_dv, truck.rpm_dv_size);
 	resize_derivative(&truck.path_dx, truck.path_dx_size);
 
@@ -1246,7 +1300,7 @@ void handle_analog()
 				TRACE2
 				print_text("center=");
 				print_float(truck.gyro_center);
-				print_NAV_HZtext("drift=");
+				print_text("drift=");
 				print_float(truck.prev_gyro_center - truck.gyro_center);
 
 // test if calculation didn't drift
@@ -1857,18 +1911,18 @@ void TIM2_IRQHandler()
 
 			}
 
-truck.debug_counter++;
-if(truck.debug_counter >= 10 * PWM_HZ / PWM_BASE)
-{
-truck.debug_counter = 0;
-TRACE2
-print_text("throttle_state=");
-print_number(truck.throttle_state);
-print_text(" truck.mid_throttle_pwm=");
-print_float(truck.mid_throttle_pwm);
-print_text(" truck.throttle_pwm=");
-print_number(truck.throttle_pwm);
-}
+// truck.debug_counter++;
+// if(truck.debug_counter >= 10 * PWM_HZ / PWM_BASE)
+// {
+// truck.debug_counter = 0;
+// TRACE2
+// print_text("throttle_state=");
+// print_number(truck.throttle_state);
+// print_text(" truck.mid_throttle_pwm=");
+// print_float(truck.mid_throttle_pwm);
+// print_text(" truck.throttle_pwm=");
+// print_number(truck.throttle_pwm);
+// }
 
 // print_text("need_steering_feedback=");
 // print_float(truck.need_steering_feedback);
@@ -2335,6 +2389,9 @@ int main(void)
 	truck.steering_step_delay = 0;
 	truck.steering_step = TO_RAD(30) / PWM_HZ;
 	truck.steering_overshoot = 0;
+	truck.stiction_threshold = 0;
+	truck.stiction_amount = 0;
+	
 	truck.battery_analog = 965;
 	truck.battery_v0 = 8.67f;
 

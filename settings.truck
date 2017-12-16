@@ -1,12 +1,7 @@
 # settings for truck with no camera
 #            P      I      D     I limit O limit
-STEERING_PID 200    0.5    -128     100     100
-THROTTLE_PID 0.1    0.02   0     100     100
-#RPM_PID      1      0.20   1     100     100
+STEERING_PID 200    0.5    -100  100     100
 RPM_PID      40     0.50   5     100     100
-#RPM_PID      0      0.10   1     100     100
-PATH_PID      0.03     0      0   100     100
-SIDE_PID      0.02     0      0   100     100
 
 BLUETOOTH truck
 # if magnetometer is attached
@@ -33,17 +28,18 @@ MIN_THROTTLE_FWD 13
 MIN_THROTTLE_REV 12
 
 # ending PWM for THROTTLE_RAMP state & PWM for THROTTLE_WAIT state
-THROTTLE_BASE 30
+THROTTLE_BASE 25
 THROTTLE_REVERSE_BASE 20
 
-# Maximum throttle for bluetooth driving
+# Maximum throttle settings
 MAX_THROTTLE_FWD 40
 # Reverse throttle
 MAX_THROTTLE_REV 30
 
 # number of PWM cycles for each throttle step
 THROTTLE_RAMP_DELAY 1
-THROTTLE_RAMP_STEP 30
+THROTTLE_RAMP_STEP 4
+#THROTTLE_RAMP_STEP 30
 
 # rpm derivative size
 RPM_DV_SIZE 10
@@ -60,7 +56,7 @@ MAX_GYRO_DRIFT 0.4
 # analog reading to radians
 ANGLE_TO_GYRO 450
 # lowpass filtering 1-255  Not used for car.
-GYRO_BANDWIDTH 32
+GYRO_BANDWIDTH 255
 
 
 
@@ -72,6 +68,13 @@ STEERING_STEP_DELAY 2
 # degrees to increment heading after every step delay
 STEERING_STEP 1.0
 STEERING_OVERSHOOT -20
+
+
+# degrees off in opposite direction before kicking integral
+STICTION_THREHSOLD 1
+# amount to kick integral
+STICTION_AMOUNT 3
+
 BATTERY_ANALOG 965
 BATTERY_V0 8.67
 

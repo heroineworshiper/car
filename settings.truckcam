@@ -1,7 +1,7 @@
 # settings for truck with camera pole
 #            P      I      D     I limit O limit
-STEERING_PID 200    0.5     0     100     100
-RPM_PID      40     0.50   5     100     100
+STEERING_PID 200    0.5    -100  100     100
+RPM_PID      40     0.5    5     100     100
 
 
 
@@ -39,7 +39,6 @@ THROTTLE_REVERSE_BASE 20
 # Maximum throttle settings
 MAX_THROTTLE_FWD 40
 MAX_THROTTLE_REV 30
-# starting PWM for THROTTLE_RAMP state
 
 
 
@@ -68,6 +67,14 @@ STEERING_STEP_DELAY 2
 # degrees to increment heading after every step delay
 STEERING_STEP 1.0
 STEERING_OVERSHOOT -20
+
+
+# degrees off in opposite direction before kicking integral
+STICTION_THREHSOLD 1
+# amount to kick integral
+STICTION_AMOUNT 3
+
+
 BATTERY_ANALOG 965
 BATTERY_V0 8.67
 

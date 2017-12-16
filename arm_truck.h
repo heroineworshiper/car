@@ -10,7 +10,7 @@
 
 
 // select the vehicle
-//#define IS_CAR
+#define IS_CAR
 
 // all vehicles use brushless motors
 #define USE_BRUSHLESS
@@ -77,7 +77,13 @@ typedef struct
 	int counter;
 	float error_accum;
 	float accum;
+// the sign of the current error
+	int stiction_sign;
+
 	int ignore_i; // don't wind up if over the output limit
+// amount of error before engaging stiction_amount
+	float stiction_threshold;
+	float stiction_amount;
 } pid_t;
 
 
@@ -227,6 +233,13 @@ typedef struct
 	float steering_step;
 // radians to rewind heading after manual steering
 	float steering_overshoot;
+// angle error before kicking the steering servo
+	float stiction_threshold;
+// amount to kick the steering servo
+	float stiction_amount;
+	
+	
+	
 // enable heading hold
 	int auto_steering;
 // enable RPM feedback
