@@ -1,0 +1,634 @@
+/*
+ * Fuse
+ *
+ * Copyright (C) 2017 Adam Williams <broadcast at earthling dot net>
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+
+
+
+
+// overcurrent protection with variable delay
+// configured over a serial terminal
+
+#include <p18f1220.h>
+#include <stdint.h>
+
+#define DEBUG_LAT LATAbits.LATA3
+#define FET_LAT LATAbits.LATA0
+
+// mane timer increments at this rate
+#define HZ 30
+
+
+// measured values
+// 5A = 15300
+
+#define FRACTION 256
+// op-amp saturates at 3.6V
+#define ADC_TO_CURRENT_N 14500
+#define ADC_TO_CURRENT_D (5 * FRACTION)
+#define SETTINGS_PACKET 8
+#define MAX_CURRENT ((uint16_t)15 * FRACTION)
+#define MAX_TIME ((uint16_t)30 * HZ)
+// delay before writing config
+#define CONFIG_DELAY (1 * HZ)
+
+volatile uint8_t serial_in = 0;
+volatile uint8_t have_serial_in = 0;
+volatile uint16_t adc_accum = 0;
+volatile uint8_t adc_count = 0;
+// the last current reading in fixed point
+volatile uint16_t current = 0;
+volatile uint16_t prev_current = 0;
+// maximum current observed
+volatile uint16_t max_current = 0;
+// redraw the menu
+volatile uint8_t force_menu = 0;
+volatile uint16_t raw_current = 0;
+
+// never exceed this current
+volatile uint16_t limit_current2 = 15 * FRACTION;
+// shut off after a certain time limit
+volatile uint16_t limit_current1 = 1 * FRACTION;
+// delay before shutting off
+volatile uint16_t limit_time1 = 1 * HZ;
+// time since limit1 was exceeded
+volatile uint16_t overload_time = 0;
+
+// time when display was updated
+volatile uint16_t display_time = 0;
+// time the fuse was active
+volatile uint16_t active_time = 0;
+
+// time since a parameter was changed
+volatile uint16_t config_time = 0;
+// write the config when config_time reaches a value
+volatile uint8_t need_config = 0;
+
+// the mane time
+volatile uint16_t current_time = 0;
+
+
+
+void print_byte(uint8_t c)
+{
+	while(!PIR1bits.TXIF)
+	{
+	}
+
+	TXREG = c;
+}
+
+
+void print_text(const uint8_t *s)
+{
+	while(*s != 0)
+	{
+		print_byte(*s);
+		s++;
+	}
+}
+
+
+void print_number_nospace(uint16_t number)
+{
+	if(number >= 10000) print_byte('0' + (number / 10000));
+	if(number >= 1000) print_byte('0' + ((number / 1000) % 10));
+	if(number >= 100) print_byte('0' + ((number / 100) % 10));
+	if(number >= 10) print_byte('0' + ((number / 10) % 10));
+	print_byte('0' + (number % 10));
+}
+
+void print_number(uint16_t number)
+{
+    print_number_nospace(number);
+   	print_byte(' ');
+ 
+}
+
+void print_fixed(uint16_t number)
+{
+    print_number_nospace(number / FRACTION);
+    uint8_t fraction = number % FRACTION;
+//    if(fraction)
+    {
+        print_byte('.');
+        fraction = fraction * 100 / FRACTION;
+        print_byte('0' + (fraction / 10));
+        print_byte('0' + (fraction % 10));
+    }
+    print_byte(' ');
+}
+
+
+void interrupt isr()
+{
+    uint8_t interrupt_done = 0;
+
+
+    while(!interrupt_done)
+    {
+        interrupt_done = 1;
+
+
+// mane timer
+        if(INTCONbits.TMR0IF)
+        {
+            INTCONbits.TMR0IF = 0;
+
+			if(current > limit_current1)
+			{
+// reset the active time if the current just went over the limit
+//				if(overload_time == 0)
+//				{
+//					active_time = 0;
+//				}
+//				else
+// increment the active time if the current has been over the limit
+				{
+					active_time++;
+				}
+			}
+
+            current_time++;
+			overload_time++;
+			if(need_config)
+            {
+                config_time++;
+            }
+			
+            interrupt_done = 0;
+        }
+
+
+// ADC
+		if(PIR1bits.ADIF)
+		{
+            interrupt_done = 0;
+            PIR1bits.ADIF = 0;
+
+            uint16_t raw_adc = ADRESL;
+            raw_adc |= ADRESH << 8;
+            adc_accum += raw_adc;
+            adc_count++;
+			
+// start next conversion
+            ADCON0bits.GO = 1;
+
+            if(adc_count > 64)
+            {
+                current = (uint32_t)adc_accum * ADC_TO_CURRENT_D / ADC_TO_CURRENT_N;
+                raw_current = adc_accum;
+                adc_accum = 0;
+                adc_count = 0;
+
+                if(current != prev_current)
+                {
+                    force_menu = 1;
+                }
+// handle fuse tasks
+				if(current > max_current)
+				{
+					max_current = current;
+					force_menu = 1;
+				}
+
+
+				if(current > limit_current2)
+				{
+					FET_LAT = 0;
+                    force_menu = 1;
+				}
+				else
+				if(current > limit_current1)
+				{
+					if(overload_time >= limit_time1)
+					{
+						FET_LAT = 0;
+                        force_menu = 1;
+					}
+				}
+//				else
+//				{
+//// reset the overload time if the current is below the limit
+//					overload_time = 0;
+//				}
+            }
+		}
+        
+// serial port
+        if(PIR1bits.RCIF)
+        {
+            serial_in = RCREG;
+            have_serial_in = 1;
+            interrupt_done = 0;
+        }
+    }
+}
+
+
+void inverse_style()
+{
+    print_byte(0x1b);  // inverse
+    print_text("[7m");  
+
+}
+
+void reset_style()
+{
+    print_byte(0x1b);  // reset
+    print_text("[0m");
+}
+
+
+void print_menu(uint8_t redraw)
+{
+    if(redraw)
+    {
+        // home position
+        print_byte(0x1b);
+        print_text("[H");
+    }
+    else
+    {
+        // clear screen
+        print_byte(0x1b);
+        print_text("[2J");
+        // home position
+        print_byte(0x1b);
+        print_text("[H");
+    }
+//    print_text("***************************************\n");
+	print_text("never exceed current:    ");
+    inverse_style(); 
+
+    print_fixed(limit_current2);
+    reset_style();
+    
+    
+    print_text("A    i/m adjusts    \n");
+	print_text("limit current:    ");
+    inverse_style(); 
+
+    print_fixed(limit_current1);
+    reset_style();
+
+    print_text("A    w/z adjusts    \n");
+    
+    
+	print_text("limit time:    ");
+    inverse_style(); 
+    print_fixed((uint32_t)limit_time1 * FRACTION / HZ);
+    reset_style();
+    
+    print_text("s    y/b adjusts    \n");
+	print_text("maximum observed:    ");
+    print_fixed(max_current);
+	print_text("A    \n");
+	print_text("time observed:    ");
+    print_fixed((uint32_t)active_time * FRACTION / HZ);
+    print_text("s    \n");
+    print_text("SPACE toggles fuse\n");
+//    print_text("***************************************\n");
+}
+
+void print_status()
+{
+    // cursor position
+    print_byte(0x1b);
+    print_text("[4;22H");  // position cursor
+    print_fixed(max_current);
+	print_text("A    ");
+	
+    print_byte(0x1b);
+    print_text("[5;17H");
+    print_fixed((uint32_t)active_time * FRACTION / HZ);
+    print_text("s    ");
+	
+    print_byte(0x1b);
+    print_text("[7;1H");
+    print_text("Status: ");
+//            print_number(raw_current); // DEBUG
+	print_fixed(current);
+    print_text("A    Fuse: ");
+    if(FET_LAT)
+    {
+        print_byte(0x1b);    // red, bright
+        print_text("[31;1mACTIVE");
+        reset_style();
+    }
+    else
+    {
+        print_text("OPEN");
+    }
+    print_text("    ");
+    if(need_config)
+    {
+        print_byte('*');
+    }
+	print_text("    ");
+}
+
+
+
+uint16_t read_eeprom(uint8_t address)
+{
+    EEADR = address;
+    EECON1bits.EEPGD = 0;
+    EECON1bits.RD = 1;
+    return EEDATA;
+}
+
+void write_eeprom(uint8_t address, uint8_t value)
+{
+    EEDATA = value;
+    EEADR = address;
+    PIR2bits.EEIF = 0;
+    EECON1bits.EEPGD = 0;
+    EECON1bits.WREN = 1;
+    INTCONbits.GIE = 0;
+    EECON2 = 0x55;
+    EECON2 = 0xaa;
+    EECON1bits.WR = 1;
+    INTCONbits.GIE = 1;
+    while(!PIR2bits.EEIF)
+    {
+    }
+    EECON1bits.WREN = 0;
+}
+
+void read_settings()
+{
+    uint16_t i;
+    for(i = 0; i < 256; i += SETTINGS_PACKET)
+    {
+        // found the end of the settings packets
+        if(read_eeprom(i) == 0xff)
+        {
+            break;
+        }
+    }
+    
+    // rewind & read the last settings
+    if(i >= SETTINGS_PACKET)
+    {
+        i -= SETTINGS_PACKET;
+        // skip the start code
+        i += 2;
+        limit_current2 = read_eeprom(i++);
+        limit_current2 |= read_eeprom(i++) << 8;
+        limit_current1 = read_eeprom(i++);
+        limit_current1 |= read_eeprom(i++) << 8;
+        limit_time1 = read_eeprom(i++);
+        limit_time1 |= read_eeprom(i++) << 8;
+    }
+
+            
+//                print_text("Reading settings from offset ");
+//                print_number(i);
+//                print_byte('\n');
+
+}
+
+// very slow
+void write_settings()
+{
+    uint16_t i;
+    // find end of settings packets
+    for(i = 0; i < 256; i += SETTINGS_PACKET)
+    {
+        if(read_eeprom(i) == 0xff)
+        {
+            break;
+        }
+    }
+    
+    
+    // out of memory.  Erase & start over
+    if(i >= 256)
+    {
+        for(i = 0; i < 256; i++)
+        {
+            write_eeprom(i, 0xff);
+        }
+        i = 0;
+    }
+    
+    // write the packet
+ //   print_text("Writing settings to offset ");
+ //   print_number(i);
+ //   print_byte('\n');
+
+    write_eeprom(i++, 0x00);
+    write_eeprom(i++, 0x00);
+    write_eeprom(i++, limit_current2 & 0xff);
+    write_eeprom(i++, limit_current2 >> 8);
+    write_eeprom(i++, limit_current1 & 0xff);
+    write_eeprom(i++, limit_current1 >> 8);
+    write_eeprom(i++, limit_time1 & 0xff);
+    write_eeprom(i++, limit_time1 >> 8);
+    
+    
+}
+
+void main() {
+
+	OSCCON = 0x70;
+    
+    // debug pin
+    ADCON1 = 0xff; // all digital mode
+    TRISAbits.TRISA3 = 0; // output
+    DEBUG_LAT = 1;
+    
+    // analog pin 
+    ADCON0 = 0x05;  // channel 1
+    ADCON1bits.PCFG1 = 0; // analog mode
+    ADCON2 = 0xbe;   // right justified, slowest samplerate
+	PIE1bits.ADIE = 1; // enable interrupt
+    ADCON0bits.GO = 1; // start 1st conversion
+    
+    // fet pin
+    FET_LAT = 0; // off
+    TRISAbits.TRISA0 = 0; // output
+    
+    // initialize serial port
+    TXSTA = 0x24;
+    RCSTA = 0x90;
+	BAUDCTL = 0x08;
+	SPBRG = 17; // 115200 baud
+    
+    PIR1bits.RCIF = 0;
+    PIE1bits.RCIE = 1;
+    
+    // initialize the timer
+    T0CON = 0x88;
+    INTCONbits.TMR0IE = 1;
+    
+    
+    
+    
+    
+    // enable all interrupts
+    INTCONbits.PEIE = 1;
+    INTCONbits.GIE = 1;
+	
+    // wait a while
+    uint16_t i;
+    for(i = 0; i < 32768; i++)
+    {
+    }
+    
+//    print_text("************************************\nWelcome to programmable fuse\n");
+// flush the serial port
+    print_text("****\n");
+    
+    
+    // dump the EEPROM
+    for(i = 0; i < 256; i++)
+    {
+        print_number(read_eeprom(i));
+    }
+    
+    // search for settings
+    read_settings();
+    
+	print_menu(0);
+    force_menu = 1;
+
+    
+    while(1)
+    {
+        ClrWdt();
+        
+        
+        if(need_config && config_time >= CONFIG_DELAY)
+        {
+            write_settings();
+            need_config = 0;
+            force_menu = 1;
+        }
+		
+		if((display_time > current_time || 
+            current_time > display_time + 3) &&
+                (FET_LAT || force_menu))
+		{
+            display_time = current_time;
+            force_menu = 0;
+			print_status();
+		}
+
+
+        
+        if(have_serial_in)
+        {
+            // echo keypresses
+            //print_byte(serial_in);
+            have_serial_in = 0;
+            
+            uint8_t changed = 0;
+            uint8_t time_step = 3;
+            
+            switch(serial_in)
+            {
+                case 'i':
+                    limit_current2 += FRACTION / 2;
+                    changed = 1;
+                    break;
+                case 'm':
+                    limit_current2 -= FRACTION / 2;
+                    changed = 1;
+                    break;
+                case 'w':
+                    limit_current1 += FRACTION / 2;
+                    changed = 1;
+                    break;
+                case 'z':
+                    limit_current1 -= FRACTION / 2;
+                    changed = 1;
+                    break;
+                case 'y':
+                    if(limit_time1 >= 3 * HZ)
+                    {
+                       time_step = HZ;
+                    }
+
+                    limit_time1 += time_step;
+                    changed = 1;
+                    break;
+                case 'b':
+                    if(limit_time1 > 3 * HZ)
+                    {
+                       time_step = HZ;
+                    }
+
+                    limit_time1 -= time_step;
+                    changed = 1;
+                    break;
+                case ' ':
+                    FET_LAT = !FET_LAT;
+					if(FET_LAT)
+					{
+// reset the maximum
+						max_current = 0;
+						active_time = 0;
+					}
+					print_status(0);
+                    break;
+                default:
+                    print_menu(0);
+                    break;
+            }
+            
+            if(changed)
+            {
+                // negative number
+                if(limit_current2 > 0xff00)
+                {
+                    limit_current2 = 0;
+                }
+                if(limit_current2 > MAX_CURRENT)
+                {
+                    limit_current2 = MAX_CURRENT;
+                }
+                if(limit_current1 > 0xff00)
+                {
+                    limit_current1 = 0;
+                }
+                if(limit_current1 > MAX_CURRENT)
+                {
+                    limit_current1 = MAX_CURRENT;
+                }
+                if(limit_time1 > 0xff00)
+                {
+                    limit_time1 = 0;
+                }
+                if(limit_time1 > MAX_TIME)
+                {
+                    limit_time1 = MAX_TIME;
+                }
+                need_config = 1;
+                config_time = 0;
+                print_menu(1);
+                print_status();
+            }
+        }
+        
+        
+    }
+}
+

@@ -259,7 +259,10 @@ leg_isp: leg
 reset:
 	avrdude -v -patmega8 -cstk500v1 -P/dev/ttyACM0 -b19200
 
-# ODROID version
+
+
+
+# ODROID versions
 #vision: $(VISION_OBJS)
 #	$(GCC_ODROID) -g -o vision $(VISION_OBJS) -lpthread -lm
 

@@ -88,6 +88,14 @@
 // packets per second
 #define PACKET_RATE 40
 
+// commands we get from the phone
+#define GET_STATUS 0
+#define RESET_COMMAND 1
+#define NEW_CONFIG 2
+
+// packets we send to the phone
+#define STATUS_PACKET 0
+
 #define THROTTLE_MAX 0x1
 // analog range
 #define STEERING_MID 0x0
@@ -160,23 +168,27 @@ float init_pid(pid_t *pid,
 	float p_gain, 
 	float i_gain,
 	float d_gain,
+	float p_limit,
 	float i_limit,
-	float o_limit)
+	float d_limit)
 {
+	pid->i_result = 0;
 	pid->p_gain = p_gain;
 	pid->i_gain = i_gain;
 	pid->d_gain = d_gain;
+	pid->p_limit = p_limit;
 	pid->i_limit = i_limit;
-	pid->o_limit = o_limit;
+	pid->d_limit = d_limit;
 }
 
 void reset_pid(pid_t *pid)
 {
 	pid->error_accum = 0;
-	pid->accum = 0;
+	pid->i_result = 0;
 	pid->counter = 0;
 	pid->ignore_i = 0;
 	pid->stiction_sign = 0;
+	pid->result = 0;
 }
 
 void dump_pid(pid_t *pid)
@@ -184,8 +196,9 @@ void dump_pid(pid_t *pid)
 	print_float(pid->p_gain);
 	print_float(pid->i_gain);
 	print_float(pid->d_gain);
+	print_float(pid->p_limit);
 	print_float(pid->i_limit);
-	print_float(pid->o_limit);
+	print_float(pid->d_limit);
 	print_lf();
 }
 
@@ -194,22 +207,27 @@ int read_pid(pid_t *pid, const unsigned char *buffer, int offset)
 	float p = READ_FLOAT32(buffer, offset);
 	float i = READ_FLOAT32(buffer, offset);
 	float d = READ_FLOAT32(buffer, offset);
+	float p_limit = READ_FLOAT32(buffer, offset);
 	float i_limit = READ_FLOAT32(buffer, offset);
-	float o_limit = READ_FLOAT32(buffer, offset);
+	float d_limit = READ_FLOAT32(buffer, offset);
 	init_pid(pid, 
 		p, // P gain
 		i, // I gain	
 		d, // D gain
-		i_limit, // I limit
-		o_limit); // O limit
+		p_limit, 
+		i_limit, 
+		d_limit);
 	reset_pid(pid);
 	return offset;
 }
 
 float do_pid(pid_t *pid, float p_error, float d_error)
 {
-	float p_result = p_error * pid->p_gain;
-	float d_result = d_error * pid->d_gain;
+	pid->p_result = p_error * pid->p_gain;
+	CLAMP(pid->p_result, -pid->p_limit, pid->p_limit);
+	
+	pid->d_result = d_error * pid->d_gain;
+	CLAMP(pid->d_result, -pid->d_limit, pid->d_limit);
 
 	pid->error_accum += p_error;
 	pid->counter++;
@@ -221,7 +239,7 @@ float do_pid(pid_t *pid, float p_error, float d_error)
 // proportional I factor
 		if(!pid->ignore_i)
 		{
-			pid->accum += pid->error_accum * pid->i_gain;
+			pid->i_result += pid->error_accum * pid->i_gain;
 		}
 		else
 		{
@@ -242,55 +260,72 @@ float do_pid(pid_t *pid, float p_error, float d_error)
  */
 
 		
-		CLAMP(pid->accum, -pid->i_limit, pid->i_limit);
+		CLAMP(pid->i_result, -pid->i_limit, pid->i_limit);
 		pid->counter = 0;
 		pid->error_accum = 0;
 	}
 	
-	
-	if(pid->stiction_amount > 0.0001)
-	{
-		if(pid->stiction_sign > 0)
-		{
-// kick I in the opposite direction
-			if(p_error < -pid->stiction_threshold)
-			{
-				pid->stiction_sign = -1;
-// I has the same sign as the error
-				pid->accum -= pid->stiction_amount;
-				CLAMP(pid->accum, -pid->i_limit, pid->i_limit);
-			}
-		}
-		else
-		if(pid->stiction_sign < 0)
-		{
-// kick I in the opposite direction
-			if(p_error > pid->stiction_threshold)
-			{
-				pid->stiction_sign = 1;
-// I has the same sign as the error
-				pid->accum += pid->stiction_amount;
-				CLAMP(pid->accum, -pid->i_limit, pid->i_limit);
-			}
-		}
-		else
-		{
-// get the starting direction of the error
-			if(p_error > 0)
-			{
-				pid->stiction_sign = 1;
-			}
-			else
-			if(p_error < 0)
-			{
-				pid->stiction_sign = -1;
-			}
-		}
-	}
 
-	float result = p_result + d_result + pid->accum;
-	CLAMP(result, -pid->o_limit, pid->o_limit);
-	return result;
+	pid->result = pid->p_result + pid->i_result + pid->d_result;
+
+
+
+
+	
+// 	if(pid->stiction_amount > 0.0001)
+// 	{
+// 		if(pid->stiction_sign > 0)
+// 		{
+// 			if(pid->result > pid->max_result)
+// 			{
+// 				pid->max_result = pid->result;
+// 			}
+// 			else
+// // kick I in the opposite direction
+// 			if(pid->result < pid->max_result - pid->stiction_threshold)
+// 			{
+// 				pid->stiction_sign = -1;
+// 				pid->max_result = pid->result;
+// 
+// // I has the same sign as the error
+// 				pid->accum -= pid->stiction_amount;
+// 			}
+// 		}
+// 		else
+// 		if(pid->stiction_sign < 0)
+// 		{
+// 			if(pid->result < pid->max_result)
+// 			{
+// 				pid->max_result = pid->result;
+// 			}
+// 			else
+// // kick I in the opposite direction
+// 			if(pid->result > pid->max_result + pid->stiction_threshold)
+// 			{
+// 				pid->stiction_sign = 1;
+// // I has the same sign as the error
+// 				pid->accum += pid->stiction_amount;
+// 			}
+// 		}
+// 		else
+// 		{
+// // get the starting point of the stiction test
+// 			if(pid->result > 0)
+// 			{
+// 				pid->stiction_sign = 1;
+// 			}
+// 			else
+// 			if(pid->result < 0)
+// 			{
+// 				pid->stiction_sign = -1;
+// 			}
+// 			pid->max_result = pid->result;
+// 		}
+// 	}
+
+
+	CLAMP(pid->result, -100, 100);
+	return pid->result;
 }
 
 
@@ -544,7 +579,7 @@ void dump_config()
 	print_text("\nsteering_overshoot=");
 	print_float(TO_DEG(truck.steering_overshoot));
 	print_text("\nstiction_threshold=");
-	print_float(TO_DEG(truck.stiction_threshold));
+	print_float(truck.stiction_threshold);
 	print_text("\nstiction_amount=");
 	print_float(truck.stiction_amount);
 
@@ -614,6 +649,10 @@ int read_config_packet(const unsigned char *buffer)
 	truck.battery_v0 = READ_FLOAT32(buffer, offset);
 	truck.steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
+	
+	
+//TRACE
+//print_buffer(buffer + offset, 4);
 	truck.stiction_threshold = READ_FLOAT32(buffer, offset);
 	truck.stiction_amount = READ_FLOAT32(buffer, offset);
 
@@ -802,7 +841,7 @@ static void handle_beacon()
 		switch(receive_buf[6])
 		{
 // battery voltage
-			case 0:
+			case GET_STATUS:
 			{
 // get fully manual controls
 				if(receive_buf[8] == 1)
@@ -871,6 +910,7 @@ static void handle_beacon()
 
 // create return packet
 				int offset = 0;
+				int offset2 = 4;
 				truck.bluetooth.send_buf[offset++] = 0xff;
 				truck.bluetooth.send_buf[offset++] = 0x2d;
 				truck.bluetooth.send_buf[offset++] = 0xd4;
@@ -878,7 +918,7 @@ static void handle_beacon()
 // size
 				WRITE_INT16(truck.bluetooth.send_buf, offset, 0);
 // battery response
-				truck.bluetooth.send_buf[offset++] = 0;
+				truck.bluetooth.send_buf[offset++] = STATUS_PACKET;
 				truck.bluetooth.send_buf[offset++] = 0;
 				
 				WRITE_INT32(truck.bluetooth.send_buf, offset, truck.battery);
@@ -910,22 +950,36 @@ static void handle_beacon()
 				truck.bluetooth.send_buf[offset++] = truck.vanish_y;
 				truck.bluetooth.send_buf[offset++] = truck.bottom_x;
 
+
+				WRITE_FLOAT32(truck.bluetooth.send_buf, 
+					offset, 
+					truck.heading_pid.result);
+
 // write the correct size
-				int offset2 = 4;
 				WRITE_INT16(truck.bluetooth.send_buf, offset2, offset + 2);
 
+// write the chksum
 				chksum = get_chksum(truck.bluetooth.send_buf, offset);
 				WRITE_INT16(truck.bluetooth.send_buf, offset, chksum);
+
+// send it
 				truck.bluetooth.send_offset = 0;
 				truck.bluetooth.send_size = offset;
 				
 //TRACE2
 //print_buffer(truck.bluetooth.send_buf, truck.bluetooth.send_size);
+
+// TRACE2
+// print_text("heading ");
+// print_float(truck.current_heading);
+// print_text("feedback ");
+// print_float(truck.heading_pid.result);
+
 				break;
 			}
 
 // reset gyro
-			case 1:
+			case RESET_COMMAND:
 				DISABLE_INTERRUPTS
 				truck.have_gyro_center = 0;
 				truck.need_gyro_center = 0;
@@ -942,7 +996,7 @@ static void handle_beacon()
 				break;
 
 // config file
-			case 2:
+			case NEW_CONFIG:
 			{
 				int offset = 8;
 // receive_buf is overwritten if this routine takes too long
@@ -1484,6 +1538,8 @@ void TIM2_IRQHandler()
 
 		if(truck.writing_settings) return;
 
+// -100 - 100
+		float steering_feedback100 = 0;
 		float steering_overshoot = 0;
 		int target_rpm = 0;
 
@@ -1544,6 +1600,12 @@ void TIM2_IRQHandler()
 			{
 				truck.throttle_ramp_counter = 0;
 				truck.steering_step_counter = 0;
+			}
+
+// change in reverse
+			if(truck.throttle_reverse2 != truck.throttle_reverse)
+			{
+				truck.steering_timeout = 0;
 			}
 			
 			truck.steering2 = truck.steering;
@@ -1927,10 +1989,6 @@ void TIM2_IRQHandler()
 // print_text("need_steering_feedback=");
 // print_float(truck.need_steering_feedback);
 
-// print_text("current_heading=");
-// print_float(truck.current_heading);
-// print_text("target_heading=");
-// print_float(truck.target_heading);
 				if(truck.need_steering_feedback)
 				{
 					if(truck.steering_timeout > 0)
@@ -1939,31 +1997,31 @@ void TIM2_IRQHandler()
 					}
 					else
 					{
-// disable heading hold after a certain time with no throttle
+// disable heading hold after a certain time with no throttle or a change in reverse
 						truck.need_steering_feedback = 0;
 					}					
 
-// -100 - 100
-					float steering_feedback = 0;
-#ifdef I2C_IMU
+#ifndef I2C_IMU
+					int raw_gyro = truck.gyro - truck.gyro_center;
+#else // !I2C_IMU
+					int raw_gyro = truck.imu.gyro_z_centered;
 					if(truck.enable_mag)
 					{
-						steering_feedback = do_pid(&truck.heading_pid, 
+						steering_feedback100 = do_pid(&truck.heading_pid, 
 							-get_angle_change(truck.imu.current_heading, truck.target_heading), 
 							0);
 					}
 					else
-#endif
+#endif  // I2C_IMU
 					{
-						steering_feedback = do_pid(&truck.heading_pid, 
+						steering_feedback100 = do_pid(&truck.heading_pid, 
 							-get_angle_change(truck.current_heading, truck.target_heading), 
-							(float)(truck.gyro - truck.gyro_center) /
-								truck.angle_to_gyro);
+							(float)raw_gyro / truck.angle_to_gyro);
 					}
 
 
 					truck.steering_pwm = truck.mid_steering_pwm -
-						steering_feedback * 
+						steering_feedback100 * 
 						(MAX_PWM - MIN_PWM) / 2 / 
 						100;
 				}
@@ -1990,8 +2048,23 @@ void TIM2_IRQHandler()
 
 /*
  * 				TRACE2
- * 				print_float(steering_feedback);
+ * 				print_float(steering_feedback100);
  */
+
+
+
+// send debug info to the Odroid running video_debug.c
+unsigned char debug_buffer[256];
+int offset = 0;
+debug_buffer[offset++] = 0xff;
+debug_buffer[offset++] = SYNC_CODE;
+WRITE_FLOAT32(debug_buffer, offset, truck.current_heading);
+WRITE_FLOAT32(debug_buffer, offset, truck.target_heading);
+WRITE_FLOAT32(debug_buffer, offset, truck.heading_pid.p_result);
+WRITE_FLOAT32(debug_buffer, offset, truck.heading_pid.i_result);
+WRITE_FLOAT32(debug_buffer, offset, truck.heading_pid.d_result);
+WRITE_FLOAT32(debug_buffer, offset, steering_feedback100);
+send_uart_binary(debug_buffer, offset);
 
 
 
@@ -2396,37 +2469,18 @@ int main(void)
 	truck.battery_v0 = 8.67f;
 
 // heading error -> PWM
-	init_pid(&truck.heading_pid, 
-		30, // P gain
-		0.5f, // I gain	
-		10, // D gain
-		100, // I limit
-		100); // O limit
+
+	init_pid(&truck.heading_pid, 0, 0, 0, 0, 0, 0);
 
 
 // RPM error -> throttle
-	init_pid(&truck.rpm_pid, 
-		0, // P gain
-		0, // I gain	
-		0, // D gain
-		100, // I limit
-		100); // O limit
+	init_pid(&truck.rpm_pid, 0, 0, 0, 0, 0, 0);
 
 // vanishing point error -> heading
-	init_pid(&truck.path_pid, 
-		0, // P gain
-		0, // I gain	
-		0, // D gain
-		100, // I limit
-		100); // O limit
+	init_pid(&truck.path_pid, 0, 0, 0, 0, 0, 0);
 
 // side error -> heading
-	init_pid(&truck.side_pid, 
-		0, // P gain
-		0, // I gain	
-		0, // D gain
-		100, // I limit
-		100); // O limit
+	init_pid(&truck.side_pid, 0, 0, 0, 0, 0, 0);
 
 	truck.rpm_dv_size = 10;
 	init_derivative(&truck.rpm_dv, truck.rpm_dv_size);
@@ -2535,18 +2589,12 @@ int main(void)
 	init_cc1101();
 	cc1101_receiver();
 
-// DEBUG
-// bypass calibration for testing
-//	imu.have_gyro_center = 1;
+/*
+ * 	TRACE2
+ * 	print_text("\nimu.angle_to_gyro=");
+ * 	print_number(truck.imu.angle_to_gyro);
+ */
 
-//	test_motors();
-	
-// test floating point
-//	float x = 0.12345f;
-//	float y = tanf(x);
-//    print_float(x);
-//    print_float(y);
-	
 
 	while(1)
 	{

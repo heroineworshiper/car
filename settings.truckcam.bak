@@ -1,0 +1,74 @@
+# settings for truck with camera pole
+#            P      I      D     I limit O limit
+STEERING_PID 200    0.5     0     100     100
+RPM_PID      40     0.5    5     100                    100
+
+
+
+BLUETOOTH truck
+# if magnetometer is attached
+ENABLE_MAG 0
+ENABLE_VISION 0
+PATH_CENTER 126
+BOTTOM_CENTER 70
+VISION_BANDWIDTH 0.10
+# PWM_HZ * seconds
+MANUAL_OVERRIDE_DELAY 50
+
+# wheel diameter in mm
+DIAMETER 108
+# if nonzero, replaces TARGET_REVERSE_RPM
+TARGET_REVERSE_PACE 20.00
+
+# PWM positions 0 - 100
+MID_STEERING 40
+MID_THROTTLE 46
+# enable heading hold
+AUTO_STEERING 1
+# enable RPM hold
+AUTO_THROTTLE 1
+
+# starting PWM for THROTTLE_RAMP state & minimum throttle settings
+MIN_THROTTLE_FWD 13
+MIN_THROTTLE_REV 12
+
+# ending PWM for THROTTLE_RAMP state & PWM for THROTTLE_WAIT state
+THROTTLE_BASE 20
+THROTTLE_REVERSE_BASE 20
+
+# Maximum throttle settings
+MAX_THROTTLE_FWD 40
+MAX_THROTTLE_REV 30
+# starting PWM for THROTTLE_RAMP state
+
+
+
+# number of PWM cycles for each throttle step
+THROTTLE_RAMP_DELAY 2
+THROTTLE_RAMP_STEP 1
+
+# rpm derivative size
+RPM_DV_SIZE 10
+# Steering PWM with no throttle
+MAX_STEERING 100
+MIN_STEERING 25
+# maximum analog amount gyros can move while calculating center
+GYRO_CENTER_MAX 200
+MAX_GYRO_DRIFT 0.4
+# analog reading to radians
+ANGLE_TO_GYRO 450
+# lowpass filtering 1-255.  Not used for car.
+GYRO_BANDWIDTH 255
+
+
+# PWM cycles between I steps
+PID_DOWNSAMPLE 1
+# number of PWM cycles for each steering step
+STEERING_STEP_DELAY 2
+# degrees to increment heading after every step delay
+STEERING_STEP 1.0
+STEERING_OVERSHOOT -20
+BATTERY_ANALOG 965
+BATTERY_V0 8.67
+
+

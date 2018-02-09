@@ -35,7 +35,7 @@ public class Settings {
 		big_font = Typeface.create("SansSerif", Typeface.BOLD);
 		small_font = Typeface.create("SansSerif", Typeface.BOLD);
 		big_font_size = 70;
-		small_font_size = 24;
+		small_font_size = 36;
 		foreground = Color.WHITE;
 		background = Color.BLACK;
 	}

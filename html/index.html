@@ -1,0 +1,54 @@
+<meta charset="utf-8">
+<img id="canvas" src="latest.jpg" width=640 height=480></canvas><P>
+<H1>
+<B><font face=helvetica>
+Frames written: <output id="frame_count"></output><BR>
+FPS: <output id="fps"></output><BR>
+Path X: <output id="path_x"></output><BR>
+
+
+
+
+<script type="text/javascript">
+setInterval(refresh, 1000);
+// force the image to refresh by using a junk counter
+var counter = 0;
+
+function drawFields(data) {
+
+
+}
+
+function refresh() {
+	console.log("refreshing counter=" + counter);
+
+	var frameCountHttp = new XMLHttpRequest();
+	frameCountHttp.onreadystatechange = function() {
+		document.getElementById("frame_count").innerHTML = frameCountHttp.responseText;
+	}
+	frameCountHttp.open("GET","total_frames.txt", true);
+	frameCountHttp.send();
+
+	var FPSHttp = new XMLHttpRequest();
+	FPSHttp.onreadystatechange = function() {
+		document.getElementById("fps").innerHTML = FPSHttp.responseText;
+	}
+	FPSHttp.open("GET","fps.txt", true);
+	FPSHttp.send();
+
+	var PathXHttp = new XMLHttpRequest();
+	PathXHttp.onreadystatechange = function() {
+		document.getElementById("path_x").innerHTML = PathXHttp.responseText;
+	}
+	PathXHttp.open("GET","path_x.txt", true);
+	PathXHttp.send();
+
+//	document.getElementById("fps").innerHTML = "FPS";
+	
+	document.getElementById('canvas').src = 'latest.jpg?counter=' + counter;
+	counter++;
+}
+
+
+</script>
+

@@ -31,10 +31,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-// makes no difference in latency because we always consume faster than it 
-// produces
-//#define DEVICE_BUFFERS 8
-#define DEVICE_BUFFERS 2
 #define TOTAL_CPUS 4
 //#define USE_COLOR
 #define USE_OPENCV

@@ -65,7 +65,7 @@ typedef struct
 	int compass_offset;
 	int attitude_blend;
 	int blend_counter;
-	int angle_to_gyro;
+//	int angle_to_gyro;
 
 	float gyro_x_center;
 	float gyro_y_center;

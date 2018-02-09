@@ -1,0 +1,523 @@
+/*
+ * Leg test program
+ *
+ * Copyright (C) 2017 Adam Williams <broadcast at earthling dot net>
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+
+// compile with make leg.hex
+// program with make leg_isp
+// UART is 9600 baud
+
+// pin functions
+// 1 - field 3 N
+// 2 - field 3 P
+// 9 - field 1 P
+// 11 - field 2 P
+// 30 - field 1 N
+// 31 - field 2 N
+// 32 - debug RX
+// 13 - debug TX
+
+
+
+#include "leg.h"
+#include "avr_debug.h"
+#include <string.h> // memcpy
+
+
+// created by tables.c
+const uint8_t sin_table[] = {
+	0x80, 0x83, 0x86, 0x89, 0x8c, 0x8f, 0x92, 0x95, 
+	0x98, 0x9c, 0x9f, 0xa2, 0xa5, 0xa8, 0xab, 0xae, 
+	0xb0, 0xb3, 0xb6, 0xb9, 0xbc, 0xbf, 0xc1, 0xc4, 
+	0xc7, 0xc9, 0xcc, 0xce, 0xd1, 0xd3, 0xd5, 0xd8, 
+	0xda, 0xdc, 0xde, 0xe0, 0xe2, 0xe4, 0xe6, 0xe8, 
+	0xea, 0xec, 0xed, 0xef, 0xf0, 0xf2, 0xf3, 0xf5, 
+	0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfc, 
+	0xfd, 0xfe, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xfe, 
+	0xfd, 0xfc, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 
+	0xf6, 0xf5, 0xf3, 0xf2, 0xf0, 0xef, 0xed, 0xec, 
+	0xea, 0xe8, 0xe6, 0xe4, 0xe2, 0xe0, 0xde, 0xdc, 
+	0xda, 0xd8, 0xd5, 0xd3, 0xd1, 0xce, 0xcc, 0xc9, 
+	0xc7, 0xc4, 0xc1, 0xbf, 0xbc, 0xb9, 0xb6, 0xb3, 
+	0xb0, 0xae, 0xab, 0xa8, 0xa5, 0xa2, 0x9f, 0x9c, 
+	0x98, 0x95, 0x92, 0x8f, 0x8c, 0x89, 0x86, 0x83, 
+	0x80, 0x7c, 0x79, 0x76, 0x73, 0x70, 0x6d, 0x6a, 
+	0x67, 0x63, 0x60, 0x5d, 0x5a, 0x57, 0x54, 0x51, 
+	0x4f, 0x4c, 0x49, 0x46, 0x43, 0x40, 0x3e, 0x3b, 
+	0x38, 0x36, 0x33, 0x31, 0x2e, 0x2c, 0x2a, 0x27, 
+	0x25, 0x23, 0x21, 0x1f, 0x1d, 0x1b, 0x19, 0x17, 
+	0x15, 0x13, 0x12, 0x10, 0x0f, 0x0d, 0x0c, 0x0a, 
+	0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x03, 
+	0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
+	0x02, 0x03, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 
+	0x09, 0x0a, 0x0c, 0x0d, 0x0f, 0x10, 0x12, 0x13, 
+	0x15, 0x17, 0x19, 0x1b, 0x1d, 0x1f, 0x21, 0x23, 
+	0x25, 0x27, 0x2a, 0x2c, 0x2e, 0x31, 0x33, 0x36, 
+	0x38, 0x3b, 0x3e, 0x40, 0x43, 0x46, 0x49, 0x4c, 
+	0x4f, 0x51, 0x54, 0x57, 0x5a, 0x5d, 0x60, 0x63, 
+	0x67, 0x6a, 0x6d, 0x70, 0x73, 0x76, 0x79, 0x7c
+};
+
+
+
+#define SIN_TABLE_SIZE (sizeof(sin_table))
+// pins for the FETs
+#define P_FET1	5
+#define P_FET2	7
+#define P_FET3	4
+#define N_FET1	0
+#define N_FET2	1
+#define N_FET3	3
+
+typedef struct
+{
+// time until the next interrupt
+	uint8_t time;
+// value that turns off the P's
+	uint8_t port_value1;
+// value that turns on the N's
+	uint8_t port_value2;
+} pwm_table_t;
+
+
+
+
+// the motor phase 0 - 255
+uint8_t phase;
+#define MIN_POWER 2
+// tweek this to get the right Hz
+#define MAX_POWER 128
+// the power
+uint8_t power = MAX_POWER;
+
+// pwm values derived from the motor phase 0 - 255
+uint8_t pwm1;
+uint8_t pwm2;
+uint8_t pwm3;
+
+// the PWM program
+// 1 for overflow, 3 for phases
+#define TABLE_SIZE 4
+pwm_table_t pwm_table[TABLE_SIZE];
+// entry in pwm_table we're on
+pwm_table_t *pwm_ptr;
+pwm_table_t new_table[TABLE_SIZE];
+uint8_t have_new_table = 0;
+// timer 2 is waiting to change the FETs
+uint8_t fet_delay = 0;
+
+// timer 2 overflow
+ISR(TIMER2_OVF_vect)
+{
+// turn off the P's
+	if(!fet_delay)
+	{
+		PORTD = pwm_ptr->port_value1;
+		fet_delay = 1;
+// wait for the FETs
+		TCNT2 = 0xa0;   // 15khz requires much longer  delay
+//		TCNT2 = 0xf4;   // 1.5khz
+	}
+	else
+	{
+// turn on the N's
+		fet_delay = 0;
+		PORTD = pwm_ptr->port_value2;
+// set the next delay
+		TCNT2 = pwm_ptr->time;
+
+// next program line
+		pwm_ptr++;
+
+// new cycle begins
+		if(pwm_ptr >= &pwm_table[TABLE_SIZE])
+		{
+			pwm_ptr = &pwm_table[0];
+
+// copy new program in
+			if(have_new_table)
+			{
+				memcpy(pwm_table, new_table, TABLE_SIZE * sizeof(pwm_table_t));
+				have_new_table = 0;
+			}
+		}
+	}
+}
+
+
+void phase_to_pwm()
+{
+	if(power < MIN_POWER)
+	{
+		power = MIN_POWER;
+	}
+
+
+	pwm1 = (uint8_t)(((uint16_t)sin_table[(uint8_t)(phase)]) * 
+		power / 
+		0xff);
+	pwm2 = (uint8_t)(((uint16_t)sin_table[(uint8_t)(phase + 85)]) * 
+		power / 
+		0xff);
+	pwm3 = (uint8_t)(((uint16_t)sin_table[(uint8_t)(phase + 170)]) * 
+		power / 
+		0xff);
+
+
+//pwm1 = 128;
+
+
+// construct the new PWM program
+	pwm_table_t *ptr;
+
+// RX_PIN must always be high to enable the pullup
+	uint8_t current_port = (1 << RX_PIN) |
+		(1 << P_FET1) |
+		(1 << P_FET2) |
+		(1 << P_FET3);
+	uint8_t i;
+// 1st interrupt
+	ptr = &new_table[0];
+	ptr->time = 0;
+	ptr->port_value1 = (1 << RX_PIN);
+	ptr->port_value2 = current_port;
+	
+	ptr++;
+	
+	uint8_t new_time;
+	uint8_t new_port1;
+	uint8_t new_port2;
+//	for(i = 0; i < 1; i++) // DEBUG
+	for(i = 0; i < 3; i++)
+	{
+		uint8_t min = 0xff;
+		if(bitIsSet(current_port, P_FET1) &&
+			pwm1 <= min)
+		{
+			min = pwm1;
+			new_time = pwm1;
+			new_port1 = current_port;
+			bitClear(new_port1, P_FET1);
+			new_port2 = new_port1;
+			bitSet(new_port2, N_FET1);
+		}
+
+
+#if 1 // DEBUG
+		if(bitIsSet(current_port, P_FET2) &&
+			pwm2 <= min)
+		{
+			min = pwm2;
+			new_time = pwm2;
+			new_port1 = current_port;
+			bitClear(new_port1, P_FET2);
+			new_port2 = new_port1;
+			bitSet(new_port2, N_FET2);
+		}
+		
+		if(bitIsSet(current_port, P_FET3) &&
+			pwm3 <= min)
+		{
+			min = pwm3;
+			new_time = pwm3;
+			new_port1 = current_port;
+			bitClear(new_port1, P_FET3);
+			new_port2 = new_port1;
+			bitSet(new_port2, N_FET3);
+		}
+#endif
+
+		ptr->time = new_time;
+		ptr->port_value1 = new_port1;
+		ptr->port_value2 = new_port2;
+		current_port = new_port2;
+		ptr++;
+	}
+
+
+// convert absolute times to -delays
+	for(i = 0; i < 3; i++)
+	{
+		pwm_table_t *ptr1 = &new_table[i];
+		pwm_table_t *ptr2 = &new_table[i + 1];
+		uint8_t diff = ptr2->time - ptr1->time;
+		ptr1->time = 0xff - diff;
+	}
+
+// time with only N's
+	uint8_t diff = MAX_POWER - new_table[3].time;
+	new_table[3].time = 0xff - diff;
+
+// make the interrupt handle copy new_table over
+	have_new_table = 1;	
+}
+
+
+void dump_pwm()
+{
+	print_text("dump_pwm \n");
+	flush_serial();
+	print_text("pwm1=");
+	print_number(pwm1);
+	print_text("pwm2=");
+	print_number(pwm2);
+	print_text("pwm3=");
+	print_number(pwm3);
+	flush_serial();
+	send_byte('\n');
+
+	uint8_t i;
+	for(i = 0; i < TABLE_SIZE; i++)
+	{
+		print_text("delay=");
+		print_number(0xff - new_table[i].time);
+		print_text("\tport_value1=");
+		print_bin(new_table[i].port_value1);
+		print_text("\tport_value2=");
+		print_bin(new_table[i].port_value2);
+		flush_serial();
+		send_byte('\n');
+	}
+}
+
+void pwm_on()
+{
+// enable the overflow interrupt
+	TIMSK = (1 << TOIE2);
+}
+
+void pwm_off()
+{
+	bitClear(TIMSK, TOIE2);
+	PORTD = (1 << RX_PIN);
+}
+
+void jump()
+{
+	int i, j;
+	phase = 0;
+	power = 192;
+	pwm_on();
+
+
+
+	for(i = 0; i < 100; i++)
+	{
+		delayMicroseconds(1000);
+		uint8_t step = i / 8;
+		if(step > 12) step = 12;
+		if(step < 1) step = 1;
+		phase += step;
+		phase_to_pwm();
+	}
+
+
+	for(i = 0; i < 50; i++)
+	{
+		delayMicroseconds(1000);
+	}
+
+	pwm_off();
+}
+
+void hold()
+{
+	int i;
+	phase = 0;
+	power = 4;
+	pwm_on();
+
+	for(i = 0; i < 500; i++)
+	{
+		delayMicroseconds(2000);
+		phase += 1;
+		if(i == 499) power = MIN_POWER;
+		phase_to_pwm();
+	}
+
+	
+	
+// hold it
+	for(i = 0; i < 1000; i++)
+	{
+		delayMicroseconds(1000);
+	}
+
+	pwm_off();
+//	dump_pwm();
+}
+
+
+int main()
+{
+// disable watchdog.  Disabled by default.
+//	WDTCR = (1 << 4) | (1 << 3);
+//	WDTCR = (1 << 3) | (1);
+	
+
+
+
+	
+
+	init_serial();
+
+// delay
+	int i;
+	for(i = 0; i < 1000; i++)
+	{
+		delayMicroseconds(1000);
+	}
+
+
+
+// set up the FETs
+	bitClear(PORTD, N_FET1);
+	bitClear(PORTD, N_FET2);
+	bitClear(PORTD, N_FET3);
+	bitClear(PORTD, P_FET1);
+	bitClear(PORTD, P_FET2);
+	bitClear(PORTD, P_FET3);
+
+// enable the FET outputs.  Makes no difference, because of pullups.
+ 	bitSet(DDRD, N_FET1);
+ 	bitSet(DDRD, N_FET2);
+ 	bitSet(DDRD, N_FET3);
+ 	bitSet(DDRD, P_FET1);
+ 	bitSet(DDRD, P_FET2);
+ 	bitSet(DDRD, P_FET3);
+
+
+	power = MAX_POWER;
+	phase = 0;
+	pwm_ptr = &pwm_table[0];
+
+
+	pwm_off();
+
+
+
+// set the prescaler for PWM.  
+	TCCR2 = 0x1; // 15 kHz
+//	TCCR2 = 0x2; // 5.7 kHz
+//  TCCR2 = 0x3; // 1.5 kHz
+//	TCCR2 = 0x4; // 800Hz
+
+// enable interrupts
+	sei();
+	
+	print_text("****\nWelcome to the leg controller\n");
+	flush_serial();
+
+
+
+	pwm_on();
+	phase_to_pwm();
+	dump_pwm();
+	while(1)
+	{
+		for(i = 0; i < 10; i++)
+		{
+			delayMicroseconds(1000);
+		}
+		
+		phase++;
+		phase_to_pwm();
+
+		if(have_uart_in)
+		{
+			have_uart_in = 0;
+			
+			send_byte(uart_in);
+		}
+	}
+
+
+
+// user input
+	while(1)
+	{
+		if(have_uart_in)
+		{
+			have_uart_in = 0;
+			
+			send_byte(uart_in);
+			
+			switch(uart_in)
+			{
+				case '1':
+					jump();
+					break;
+
+				case '2':
+					hold();
+					break;
+
+// can't receive when PWM is on, so just take any character
+//				default:
+//					pwm_off();
+//					break;
+			}
+			
+//			print_hex(uart_in);
+//			flush_serial();
+//			jump();
+		}
+	}
+
+
+#if 0
+	while(1)
+	{
+		for(i = 0; i < 1; i++)
+		{
+			delayMicroseconds(1000);
+		}
+		
+		bitSet(TX_PORT, TX_PIN); // DEBUG
+		phase++;
+		phase_to_pwm();
+	}
+#endif
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

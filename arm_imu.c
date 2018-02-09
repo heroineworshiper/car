@@ -352,13 +352,13 @@ TOGGLE_PIN(DEBUG_GPIO, DEBUG_PIN);
 	
 		DISABLE_INTERRUPTS
 // accumulate heading for enable_mag = 0
-		truck.current_heading += imu->gyro_z_centered / imu->angle_to_gyro / NAV_HZ;
+		truck.current_heading += imu->gyro_z_centered / truck.angle_to_gyro / NAV_HZ;
 		truck.current_heading = fix_angle(truck.current_heading);
 
 // accmulate for mag 
-		imu->current_roll += imu->gyro_x_centered / imu->angle_to_gyro / NAV_HZ;
-		imu->current_pitch += imu->gyro_y_centered / imu->angle_to_gyro / NAV_HZ;
-		imu->current_heading += imu->gyro_z_centered / imu->angle_to_gyro / NAV_HZ;
+		imu->current_roll += imu->gyro_x_centered / truck.angle_to_gyro / NAV_HZ;
+		imu->current_pitch += imu->gyro_y_centered / truck.angle_to_gyro / NAV_HZ;
+		imu->current_heading += imu->gyro_z_centered / truck.angle_to_gyro / NAV_HZ;
 		imu->current_roll = fix_angle(imu->current_roll);
 		imu->current_pitch = fix_angle(imu->current_pitch);
 		imu->current_heading = fix_angle(imu->current_heading);
@@ -603,7 +603,7 @@ void init_imu(imu_t *imu)
 
 	imu->compass_sign = 1;
 	imu->attitude_blend = 64;
-	imu->angle_to_gyro = 4000;
+//	imu->angle_to_gyro = 4000;
 	imu->gyro_x_min = 65535;
 	imu->gyro_y_min = 65535;
 	imu->gyro_z_min = 65535;

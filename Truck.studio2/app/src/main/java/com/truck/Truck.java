@@ -120,7 +120,7 @@ public class Truck extends Thread {
 
         	try 
 			{
-              Log.i("", "Truck.run: Trying plan B");
+              Log.i("", "Truck.initializeBluetooth: Trying plan B");
               socket =(BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[] {int.class}).invoke(device, 1);
               socket.connect();
         	} catch (Exception e2) 
@@ -134,7 +134,7 @@ public class Truck extends Thread {
 				
 				
  				socket = null;
-				Log.i("", "Truck.run: connect failed ");
+				Log.i("", "Truck.initializeBluetooth: connect failed ");
 	       		printAlert("Couldn't open bluetooth socket\n");
 	     	   	return true;
 	       	}
@@ -145,7 +145,7 @@ public class Truck extends Thread {
 			ostream = socket.getOutputStream();
 		} catch (IOException e) {
 //			alert("run: couldn't get bluetooth ostream");
-			Log.i("Truck", "run: ostream failed");
+			Log.i("Truck", "initializeBluetooth: ostream failed");
 			e.printStackTrace();
 	        printAlert("Couldn't get bluetooth ostream\n");
 			return true;
@@ -155,7 +155,7 @@ public class Truck extends Thread {
         try {
 			istream = socket.getInputStream();
 		} catch (IOException e) {
-			Log.i("Truck", "run: istream failed");
+			Log.i("Truck", "initializeBluetooth: istream failed");
 	        printAlert("Couldn't get bluetooth istream\n");
 			e.printStackTrace();
 			return true;
@@ -239,9 +239,9 @@ public class Truck extends Thread {
 	    			{
 	    				// reset gyro
 	    				// size
-		    			offset = Math.write_int16(beacon, offset, 10);
+		    			offset = Math2.write_int16(beacon, offset, 10);
 		    			// command
-		    			beacon[offset++] = (byte) 1;
+		    			beacon[offset++] = (byte) RESET_COMMAND;
 		    			beacon[offset++] = (byte) 0;
 		    			
 		    			needReset = false;
@@ -253,8 +253,7 @@ public class Truck extends Thread {
 	    				// size
 		    			offset += 2;
 		    			// command
-		    			beacon[offset++] = (byte) 2;
-						//beacon[offset++] = (byte) (needSaveConfig ? 1 : 0);
+		    			beacon[offset++] = (byte) NEW_CONFIG;
 						beacon[offset++] = (byte) 1;
 
 
@@ -263,7 +262,7 @@ public class Truck extends Thread {
 						beacon[offset++] = (byte) (Settings.getFileFloat("BOTTOM_CENTER")[0]);
 						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_VISION")[0]);
 						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_MAG")[0]);
-						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("MANUAL_OVERRIDE_DELAY")[0]));
+						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MANUAL_OVERRIDE_DELAY")[0]));
 
 
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
@@ -281,30 +280,33 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("RPM_DV_SIZE")[0]);
 		    			beacon[offset++] = (byte) (Settings.getFileFloat("PATH_DX_SIZE")[0]);
 		    			
-						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
-						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
+						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
+		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
 						beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
 
 
 
-						offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
-		    			offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
+						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
+		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
+		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
+		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
+						
+						
+
+		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 
                         //float targetPace = Settings.getFileFloat("TARGET_PACE")[0];
 						float targetPace = Settings.targetPace;
                         if(targetPace > 0.001)
                         {
                             // meters per minute/wheel circumference in meters
-                            offset = Math.write_int16(beacon, offset, paceToRPM(targetPace));
+                            offset = Math2.write_int16(beacon, offset, paceToRPM(targetPace));
 //Log.i("Truck", "run targetRPM=" + targetRpm);
                         }
                         else
                         {
-                            offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
+                            offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
                         }
 
 
@@ -312,28 +314,32 @@ public class Truck extends Thread {
 						if(targetPace > 0.001)
 						{
 							// meters per minute/wheel circumference in meters
-							offset = Math.write_int16(beacon, offset, paceToRPM(targetReversePace));
+							offset = Math2.write_int16(beacon, offset, paceToRPM(targetReversePace));
 //Log.i("Truck", "run targetRPM=" + targetRpm);
 						}
 						else
 						{
-							offset = Math.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_REVERSE_RPM")[0]));
+							offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_REVERSE_RPM")[0]));
 						}
 
 
 
-		    			offset = Math.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
-		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
-		    			offset = Math.write_float32(beacon, offset, (float)Math.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+		    			offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
+		    			offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
+		    			offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+
+						offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("STICTION_THRESHOLD")[0]);
+						offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("STICTION_AMOUNT")[0]);
 
 
 
-						offset = Math.write_int16(beacon, offset, mag_x_max);
-						offset = Math.write_int16(beacon, offset, mag_y_max);
-						offset = Math.write_int16(beacon, offset, mag_z_max);
-						offset = Math.write_int16(beacon, offset, mag_x_min);
-						offset = Math.write_int16(beacon, offset, mag_y_min);
-						offset = Math.write_int16(beacon, offset, mag_z_min);
+
+						offset = Math2.write_int16(beacon, offset, mag_x_max);
+						offset = Math2.write_int16(beacon, offset, mag_y_max);
+						offset = Math2.write_int16(beacon, offset, mag_z_max);
+						offset = Math2.write_int16(beacon, offset, mag_x_min);
+						offset = Math2.write_int16(beacon, offset, mag_y_min);
+						offset = Math2.write_int16(beacon, offset, mag_z_min);
 
 
 
@@ -353,7 +359,7 @@ public class Truck extends Thread {
 						offset = writePid(offset, pid);
 
 // write the size including the CRC
-						Math.write_int16(beacon, 4, offset + 2);
+						Math2.write_int16(beacon, 4, offset + 2);
 
 		    			needConfig = false;
 	    			}
@@ -361,10 +367,10 @@ public class Truck extends Thread {
 	    			{
 // get battery voltage
 // size
-		    			Math.write_int16(beacon, offset, 16);
+		    			Math2.write_int16(beacon, offset, 16);
 		    			offset += 2;
 // command
-		    			beacon[offset++] = (byte) 0;
+		    			beacon[offset++] = (byte) GET_STATUS;
 		    			beacon[offset++] = (byte) 0;
 // offset = 8
 						if(haveControls)
@@ -402,8 +408,8 @@ public class Truck extends Thread {
 	    			
 	    			
 	    			
-	    			int checksum = Math.getChecksum(beacon, 0, offset);
-	    			Math.write_int16(beacon, offset, checksum);
+	    			int checksum = Math2.getChecksum(beacon, 0, offset);
+	    			Math2.write_int16(beacon, offset, checksum);
 	    			offset += 2;
 
 	    			sendBeacon(offset);
@@ -429,7 +435,7 @@ public class Truck extends Thread {
 // get size
 	    					if(offset < totalReceived - 8)
 	    					{
-	    						int size = Math.read_uint16(receive_buf, offset + 4);
+	    						int size = Math2.read_uint16(receive_buf, offset + 4);
 	    						if(size + offset > receive_buf.length ||
 	    							size < 8)
 	    						{
@@ -440,33 +446,35 @@ public class Truck extends Thread {
 	    						{
 									printBuffer("run 1", receive_buf, 0, totalReceived);
 
-									checksum = Math.getChecksum(receive_buf, offset, size - 2);
-    			    				Log.i("Truck.run 1", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math.read_uint16(receive_buf, offset + size - 2));
-	    							if(checksum == Math.read_uint16(receive_buf, offset + size - 2))
+									checksum = Math2.getChecksum(receive_buf, offset, size - 2);
+    			    				Log.i("Truck.run 1", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math2.read_uint16(receive_buf, offset + size - 2));
+	    							if(checksum == Math2.read_uint16(receive_buf, offset + size - 2))
 	    							{
 // packet is intact
 		    							switch(receive_buf[offset + 6])
 		    							{
-		    							case 0:
-		    								battery_analog = Math.read_int32(receive_buf, offset + 8);
-		    								battery_voltage = Math.read_float32(receive_buf, offset + 12);
-		    								gyro_center = Math.read_int16(receive_buf, offset + 16);
-		    								gyro_range = Math.read_uint16(receive_buf, offset + 18);
-		    								rpm = Math.read_uint16(receive_buf, offset + 20);
-		    								current_heading = Math.read_float32(receive_buf, offset + 22);
+		    							case STATUS_PACKET:
+		    								battery_analog = Math2.read_int32(receive_buf, offset + 8);
+		    								battery_voltage = Math2.read_float32(receive_buf, offset + 12);
+		    								gyro_center = Math2.read_int16(receive_buf, offset + 16);
+		    								gyro_range = Math2.read_uint16(receive_buf, offset + 18);
+		    								rpm = Math2.read_uint16(receive_buf, offset + 20);
+		    								current_heading = Math2.read_float32(receive_buf, offset + 22);
 
-											mag_x_min = Math.read_int16(receive_buf, offset + 26);
-											mag_x_max = Math.read_int16(receive_buf, offset + 28);
-											mag_y_min = Math.read_int16(receive_buf, offset + 30);
-											mag_y_max = Math.read_int16(receive_buf, offset + 32);
-											mag_z_min = Math.read_int16(receive_buf, offset + 34);
-											mag_z_max = Math.read_int16(receive_buf, offset + 36);
+											mag_x_min = Math2.read_int16(receive_buf, offset + 26);
+											mag_x_max = Math2.read_int16(receive_buf, offset + 28);
+											mag_y_min = Math2.read_int16(receive_buf, offset + 30);
+											mag_y_max = Math2.read_int16(receive_buf, offset + 32);
+											mag_z_min = Math2.read_int16(receive_buf, offset + 34);
+											mag_z_max = Math2.read_int16(receive_buf, offset + 36);
 
 
 
 											vanish_x = receive_buf[offset + 38];
 											vanish_y = receive_buf[offset + 39];
 											bottom_x = receive_buf[offset + 40];
+
+											heading_feedback = Math2.read_float32(receive_buf, offset + 41);
 
 		    								break;
 		    							}
@@ -520,14 +528,14 @@ public class Truck extends Thread {
 
 	private int paceToRPM(float targetPace) {
 		float diameter = Settings.getFileFloat("DIAMETER")[0] / 1000;
-		return (int) (1609.0 / targetPace / (diameter * Math.PI));
+		return (int) (1609.0 / targetPace / (diameter * Math2.PI));
 	}
 
 
 	private int writePid(int offset, float[] pid) {
-		for(int i = 0; i < 5; i++)
+		for(int i = 0; i < 6; i++)
 		{
-			Math.write_float32(beacon, offset, pid[i]);
+			Math2.write_float32(beacon, offset, pid[i]);
 			offset += 4;
 		}
 		return offset;
@@ -643,12 +651,22 @@ public class Truck extends Thread {
     BluetoothSocket socket = null;
 	OutputStream ostream = null;
     InputStream istream = null;
+
+// commands we send to the vehicle
+	static final int GET_STATUS = 0;
+	static final int RESET_COMMAND = 1;
+	static final int NEW_CONFIG = 2;
+
+// packets we get back from the vehicle
+	static final int STATUS_PACKET = 0;
+	
     
     static int battery_analog;
     static float battery_voltage;
     static int gyro_center;
     static int gyro_range;
     static float current_heading;
+	static float heading_feedback;
 //	static float power;
 	static int rpm;
 	static int mag_x_min, mag_x_max;

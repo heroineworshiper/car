@@ -10,7 +10,7 @@
 
 
 // select the vehicle
-#define IS_CAR
+//#define IS_CAR
 
 // all vehicles use brushless motors
 #define USE_BRUSHLESS
@@ -72,18 +72,25 @@ typedef struct
 	float p_gain;
 	float i_gain;
 	float d_gain;
+	float p_limit;
 	float i_limit;
-	float o_limit;
+	float d_limit;
 	int counter;
 	float error_accum;
-	float accum;
+	float p_result;
+	float i_result;
+	float d_result;
 // the sign of the current error
 	int stiction_sign;
 
 	int ignore_i; // don't wind up if over the output limit
-// amount of error before engaging stiction_amount
+// amount of change before engaging stiction_amount
 	float stiction_threshold;
 	float stiction_amount;
+	float max_result;
+
+// last result for debugging
+	float result;
 } pid_t;
 
 
@@ -208,7 +215,7 @@ typedef struct
 	float ref;
 // the analog gyro reading
 	float gyro;
-// conversion factor for the analog gyro
+// conversion factor for the gyro
 	int angle_to_gyro;
 // steering magnitude 0 - 100
 	int max_steering100;
