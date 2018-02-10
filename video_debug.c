@@ -40,8 +40,10 @@ unsigned char *in_y, *in_u, *in_v;
 #define TEXTLEN 1024
 
 #define FILENAME_FORMAT "debug_vision%02d.out"
+#define SERIAL_FORMAT "debug_serial%02d.out"
 #define MAXFILES 100
 char filename[TEXTLEN];
+char serial_filename[TEXTLEN];
 
 // compressed output from compress_output
 unsigned char *picture_out = 0;
@@ -776,6 +778,9 @@ void* serial_thread(void *ptr)
 	unsigned char buffer[256];
 	int counter = 0;
 	int state = 0;
+	FILE *log_fd = 0;
+	
+	
 	while(1)
 	{
 		unsigned char c;
@@ -822,6 +827,25 @@ void* serial_thread(void *ptr)
 					d_result = READ_FLOAT32(buffer, offset);
 					feedback = READ_FLOAT32(buffer, offset);
 					pthread_mutex_unlock(&serial_lock);
+					
+					
+					if(!log_fd)
+					{
+						log_fd = fopen(serial_filename, "w");
+						fprintf(log_fd, 
+							"current_heading,target_heading,p_result,i_result,d_result,feedback\n");
+					}
+					fprintf(log_fd, 
+						"%f,%f,%f,%f,%f,%f\n", 
+						current_heading,
+						target_heading,
+						p_result,
+						i_result,
+						d_result,
+						feedback);
+					fflush(log_fd);
+					
+					
 					state = 0;
 				}
 				break;
@@ -846,11 +870,22 @@ void main()
 	for(file_num = 0; file_num < MAXFILES; file_num++)
 	{
 		sprintf(filename, FILENAME_FORMAT, file_num);
+		sprintf(serial_filename, SERIAL_FORMAT, file_num);
 		FILE *fd = fopen(filename, "r");
 
 		if(!fd)
 		{
-			break;
+			fd = fopen(serial_filename, "r");
+			if(!fd)
+			{
+				break;
+			}
+			else
+			{
+				fclose(fd);
+				filename[0] = 0;
+				serial_filename[0] = 0;
+			}
 		}
 		else
 		{
@@ -860,7 +895,8 @@ void main()
 	}
 
 
-	if(filename[0] == 0)
+	if(filename[0] == 0 ||
+		serial_filename[0] == 0)
 	{
 		printf("main %d: no remaneing filenames\n", __LINE__);
 		exit(0);
