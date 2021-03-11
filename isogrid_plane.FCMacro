@@ -1,0 +1,964 @@
+# create an isogrid plane
+
+
+
+import FreeCAD
+import Sketcher
+import math
+
+# wide wall for gearbox
+if False:
+    W = 89.4
+    H = 66.0
+    X_SLICES = 5
+    Y_SLICES = 3
+    Y_BORDER = 2
+    X_BORDER = 2
+    # height of the subdivision layer
+    THICKNESS1 = 1.0
+    # height of the triangle layer
+    THICKNESS2 = 1.0
+
+    # big ribs
+    RIB_WIDTH = 1.2
+    # smaller ribs
+    RIB_WIDTH2 = 0.8
+
+
+# narrow wall for gearbox
+if False:
+    W = 71.0
+    H = 66.0
+    X_SLICES = 4
+    Y_SLICES = 3
+    Y_BORDER = 2
+    X_BORDER = 4
+    # height of the subdivision layer
+    THICKNESS1 = 1.0
+    # height of the triangle layer
+    THICKNESS2 = 1.0
+
+    # big ribs
+    RIB_WIDTH = 1.2
+    # smaller ribs
+    RIB_WIDTH2 = 0.8
+
+
+# cam remote
+if False:
+# placement
+    X = -44.5
+    Y = 20.25
+    Z = -5.4
+    ANGLE = -90
+    W = 41.5
+    H = 161.5
+    X_SLICES = 3
+    Y_SLICES = 11
+    Y_BORDER = 3.0
+    X_BORDER = 2.4
+    # no subdivision layer
+    THICKNESS1 = 0
+    # height of the triangle layer
+    THICKNESS2 = 1.0
+    # triangle ribs
+    RIB_WIDTH = 1.2
+    # subdivision ribs
+    RIB_WIDTH2 = 0.8
+
+
+BACK_H = 1.0
+SKETCH_Z = 20.0
+
+# make solid rectangles instead of isogrid for faster computing
+DUMMY = False
+
+
+
+
+doc = App.activeDocument()
+gui = Gui.activeDocument()
+
+def extruderDefaults(x):
+    x.DirMode = "Normal"
+    x.DirLink = None
+    x.LengthFwd = 0.0
+    x.LengthRev = 0.0
+    x.Solid = True
+    x.Reversed = False
+    x.Symmetric = False
+    x.TaperAngle = 0.000000000000000
+    x.TaperAngleRev = 0.000000000000000
+
+
+def toRad(angle):
+    return angle * math.pi * 2.0 / 360.0
+
+def toDeg(x):
+    return x * 360.0 / 2 / math.pi
+
+# add vector with length & angle to start 
+def addLine(start, angle, length):
+    result = FreeCAD.Vector(start.x + length * math.cos(angle),
+        start.y + length * math.sin(angle),
+        start.z)
+    return result
+
+def angleChange(old_angle, new_angle):
+    result = new_angle - old_angle
+    if result > math.pi: 
+        result -= math.pi * 2
+    elif result < -math.pi:
+        result += math.pi * 2
+    return result
+
+# make a closed polygon
+def makePoly(sketch, coords):
+    for i in range(0, len(coords) - 1):
+        sketch.addGeometry(Part.LineSegment(coords[i],
+            coords[i + 1]),
+            False)
+    sketch.addGeometry(Part.LineSegment(coords[len(coords) - 1],
+        coords[0]),
+        False)
+        
+    
+
+# make an iso triangle
+def makeTri(sketch, 
+    sketch2,
+    corners, 
+    innerCorners,
+    x1, 
+    x2, 
+    y1, 
+    y2, 
+    y3,
+    flipX):
+
+    innerCorners2 = []
+    corners2 = []
+# defeat call by reference
+    if len(innerCorners) > 0:
+        for i in range(0, 3):
+            innerCorners2.append(
+                App.Vector(innerCorners[i].x, innerCorners[i].y, 0.0))
+    
+    for i in range(0, 6):
+        corners2.append(
+            App.Vector(corners[i].x, corners[i].y, 0.0))
+
+
+    if flipX:
+        x3 = x2
+        x2 = x1
+        x1 = x3
+        if len(innerCorners) > 0:
+            for i in range(0, 3):
+                innerCorners2[i].x *= -1
+
+        for i in range(0, 6):
+            corners2[i].x *= -1
+
+# the triangle
+    coords = [
+        App.Vector(x1, y1, 0.0) + corners2[1],
+        App.Vector(x1, y3, 0.0) + corners2[5],
+        App.Vector(x2, y2, 0.0) + corners2[3]]
+    makePoly(sketch, coords)
+
+    if len(innerCorners) > 0:
+# inner subdivisions have to be combined with triangles in a single sketch 
+# to make the slicer join them with a continuous filament
+        center_x = x1 + (x2 - x1) / 2 / 1.732
+        x_offset = (corners2[5].x - corners2[0].x) / 2 + innerCorners2[2].x / 2
+        y_offset = (corners2[5].y - corners2[0].y) / 2 + innerCorners2[2].y / 2
+        coords = [
+            # left
+            App.Vector(x1 + corners2[1].x, y2 + innerCorners2[1].y, 0.0),
+            # center
+            App.Vector(center_x, y2, 0.0) + innerCorners2[1],
+            # top right
+            App.Vector((x1 + x2) / 2 + x_offset, (y2 + y3) / 2 + y_offset, 0.0) + innerCorners2[1],
+            # top left
+            App.Vector(x1, y3, 0.0) + corners2[5]
+            ]
+        makePoly(sketch2, coords)
+
+
+        coords = [
+            # top right
+            App.Vector((x1 + x2) / 2 + x_offset, (y2 + y3) / 2 + y_offset, 0.0) + innerCorners2[0],
+            # center
+            App.Vector(center_x, y2, 0.0) + innerCorners2[0],
+            # bottom right
+            App.Vector((x1 + x2) / 2 + x_offset, (y1 + y2) / 2 - y_offset, 0.0) + innerCorners2[0],
+            # right
+            App.Vector(x2, y2, 0.0) + corners2[3]
+            ]
+        makePoly(sketch2, coords)
+
+
+        coords = [
+            # bottom right
+            App.Vector((x1 + x2) / 2 + x_offset, (y1 + y2) / 2 - y_offset, 0.0) + innerCorners2[2],
+            # center
+            App.Vector(center_x, y2, 0.0) + innerCorners2[2],
+            # left
+            App.Vector(x1 + corners2[1].x, y2 - innerCorners2[1].y, 0.0),
+            # bottom left
+            App.Vector(x1, y1, 0.0) + corners2[1]
+            ]
+        makePoly(sketch2, coords)
+
+
+
+
+
+def makeGrid(w, \
+    h, \
+    x_slices, \
+    y_slices, \
+    x_borders, \
+    y_borders, \
+    subdivision_thickness, \
+    subdivision_w, \
+    triangle_thickness, \
+    triangle_w):
+
+    slice_h = (h - y_borders[0] - y_borders[1]) / y_slices
+    slice_w = (w - x_borders[0] - x_borders[1]) / x_slices
+
+
+# top layer with just triangles
+    sketch = doc.addObject('Sketcher::SketchObject','gridsketch')
+    sketch.Placement = App.Placement(
+        App.Vector(0.0, 0.0, SKETCH_Z),
+        App.Rotation(App.Vector(0, 0, 1), 0.0))
+    gui.getObject(sketch.Label).Visibility = False
+# bottom layer with subdivisions
+    sketch2 = doc.addObject('Sketcher::SketchObject','gridsketch')
+    sketch2.Placement = App.Placement(
+        App.Vector(0.0, 0.0, SKETCH_Z),
+        App.Rotation(App.Vector(0, 0, 1), 0.0))
+    gui.getObject(sketch2.Label).Visibility = False
+
+
+
+# radius of the circle joining 6 ribs
+    radius = triangle_w
+# offsets of the 6 triangle corners around each center coordinate
+# coordinates are counterclockwise
+    corners = []
+    for i in range(0, 6):
+        corner = App.Vector( \
+            radius * math.cos(toRad(i * 60)), \
+            radius * math.sin(toRad(i * 60)), \
+            0.0)
+        corners.append(corner)
+
+# offsets of the 3 inner triangle corners
+    innerCorners = []
+    innerRadius = subdivision_w / 1.732
+
+
+#    print('makeGrid innerRadius=', innerRadius)
+    for i in range(0, 3):
+        corner = App.Vector( \
+            innerRadius * math.cos(toRad(i * 120)), \
+            innerRadius * math.sin(toRad(i * 120)), \
+            0.0)
+        innerCorners.append(corner)
+
+# bottom & top row
+    for x in range(0, x_slices):
+        center_x1 = x_borders[0] + x * slice_w
+        center_x2 = x_borders[0] + (x + 1) * slice_w
+        if (not FLIP and (x % 2) == 0) or \
+            (FLIP and (x % 2) == 1):
+# bottom left
+            center_y1 = y_borders[0]
+            center_y2 = y_borders[0] + .5 * slice_h
+            coords = [
+                App.Vector(center_x1, center_y1, 0.0) + App.Vector(corners[0].x, 0, 0),
+                App.Vector(center_x2, center_y1, 0.0) + App.Vector(corners[4].x, 0, 0),
+                App.Vector(center_x2, center_y2, 0.0) + corners[4]]
+            makePoly(sketch, coords)
+            if subdivision_thickness > 0.001:
+                makePoly(sketch2, coords)
+
+# top left.  
+            center_y2 = y_borders[0] + y_slices * slice_h
+            center_y1 = y_borders[0] + (y_slices - .5) * slice_h
+            if y_slices - int(y_slices) < 0.25:
+# If a fractional row, flip it horizontally
+                coords = [
+                    App.Vector(center_x1, center_y2, 0.0) + App.Vector(corners[0].x, 0, 0),
+                    App.Vector(center_x2, center_y2, 0.0) + App.Vector(corners[4].x, 0, 0),
+                    App.Vector(center_x2, center_y1, 0.0) + corners[2]]
+                makePoly(sketch, coords)
+                if subdivision_thickness > 0.001:
+                    makePoly(sketch2, coords)
+            else:
+                coords = [
+                    App.Vector(center_x2, center_y2, 0.0) + App.Vector(corners[3].x, 0, 0),
+                    App.Vector(center_x1, center_y2, 0.0) + App.Vector(corners[1].x, 0, 0),
+                    App.Vector(center_x1, center_y1, 0.0) + corners[1]]
+                makePoly(sketch, coords)
+                if subdivision_thickness > 0.001:
+                    makePoly(sketch2, coords)
+        else:
+# bottom right
+            center_y1 = y_borders[0]
+            center_y2 = y_borders[0] + .5 * slice_h
+            coords = [
+                App.Vector(center_x2, center_y1, 0.0) + App.Vector(corners[3].x, 0, 0),
+                App.Vector(center_x1, center_y1, 0.0) + App.Vector(corners[1].x, 0, 0),
+                App.Vector(center_x1, center_y2, 0.0) + corners[5]]
+            makePoly(sketch, coords)
+            if subdivision_thickness > 0.001:
+                makePoly(sketch2, coords)
+# top right
+            center_y2 = y_borders[0] + y_slices * slice_h
+            center_y1 = y_borders[0] + (y_slices - .5) * slice_h
+            coords = [
+                App.Vector(center_x2, center_y2, 0.0) + App.Vector(corners[3].x, 0, 0),
+                App.Vector(center_x1, center_y2, 0.0) + App.Vector(corners[1].x, 0, 0),
+                App.Vector(center_x1, center_y1, 0.0) + corners[1]]
+            makePoly(sketch, coords)
+            if subdivision_thickness > 0.001:
+                makePoly(sketch2, coords)
+
+
+
+# middle rows
+    for y in range(0, int(y_slices)):
+        for x in range(0, int(x_slices)):
+            center_y1 = y_borders[0] + y * slice_h
+            center_y2 = y_borders[0] + (y + .5) * slice_h
+            center_y3 = y_borders[0] + (y + 1) * slice_h
+            center_x1 = x_borders[0] + x * slice_w
+            center_x2 = x_borders[0] + (x + 1) * slice_w
+
+# debug
+#            coords = [
+#                App.Vector(center_x1, center_y1, 0.0) + corners[0],
+#                App.Vector(center_x1, center_y1, 0.0) + corners[1],
+#                App.Vector(center_x1, center_y1, 0.0) + corners[2],
+#                App.Vector(center_x1, center_y1, 0.0) + corners[3],
+#                App.Vector(center_x1, center_y1, 0.0) + corners[4],
+#                App.Vector(center_x1, center_y1, 0.0) + corners[5]
+#            ]
+#            makePoly(sketch, coords)
+#
+#            coords = [
+#                App.Vector(center_x1, center_y1, 0.0) + innerCorners[0],
+#                App.Vector(center_x1, center_y1, 0.0) + innerCorners[1],
+#                App.Vector(center_x1, center_y1, 0.0) + innerCorners[2]
+#            ]
+#            makePoly(sketch, coords)
+
+            if subdivision_thickness < 0.001:
+                innerCorners = []
+
+            direction = (not FLIP and (x % 2) == 1) or \
+                (FLIP and (x % 2) == 0)
+            makeTri(sketch, 
+                sketch2,
+                corners, 
+                innerCorners,
+                center_x1, 
+                center_x2, 
+                center_y1, 
+                center_y2, 
+                center_y3,
+                direction)
+
+            if y < y_slices - 1:
+                center_y1 += slice_h / 2
+                center_y2 += slice_h / 2
+                center_y3 += slice_h / 2
+
+                if subdivision_thickness < 0.001:
+                    innerCorners = []
+                makeTri(sketch, 
+                    sketch2,
+                    corners, 
+                    innerCorners,
+                    center_x1, 
+                    center_x2, 
+                    center_y1, 
+                    center_y2, 
+                    center_y3,
+                    not direction)
+
+
+
+
+# border
+    coords = [
+        App.Vector(0.0, 0.0, 0.0),
+        App.Vector(0.0, h, 0.0),
+        App.Vector(w, h, 0.0),
+        App.Vector(w, 0.0, 0.0),
+        ]
+    makePoly(sketch, coords)
+    if subdivision_thickness > 0.001:
+        makePoly(sketch2, coords)
+
+# isogrid extrusion
+    if True:
+        global extrudeTris
+        extrudeTris = doc.addObject('Part::Extrusion', 'isogrid')
+        extruderDefaults(extrudeTris)
+        extrudeTris.Placement = App.Placement(
+            App.Vector(0.0, 0.0, 0.0),
+            App.Rotation(App.Vector(0,0,1), 0.0))
+        extrudeTris.Base = sketch
+        extrudeTris.LengthFwd = triangle_thickness
+
+# subdivisions
+        if subdivision_thickness > 0.001:
+            global extrudeSubs
+            extrudeSubs = doc.addObject('Part::Extrusion', 'isogrid')
+            extruderDefaults(extrudeSubs)
+            extrudeSubs.Placement = App.Placement(
+                App.Vector(0.0, 0.0, 0.0),
+                App.Rotation(App.Vector(0,0,1), 0.0))
+            extrudeSubs.Base = sketch2
+            extrudeSubs.LengthFwd = subdivision_thickness
+        else:
+            doc.removeObject(sketch2.Label)
+
+    doc.recompute()
+
+
+
+def getObj(name):
+    for i in doc.Objects:
+        if i.Label == name:
+            return i
+    return None
+
+
+def vectorsEqual(a, b):
+    return a.sub(b).Length < 0.0001
+
+def vectorsNotEqual(a, b):
+    return a.sub(b).Length >= 0.0001
+
+def getSegments(ref):
+    # get the line segments
+    global starts
+    global ends
+    global total
+    global sorted
+
+    starts = []
+    ends = []
+    total = ref.GeometryCount
+    for i in range(0, total):
+        start = ref.getPoint(i, 1)
+        end = ref.getPoint(i, 2)
+    #    print('line ', i, '=', start, ' -> ', end)
+        starts.append(start)
+        ends.append(end)
+
+
+    # sort the line segments
+    sorted = []
+    taken = []
+    for i in range(0, total):
+        taken.append(False)
+
+    # find line with 1 dangling point
+    for i in range(0, total):
+        gotStart = False
+        gotEnd = False
+        for j in range(0, total):
+            if j != i:
+                if vectorsEqual(starts[i], starts[j]) or \
+                    vectorsEqual(starts[i], ends[j]):
+                    gotStart = True
+                if vectorsEqual(ends[i], starts[j]) or \
+                    vectorsEqual(ends[i], ends[j]):
+                    gotEnd = True
+            if not gotStart or not gotEnd:
+                sorted.append(i)
+                taken[i] = True
+                break
+        if len(taken) > 0:
+            break;
+
+    #print('sorted=', len(sorted))
+    if len(sorted) == 0:
+        print('*** Got no starting line')
+
+    # get rest of lines
+    prev = sorted[0]
+    for i in range(1, total):
+        for j in range(0, total):
+            if not taken[j]:
+                if vectorsEqual(starts[prev], starts[j]) or \
+                    vectorsEqual(starts[prev], ends[j]) or \
+                    vectorsEqual(ends[prev], starts[j]) or \
+                    vectorsEqual(ends[prev], ends[j]):
+                    #print('prev=', prev, ' j=', j)
+                    taken[j] = True
+                    sorted.append(j)
+                    prev = j
+                    break
+
+    #for i in range(0, total):
+    #    print('sorted[', i, '] = ', sorted[i])
+
+    # swap line ends
+    for i in range(1, total):
+        index1 = sorted[i - 1]
+        index2 = sorted[i]
+        if i == 1:
+            if vectorsNotEqual(ends[index1], starts[index2]) and \
+                vectorsNotEqual(ends[index1], ends[index2]):
+                temp = starts[index1]
+                starts[index1] = ends[index1]
+                ends[index1] = temp
+        if vectorsNotEqual(ends[index1], starts[index2]):
+            temp = starts[index2]
+            starts[index2] = ends[index2]
+            ends[index2] = temp
+
+    for i in range(0, total):
+        print('line ', i, '=', starts[sorted[i]], ' -> ', ends[sorted[i]])
+
+
+# border for a closed polygon
+def cropBorder(sketchTitle, backTitle, x, y, z, w, h, insideDirection):
+    ref = getObj(sketchTitle)
+    back = getObj(backTitle)
+    getSegments(ref)
+
+    # create border lines
+    borderLine1 = []
+    borderLine2 = []
+
+    for i in range(0, total):
+        prevStart = starts[sorted[total - 1]]
+        prevEnd = ends[sorted[total - 1]]
+        start = starts[sorted[i]]
+        end = ends[sorted[i]]
+
+        if i == 0:
+            prevAngle = math.atan2(prevEnd.y - prevStart.y, prevEnd.x - prevStart.x)
+            nextAngle = math.atan2(end.y - start.y, end.x - start.x)
+            angle2 = prevAngle + angleChange(prevAngle, nextAngle) / 2.0 + insideDirection
+            mag = abs(1.0 / math.cos(angleChange(prevAngle, nextAngle) / 2.0))
+            print('1st line prevAngle=', \
+                toDeg(prevAngle), \
+                'nextAngle=', \
+                toDeg(nextAngle), \
+                ' angle2=', \
+                toDeg(angle2))
+
+            borderLine1.append(start)
+            borderLine2.append(addLine(start, angle2, mag * w))
+        if i == total - 1:
+            start2 = starts[sorted[0]]
+            end2 = ends[sorted[0]]
+            prevAngle = math.atan2(end.y - start.y, end.x - start.x)
+            nextAngle = math.atan2(end2.y - start2.y, end2.x - start2.x)
+            angle2 = prevAngle + angleChange(prevAngle, nextAngle) / 2.0 + insideDirection
+            mag = abs(1.0 / math.cos(angleChange(prevAngle, nextAngle) / 2.0))
+            print(' prevAngle=', \
+                toDeg(prevAngle), \
+                'nextAngle=', \
+                toDeg(nextAngle), \
+                ' angle2=', \
+                toDeg(angle2))
+            borderLine1.append(end)
+            borderLine2.append(addLine(end, angle2, mag * w))
+        else:
+            start2 = starts[sorted[i + 1]]
+            end2 = ends[sorted[i + 1]]
+            prevAngle = math.atan2(end.y - start.y, end.x - start.x)
+            nextAngle = math.atan2(end2.y - start2.y, end2.x - start2.x)
+            angle2 = prevAngle + angleChange(prevAngle, nextAngle) / 2.0 + insideDirection
+            mag = abs(1.0 / math.cos(angleChange(prevAngle, nextAngle) / 2.0))
+            print(' prevAngle=', \
+                toDeg(prevAngle), \
+                'nextAngle=', \
+                toDeg(nextAngle), \
+                ' angle2=', \
+                toDeg(angle2))
+            borderLine1.append(end)
+            borderLine2.append(addLine(end, angle2, mag * w))
+
+    border = doc.addObject('Sketcher::SketchObject','border')
+#    gui.getObject(border.Label).Visibility = False
+    border.Placement = App.Placement(
+        App.Vector(x, y, z),
+        App.Rotation(App.Vector(0, 0, 1), 0.0))
+
+    crop = doc.addObject('Sketcher::SketchObject','crop')
+#    gui.getObject(crop.Label).Visibility = False
+    crop.Placement = App.Placement(
+        App.Vector(x, y, z),
+        App.Rotation(App.Vector(0, 0, 1), 0.0))
+
+    for i in range(1, total + 1):
+        i1 = i - 1
+        i2 = i
+
+        border.addGeometry(Part.LineSegment(borderLine1[i1],
+                    borderLine1[i2]),
+                    False)
+        border.addGeometry(Part.LineSegment(borderLine2[i1],
+                    borderLine2[i2]),
+                    False)
+        crop.addGeometry(Part.LineSegment(borderLine1[i1],
+                    borderLine1[i2]),
+                    False)
+
+    extrudeBorder = doc.addObject('Part::Extrusion', 'border')
+    extruderDefaults(extrudeBorder)
+    extrudeBorder.Base = border
+    extrudeBorder.LengthFwd = h
+
+    isogridFusion = doc.addObject("Part::MultiFuse","isogrid")
+    isogridFusion.Shapes = [extrudeTris, back, extrudeBorder]
+
+    extrudeCrop = doc.addObject('Part::Extrusion', 'crop')
+    extruderDefaults(extrudeCrop)
+    extrudeCrop.Base = crop
+    extrudeCrop.LengthFwd = h
+
+    union = doc.addObject("Part::MultiCommon","isogrid")
+    union.Shapes = [isogridFusion, extrudeCrop]
+
+
+
+
+
+
+##############################################################################
+# car_remote pieces:
+# want to add diagonals to the isogrid fusion, so the fusion coords have to be 0
+
+
+# top thick section
+if False:
+    X = 39.0
+    Y = 20.25
+    Z = 10.2
+    ANGLE = -90.0
+    makeGrid(41.5, \
+        44.9, \
+        3, \
+        3, \
+        [ 2.4, 2.4 ], \
+        [ 1.0, 3.0 ],\
+        0.0, \
+        0.8, \
+        1.0, \
+        1.2)
+    fusion = doc.addObject("Part::MultiFuse","topGrid")
+    fusion.Shapes = [extrudeTris, back]
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 1),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z - 2),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    fusion.Placement = App.Placement(
+        App.Vector(0.0, 0.0, 0.0),
+        App.Rotation(App.Vector(0,0,1), 0.0))
+
+
+# bottom thick section
+if False:
+    X = 39.0
+    Y = 20.25
+    Z = -6.4
+    ANGLE = -90.0
+    makeGrid(41.5, \
+        44.9, \
+        3, \
+        3, \
+        [ 2.4, 2.4 ], \
+        [ 1.0, 3.0 ], \
+        0.0, \
+        0.8, \
+        1.0, \
+        1.2)
+    fusion = doc.addObject("Part::MultiFuse","bottomGrid")
+    fusion.Shapes = [extrudeTris, back]
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 2),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z - 1),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    fusion.Placement = App.Placement(
+        App.Vector(0.0, 0.0, 0.0),
+        App.Rotation(App.Vector(0,0,1), 0.0))
+
+# top mane grid
+if False:
+    X = -57
+    Y = 20.25
+    Z = 7.2
+    ANGLE = -90.0
+    makeGrid(41.50, \
+        90.7, \
+        3, \
+        7, \
+        [ 2.4, 2.4 ], \
+        [ 3.0, 1.0 ],\
+        0.0, \
+        0.8, \
+        1.0, \
+        1.2)
+    fusion = doc.addObject("Part::MultiFuse","topGrid")
+    fusion.Shapes = [extrudeTris, back]
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 1),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z - 2),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    fusion.Placement = App.Placement(
+        App.Vector(0.0, 0.0, 0.0),
+        App.Rotation(App.Vector(0,0,1), 0.0))
+
+
+# bottom mane grid
+if False:
+    X = -57
+    Y = 20.25
+    Z = -3.4
+    ANGLE = -90.0
+    makeGrid(41.50, \
+        90.7, \
+        3, \
+        7, \
+        [ 2.4, 2.4 ], \
+        [ 3.0, 1.0 ], \
+        0.0, \
+        0.8, \
+        1.0, \
+        1.2)
+    fusion = doc.addObject("Part::MultiFuse","bottomGrid")
+    fusion.Shapes = [extrudeTris, back]
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 2),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z - 1),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    fusion.Placement = App.Placement(
+        App.Vector(0.0, 0.0, 0.0),
+        App.Rotation(App.Vector(0,0,1), 0.0))
+
+
+X = -57
+Y = 36
+W = 18.75
+H = 43.75
+ANGLE = -90.0
+# flip the triangle direction
+FLIP = True
+Y_BORDERS = [ 3.0, 3.57 ]
+
+# top throttle grid
+if False:
+    Z = 7.2
+    makeGrid(W, \
+        H, \
+        1, \
+        3, \
+        [ 4.4, 2.4 ], \
+        Y_BORDERS, \
+        0.0, \
+        1.0, \
+        1.0, \
+        1.0)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 1),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z - 2),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+
+# bottom throttle grid
+if False:
+    Z = -3.4
+    makeGrid(W, \
+        H, \
+        1, \
+        3, \
+        [ 4.4, 2.4 ], \
+        Y_BORDERS, \
+        0.0, \
+        0.8, \
+        1.0, \
+        1.2)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 2),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z - 1),
+        App.Rotation(App.Vector(0,0,1), ANGLE))
+
+
+
+##############################################################################
+# truck pieces:
+
+# battery bottom
+if False:
+    makeGrid(200, \
+        98.6, \
+        10, \
+        4, \
+        [ 1.0, 1.0 ], \
+        [ 1.6, 1.6 ], \
+        0.0, \
+        1.2, \
+        2.4, \
+        1.2)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-49.4, -36.00, -27),
+        App.Rotation(App.Vector(.58, .58, .58), 240))
+
+
+# battery side
+if False:
+    X = -54.6
+    Y = -12.4
+    Z = -27
+    W = 75.4
+    H = 200.0
+    makeGrid(W, \
+        H, \
+        4, \
+        8, \
+        [ 1.0, 1.0 ], \
+        [ 1.6, 1.6 ], \
+        0.0, \
+        1.2, \
+        2.2, \
+        1.2)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X - SKETCH_Z, Y, Z),
+        App.Rotation(App.Vector(0.58, 0.58, 0.58), 120.00))
+
+# steering bottom
+if False:
+    X = -40
+    Y = -35
+    Z = 1.8
+    W = 43
+    H = 78.2
+    ANGLE = 0.0
+    makeGrid(W, \
+        H, \
+        3, \
+        5, \
+        [ 1.4, 1.4 ], \
+        [ 2.0, 2.0 ], \
+        0.0, \
+        1.2, \
+        1.8, \
+        1.2, \
+        1.2)
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z),
+        App.Rotation(App.Vector(0, 0, 1), ANGLE))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y, Z - SKETCH_Z - 1.8),
+        App.Rotation(App.Vector(0, 0, 1), ANGLE))
+
+    X = 5
+    Y = 0
+    Z = 0
+    cropGrid('bottom outline', X, Y, Z, 2.0, 3.0, -math.pi / 2)
+
+
+# steering bottom
+if True:
+    makeGrid(78.2, \
+        129, \
+        4, \
+        5, \
+        [ 1.4, 1.4 ], \
+        [ 2.0, 2.0 ], \
+        0.0, \
+        1.2, \
+        2.4, \
+        1.2)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(3, -35, -20),
+        App.Rotation(App.Vector(0, 0, 1), 90))
+    cropBorder('border', 'isogrid back clone', 0, 8.2, 0, 2.0, 3.6, -math.pi / 2)
+
+
+# servo back
+if False:
+    makeGrid(31.40, \
+        63, \
+        1, \
+        2, \
+        [ 1.0, 1.0 ], \
+        [ 1.6, 1.6 ], \
+        1.0, \
+        1.2, \
+        1.2, \
+        1.2)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(-93, -53.8, 3.6),
+        App.Rotation(App.Vector(-.58, -.58, -.58), 120))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-93, -55, 3.6),
+        App.Rotation(App.Vector(-.58, -.58, -.58), 120))
+
+
+
+
+
+###########################################################################
+# light stand pieces
+
+
+if False:
+    X = 0
+    Y = 0
+    Z = 0
+    W = 90
+    H = 120
+    BACK_H = 1.2
+    makeGrid(W, \
+        H, \
+        3, \
+        3, \
+        [ 1.0, 1.0 ], \
+        [ 2.0, 2.0 ], \
+        1.2, \
+        1.2, \
+        1.2, \
+        2.0)
+    back.Placement = App.Placement(
+        App.Vector(X, Y, Z),
+        App.Rotation(App.Vector(0, .71, .71), 180))
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(X, Y - SKETCH_Z - 1.2, Z),
+        App.Rotation(App.Vector(0, .71, .71), 180))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(X, Y - SKETCH_Z - 2.4, Z),
+        App.Rotation(App.Vector(0, .71, .71), 180))
+
+
+
+
+
+
+
+

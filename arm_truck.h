@@ -12,8 +12,11 @@
 // select the vehicle
 //#define IS_CAR
 
+
+
 // all vehicles use brushless motors
 #define USE_BRUSHLESS
+
 
 // external navigation using a raspberry pi
 //#define SPI_NAV
@@ -21,7 +24,8 @@
 //#define UART_NAV
 // pass bluetooth to debug port
 //#define BLUETOOTH_PASSTHROUGH
-
+// before a device is configured, its UART will be 9600
+//#define BLUETOOTH9600 
 
 #ifndef IS_CAR
 
@@ -30,11 +34,21 @@
 // truck's ESC pin
 	#define ESC_PIN GPIO_Pin_6
 // reverse steering servo on truck
-	#define REVERSE_STEERING
+//	#define REVERSE_STEERING
+
+// use the xbee 900
+    #define USE_XBEE
+// use frequency hopping on the xbee.  Doesn't work
+//  #define USE_HOPPING
 
 #else  // !IS_CAR
-// car's ESC pin burned out.  Use a different pin in the same port.
+// truck's ESC pin burned out.  Use a different pin in the same port.
 	#define ESC_PIN GPIO_Pin_5
+
+    #define REVERSE_GYRO
+
+// use the CC1101
+    #define USE_CC1101
 
 #endif // IS_CAR
 
@@ -52,11 +66,16 @@
 #define NAV_HZ 366
 #endif // I2C_IMU
 
+// tick/TIM10 wraps at this frequency
+#define TIMER_HZ 100
 
 // how fast the feedback loop fires
-#define PWM_HZ 150
+#define PWM_HZ 100
 // what the feedback is calibrated for
 #define PWM_BASE 50
+
+
+#define PACKET_SIZE 8
 
 // timer for packet flashing
 #define LED_DELAY2 2
@@ -72,22 +91,30 @@ typedef struct
 	float p_gain;
 	float i_gain;
 	float d_gain;
+	float d2_gain;
+
 	float p_limit;
 	float i_limit;
 	float d_limit;
 	int counter;
 	float error_accum;
+
+	float p_input;
+	float d_input;
+	float d2_input;
+
 	float p_result;
 	float i_result;
 	float d_result;
+	float d2_result;
 // the sign of the current error
-	int stiction_sign;
+//	int stiction_sign;
 
 	int ignore_i; // don't wind up if over the output limit
 // amount of change before engaging stiction_amount
-	float stiction_threshold;
-	float stiction_amount;
-	float max_result;
+//	float stiction_threshold;
+//	float stiction_amount;
+//	float max_result;
 
 // last result for debugging
 	float result;
@@ -112,14 +139,27 @@ typedef struct
 } bluetooth_t;
 
 
+#define ORDER 2
+typedef struct
+{
+	float bandwidth;
+	float prev_output[ORDER];
+	float prev_input[ORDER];
+	float result;
+} filter_t;
+
+
 
 typedef struct
 {
-	int timer_high;
+// the mane timer which increments at TIMER_HZ
+	int tick;
+// a time used by the throttle
 	int start_time;
 // data from radio	
 	int throttle_reverse;
 	int throttle_reverse2;
+// 0 - not driving
 	int throttle;
 	int throttle2;
 	int steering;
@@ -159,13 +199,19 @@ typedef struct
 
 
 	pid_t heading_pid;
+	filter_t p_filter;
+	filter_t d_filter;
+	filter_t d2_filter;
+// 0 - 100
+	float d_bandwidth;
+	
 	pid_t rpm_pid;
 // vanishing point feedback
 // P=1/16deg
-	pid_t path_pid;
+//	pid_t path_pid;
 // side of path feedback
 // P=1/16deg
-	pid_t side_pid;
+//	pid_t side_pid;
 	imu_t imu;
 
 	int battery;
@@ -177,7 +223,7 @@ typedef struct
 	int battery_analog;
 	float battery_v0;
 
-// steering was pressed before throttle
+// current steering command was pressed before throttle so use fixed PWM
 	int steering_first;
 // Make the interrupt handler not copy the radio to the steering PWM
 	int writing_settings;
@@ -186,7 +232,7 @@ typedef struct
 	int bt_timeout;
 // timeout for loss of 433Mhz radio
 	int radio_timeout;
-// timeout for end of heading hold, to avoid burning out the servo
+// timeout for end of heading hold, to keep it on the same path after stopping
 	int steering_timeout;
 // maximum analog amount gyros can move while calculating center
 	int gyro_center_max;
@@ -241,9 +287,9 @@ typedef struct
 // radians to rewind heading after manual steering
 	float steering_overshoot;
 // angle error before kicking the steering servo
-	float stiction_threshold;
+//	float stiction_threshold;
 // amount to kick the steering servo
-	float stiction_amount;
+//	float stiction_amount;
 	
 	
 	
@@ -291,19 +337,36 @@ typedef struct
 // where in the camera view the bottom of the center line should be 0 - 255
 //	int bottom_center;
 // raw data from vision program 0 - 255
-	int vanish_x;
-	int vanish_y;
-	int bottom_x;
-	float vanish_lowpass;
-	float bottom_lowpass;
+//	int vanish_x;
+//	int vanish_y;
+//	int bottom_x;
+//	float vanish_lowpass;
+//	float bottom_lowpass;
 //	float vision_bandwidth;
-	derivative_t path_dx;
-	int path_dx_size;
+//	derivative_t path_dx;
+//	int path_dx_size;
 // delay between manual steering & path following
 //	int manual_override_delay;
 //	int manual_override_counter;
-	
-	int throttle_time;
+
+// wheel alignment statistics
+    int throttle_accum;
+    int throttle_count;
+// values sent to phone
+    int throttle_avg;
+    int throttle_updated;
+
+// radio statistics
+    int bluetooth_packets;
+    int stick_packets;
+// values sent to phone
+    int bluetooth_packets2;
+    int stick_packets2;
+
+// timer for updating statistics
+	int stat_time;
+
+// debugging
 	int debug_counter;
 	
 	bluetooth_t bluetooth;

@@ -1,0 +1,256 @@
+# curved spoke tire
+# partdesign loft is required to loft the slices
+
+import FreeCAD
+import Sketcher
+import Draft
+import math
+
+
+SKETCH_Z = 0.0
+
+doc = App.activeDocument()
+gui = Gui.activeDocument()
+
+def extruderDefaults(x):
+    x.DirMode = "Normal"
+    x.DirLink = None
+    x.LengthFwd = 0.0
+    x.LengthRev = 0.0
+    x.Solid = True
+    x.Reversed = False
+    x.Symmetric = False
+    x.TaperAngle = 0.000000000000000
+    x.TaperAngleRev = 0.000000000000000
+
+def toRad(angle):
+    return angle * math.pi * 2.0 / 360.0
+
+def toDeg(x):
+    return x * 360.0 / 2 / math.pi
+
+def polarToXYZ(angle, radius, z):
+    x = radius * math.cos(angle)
+    y = -radius * math.sin(angle)
+    return Draft.Vector(x, y, z)
+
+def polarToXYZ2(point):
+    angle = point.x
+    radius = point.y
+    z = point.z
+    return polarToXYZ(angle, radius, z)
+
+def XYZToPolar(xyz):
+    fraction = xyz.z / LENGTH
+    aspect = (TOP_ASPECT * fraction) + (1.0 - fraction)
+    xyz.x = xyz.x / aspect
+    angle = math.atan2(-xyz.y, xyz.x)
+    radius = math.hypot(xyz.x, xyz.y)
+    return Draft.Vector(angle, radius, xyz.z)
+
+
+# add vector with length & angle to start 
+def addLine(start, angle, length):
+    result = FreeCAD.Vector(start.x + length * math.cos(angle),
+        start.y + length * math.sin(angle),
+        start.z)
+    return result
+
+
+def angleChange(old_angle, new_angle):
+    result = new_angle - old_angle
+    if result > math.pi: 
+        result -= math.pi * 2
+    elif result < -math.pi:
+        result += math.pi * 2
+    return result
+
+
+# make a closed polygon
+def makePoly(sketch, coords):
+    for i in range(0, len(coords) - 1):
+        #print('makePoly ', coords[i], coords[i + 1])
+        sketch.addGeometry(Part.LineSegment(coords[i],
+            coords[i + 1]),
+            False)
+    sketch.addGeometry(Part.LineSegment(coords[len(coords) - 1],
+        coords[0]),
+        False)
+
+
+# create a border of a certain thickness for the closed polygon
+def border(sketch, coords, thickness, borderDirection):
+    borderLine = []
+    total = len(coords)
+    prevStart = coords[total - 1]
+    prevEnd = coords[0]
+    start = coords[0]
+    end = coords[1]
+
+    borderLine1 = []
+    borderLine2 = []
+
+    for i in range(0, total):
+        prevAngle = math.atan2(prevEnd.y - prevStart.y, prevEnd.x - prevStart.x)
+        nextAngle = math.atan2(end.y - start.y, end.x - start.x)
+        angle2 = prevAngle + angleChange(prevAngle, nextAngle) / 2.0 + borderDirection
+        mag = abs(1.0 / math.cos(angleChange(prevAngle, nextAngle) / 2.0))
+        borderLine1.append(start)
+        borderLine2.append(addLine(start, angle2, mag * thickness))
+
+        prevStart = start
+        prevEnd = end
+        start = end
+        if i == total - 2:
+            end = coords[0]
+        elif i == total - 1:
+            end = coords[1]
+        else:
+            end = coords[i + 2]
+    makePoly(sketch, borderLine2)
+
+
+
+
+def makeTire():
+# inner diameter
+    iDiameter = 47.2
+# inner shell thickness
+    iThickness = 1.6
+# outer shell thickness
+    oThickness = 1.2
+# offset of center radius of tread
+    bulge = 5
+# outer diameter + tread + bulge
+    oDiameter = 110
+    treadThickness = 3
+    treadW = 8
+# tread subdivisions & gap subdivisions
+    treadSubdivide = 3
+# offset of the center of the tread V.  Freecad can't loft.
+    treadOffset = 0
+    numTreads = 18
+# layers in a spoke
+    layers = 10  
+# number of spokes
+    columns = 24
+# thickness of spoke
+    spokeThickness = 1.2
+# offset of the middle of a spoke in radians
+    spokeOffset = 2 * math.pi / columns
+# tire width
+    w = 30
+# slices along width.  Only 2 required when using a loft
+    slices = 2
+
+
+
+    loft = doc.Body.newObject("PartDesign::AdditiveLoft","AdditiveLoft")
+    loftSections = []
+
+    for slice in range(0, slices + 1):
+        z = w * slice / slices
+        sliceFraction = math.sin(math.pi * slice / slices)
+        oDiameter2 = oDiameter - (bulge - sliceFraction * bulge) * 2
+
+
+#        print('z=', z, ' oDiameter2=', oDiameter2)
+
+        sketch = doc.Body.newObject('Sketcher::SketchObject','tiresketch')
+        if slice == 0:
+            loft.Profile = sketch
+        else:
+            loftSections.append(sketch)
+
+        sketch.Placement = App.Placement(
+            App.Vector(0.0, 0.0, z),
+            App.Rotation(App.Vector(0, 0, 1), 0.0))
+        gui.getObject(sketch.Label).Visibility = False
+
+# hexagon range of radii
+        iRadius = iDiameter / 2 + iThickness - spokeThickness / 2
+        oRadius = oDiameter2 / 2 - treadThickness - oThickness + spokeThickness / 2
+
+        for column in range(0, columns):
+# angle of the column
+            angle = column * 2 * math.pi / columns
+
+            coords = []
+            for layer in range(0, layers + 1):
+# radius of the layer
+                r = iRadius + layer * (oRadius - iRadius) / layers;
+# offset of the layer
+                angleOffset2 = math.sin(math.pi * layer / layers) * \
+                    spokeOffset
+                coords.append(Draft.Vector(angle + angleOffset2, r, 0.0))
+
+            for i in range(1, treadSubdivide):
+                coords.append(Draft.Vector(angle + i * 2 * math.pi / columns / treadSubdivide, 
+                    oRadius, 
+                    0.0))
+
+            for layer in range(0, layers + 1):
+                coord = coords[layers - layer]
+                coords.append(Draft.Vector(coord.x + 2 * math.pi / columns,
+                    coord.y,
+                    coord.z))
+
+            for i in range(1, treadSubdivide):
+                coords.append(Draft.Vector(angle + (treadSubdivide - i) * 2 * math.pi / columns / treadSubdivide, 
+                    iRadius, 
+                    0.0))
+
+
+            for i in range(0, len(coords)):
+                coords[i] = polarToXYZ2(coords[i])
+
+
+
+            #makePoly(sketch, coords)
+            border(sketch, coords, spokeThickness / 2, -math.pi / 2)
+
+
+    # inner shell
+        sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
+            Draft.Vector(0, 0, 1),
+            iDiameter / 2))
+
+
+    # outer shell + tread
+        coords = []
+        for i in range(0, numTreads * treadSubdivide * 2):
+            # V offset which Freecad can't loft
+            angleOffset = sliceFraction * 2 * treadOffset / oDiameter
+            angle = angleOffset + i * 2 * math.pi / (numTreads * treadSubdivide * 2)
+            radius1 = oDiameter2 / 2 - treadThickness
+            radius2 = oDiameter2 / 2
+            remane = i % (treadSubdivide * 2)
+            if remane == treadSubdivide:
+                coords.append(polarToXYZ(angle, radius1, 0.0))
+                coords.append(polarToXYZ(angle, radius2, 0.0))
+            elif remane == 0:
+                coords.append(polarToXYZ(angle, radius2, 0.0))
+                coords.append(polarToXYZ(angle, radius1, 0.0))
+            elif remane < treadSubdivide:
+                coords.append(polarToXYZ(angle, radius1, 0.0))
+            else:
+                coords.append(polarToXYZ(angle, radius2, 0.0))
+        makePoly(sketch, coords)
+    
+    loft.Sections = loftSections
+
+makeTire()
+
+
+
+
+
+
+
+
+
+
+
+
+
+

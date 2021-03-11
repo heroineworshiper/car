@@ -1,0 +1,28 @@
+#  create sections for the radio box
+
+import libisogrid
+import importlib
+importlib.reload(libisogrid)
+
+ISOGRID_W = 1.0
+EDGE_W = 3.0
+
+
+# back panel
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(168, \
+        100, \
+        6, \
+        3, \
+        [ EDGE_W, EDGE_W ], \
+        [ EDGE_W, EDGE_W ], \
+        1.2, \
+        ISOGRID_W, \
+        2.8, \
+        ISOGRID_W)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(20.80, 0, 2),
+        App.Rotation(App.Vector(0, -1, 0), 90))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(19.60, 0, 2),
+        App.Rotation(App.Vector(0, -1, 0), 90))

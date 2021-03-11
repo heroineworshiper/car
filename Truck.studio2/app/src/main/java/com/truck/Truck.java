@@ -1,5 +1,8 @@
 package com.truck;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -39,6 +42,21 @@ public class Truck extends Thread {
 			settings = new Settings(activity);
 			truck = new Truck(activity);
 			truck.start();
+		}
+		
+		
+    	Log.i("Truck", "createObjects 1 Settings.writeDebug=" + Settings.writeDebug);
+		if(Settings.writeDebug)
+		{
+			debugFile = new File(Settings.DIR + Settings.DEBUG_FILENAME);
+			try {
+				debugWriter = new BufferedWriter(new FileWriter(debugFile));
+			} catch (Exception e) 
+			{
+    			Log.i("Truck", "createObjects 1 " + e.toString());
+    			return;
+			}
+
 		}
 	}
 
@@ -103,6 +121,7 @@ public class Truck extends Thread {
         try {
             // Connect the device through the socket. This will block
             // until it succeeds or throws an exception
+			Log.i("", "Truck.initializeBluetooth: Trying createRfcommSocketToServiceRecord");
             socket.connect();
         } catch (IOException e) {
             e.printStackTrace();
@@ -120,9 +139,9 @@ public class Truck extends Thread {
 
         	try 
 			{
-              Log.i("", "Truck.initializeBluetooth: Trying plan B");
-              socket =(BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[] {int.class}).invoke(device, 1);
-              socket.connect();
+              Log.i("", "Truck.initializeBluetooth: Trying createRfcommSocket");
+				socket =(BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[] {int.class}).invoke(device, 1);
+				socket.connect();
         	} catch (Exception e2) 
 			{
                	e2.printStackTrace();
@@ -249,114 +268,20 @@ public class Truck extends Thread {
 	    			else
 	    			if(needConfig)
 	    			{
-	    				// send config
-	    				// size
-		    			offset += 2;
-		    			// command
-		    			beacon[offset++] = (byte) NEW_CONFIG;
-						beacon[offset++] = (byte) 1;
-
-
-						beacon[offset++] = (byte) (Settings.getFileFloat("VISION_BANDWIDTH")[0] * 255);
-						beacon[offset++] = (byte) (Settings.getFileFloat("PATH_CENTER")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("BOTTOM_CENTER")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_VISION")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_MAG")[0]);
-						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MANUAL_OVERRIDE_DELAY")[0]));
-
-
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_FWD")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_REV")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
-						beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_THROTTLE")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("RPM_DV_SIZE")[0]);
-		    			beacon[offset++] = (byte) (Settings.getFileFloat("PATH_DX_SIZE")[0]);
-		    			
-						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
-						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
-		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
-						beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
-
-
-
-						offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
-		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
-		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
-		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
-						
-						
-
-		    			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
-
-                        //float targetPace = Settings.getFileFloat("TARGET_PACE")[0];
-						float targetPace = Settings.targetPace;
-                        if(targetPace > 0.001)
+	                    // size
+		                offset += 2;
+		                // command
+		                beacon[offset++] = (byte) NEW_CONFIG;
+                        if(Settings.vehicle == Settings.TRUCK ||
+                            Settings.vehicle == Settings.TRUCKCAM)
                         {
-                            // meters per minute/wheel circumference in meters
-                            offset = Math2.write_int16(beacon, offset, paceToRPM(targetPace));
-//Log.i("Truck", "run targetRPM=" + targetRpm);
+                            offset = sendTruckConfig(offset);
                         }
                         else
+                        if(Settings.vehicle == Settings.CAR)
                         {
-                            offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
+                            offset = sendCarConfig(offset);
                         }
-
-
-						float targetReversePace = Settings.getFileFloat("TARGET_REVERSE_PACE")[0];
-						if(targetPace > 0.001)
-						{
-							// meters per minute/wheel circumference in meters
-							offset = Math2.write_int16(beacon, offset, paceToRPM(targetReversePace));
-//Log.i("Truck", "run targetRPM=" + targetRpm);
-						}
-						else
-						{
-							offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_REVERSE_RPM")[0]));
-						}
-
-
-
-		    			offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
-		    			offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
-		    			offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
-
-						offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("STICTION_THRESHOLD")[0]);
-						offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("STICTION_AMOUNT")[0]);
-
-
-
-
-						offset = Math2.write_int16(beacon, offset, mag_x_max);
-						offset = Math2.write_int16(beacon, offset, mag_y_max);
-						offset = Math2.write_int16(beacon, offset, mag_z_max);
-						offset = Math2.write_int16(beacon, offset, mag_x_min);
-						offset = Math2.write_int16(beacon, offset, mag_y_min);
-						offset = Math2.write_int16(beacon, offset, mag_z_min);
-
-
-
-
-
-
-						float pid[] = Settings.getFileFloat("STEERING_PID");
-		    			offset = writePid(offset, pid);
-
-						pid = Settings.getFileFloat("RPM_PID");
-		    			offset = writePid(offset, pid);
-
-						pid = Settings.getFileFloat("PATH_PID");
-						offset = writePid(offset, pid);
-
-						pid = Settings.getFileFloat("SIDE_PID");
-						offset = writePid(offset, pid);
 
 // write the size including the CRC
 						Math2.write_int16(beacon, 4, offset + 2);
@@ -444,39 +369,77 @@ public class Truck extends Thread {
 	    						else
 	    						if(offset <= totalReceived - size)
 	    						{
-									printBuffer("run 1", receive_buf, 0, totalReceived);
+									//printBuffer("run 2", receive_buf, 0, totalReceived);
 
 									checksum = Math2.getChecksum(receive_buf, offset, size - 2);
-    			    				Log.i("Truck.run 1", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math2.read_uint16(receive_buf, offset + size - 2));
+    			    				//Log.i("Truck.run 3", "size=" + size + " checksum1=" + checksum + " checksum2=" + Math2.read_uint16(receive_buf, offset + size - 2));
 	    							if(checksum == Math2.read_uint16(receive_buf, offset + size - 2))
 	    							{
 // packet is intact
 		    							switch(receive_buf[offset + 6])
 		    							{
-		    							case STATUS_PACKET:
-		    								battery_analog = Math2.read_int32(receive_buf, offset + 8);
-		    								battery_voltage = Math2.read_float32(receive_buf, offset + 12);
-		    								gyro_center = Math2.read_int16(receive_buf, offset + 16);
-		    								gyro_range = Math2.read_uint16(receive_buf, offset + 18);
-		    								rpm = Math2.read_uint16(receive_buf, offset + 20);
-		    								current_heading = Math2.read_float32(receive_buf, offset + 22);
-
-											mag_x_min = Math2.read_int16(receive_buf, offset + 26);
-											mag_x_max = Math2.read_int16(receive_buf, offset + 28);
-											mag_y_min = Math2.read_int16(receive_buf, offset + 30);
-											mag_y_max = Math2.read_int16(receive_buf, offset + 32);
-											mag_z_min = Math2.read_int16(receive_buf, offset + 34);
-											mag_z_max = Math2.read_int16(receive_buf, offset + 36);
-
-
-
-											vanish_x = receive_buf[offset + 38];
-											vanish_y = receive_buf[offset + 39];
-											bottom_x = receive_buf[offset + 40];
-
-											heading_feedback = Math2.read_float32(receive_buf, offset + 41);
-
-		    								break;
+		    							    case STATUS_PACKET:
+                                            {
+                                                int offset2 = offset + 8;
+		    								    battery_analog = Math2.read_int32(receive_buf, offset2);
+                                                offset2 += 4;
+		    								    battery_voltage = Math2.read_float32(receive_buf, offset2);
+                                                offset2 += 4;
+		    								    gyro_center = Math2.read_int16(receive_buf, offset2);
+                                                offset2 += 2;
+		    								    gyro_range = Math2.read_uint16(receive_buf, offset2);
+                                                offset2 += 2;
+		    								    rpm = Math2.read_uint16(receive_buf, offset2);
+                                                offset2 += 2;
+		    								    current_heading = Math2.read_float32(receive_buf, offset2);
+                                                offset2 += 4;
+												
+												throttleIn = Math2.read_int32(receive_buf, offset2);
+												offset2 += 4;
+												bluetooth_hz = Math2.read_int16(receive_buf, offset2);
+												offset2 += 2;
+												radio_hz = Math2.read_int16(receive_buf, offset2);
+												offset2 += 2;
+                                                
+												if(receive_buf[offset2] > 0)
+												{
+													gotThrottleIn = true;
+												}
+												else
+												{
+													gotThrottleIn = false;
+												}
+												offset2++;
+												
+												if(Settings.writeDebug &&
+													gotThrottleIn)
+												{
+													gotThrottleIn = false;
+													try {
+														debugWriter.write(Integer.toString(throttleIn) + "\n");
+														debugWriter.flush();
+													} catch (IOException e) {
+														e.printStackTrace();
+													}
+												}
+												
+                                                if(Settings.vehicle == Settings.CAR)
+                                                {
+                                                    remote_steering = (byte)receive_buf[offset2];
+                                                    if(remote_steering < 0)
+                                                    {
+                                                        remote_steering += 256;
+                                                    }
+                                                    offset2++;
+                                                    remote_throttle = (byte)receive_buf[offset2];
+                                                    offset2++;
+                                                    if(remote_throttle < 0)
+                                                    {
+                                                        remote_throttle += 256;
+                                                    }
+                               }
+		    								    break;
+                                            }
 		    							}
 		    							
 		    							offset += size;
@@ -526,16 +489,200 @@ public class Truck extends Thread {
 	    }
     }
 
-	private int paceToRPM(float targetPace) {
-		float diameter = Settings.getFileFloat("DIAMETER")[0] / 1000;
-		return (int) (1609.0 / targetPace / (diameter * Math2.PI));
+// Tamiya truck
+    private int sendTruckConfig(int offset)
+    {
+        // wheel diameter in mm
+		float diameter = Settings.getFileFloat("DIAMETER")[0];
+	    // send config
+		beacon[offset++] = (byte) 1;
+
+		beacon[offset++] = (byte) (Settings.getFileFloat("VISION_BANDWIDTH")[0] * 255);
+		beacon[offset++] = (byte) (Settings.getFileFloat("PATH_CENTER")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("BOTTOM_CENTER")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_VISION")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("ENABLE_MAG")[0]);
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MANUAL_OVERRIDE_DELAY")[0]));
+
+
+		beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MID_THROTTLE")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_FWD")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MAX_THROTTLE_REV")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_FWD")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_REV")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_STEERING")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("AUTO_THROTTLE")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("RPM_DV_SIZE")[0]);
+//		    			beacon[offset++] = (byte) (Settings.getFileFloat("PATH_DX_SIZE")[0]);
+
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
+		beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
+		beacon[offset++] = (byte)(Settings.getFileFloat("D_BANDWIDTH")[0]);
+
+
+
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_DELAY")[0]));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("THROTTLE_RAMP_STEP")[0]));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("STEERING_STEP_DELAY")[0]));
+
+
+
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
+
+        //float targetPace = Settings.getFileFloat("TARGET_PACE")[0];
+		float targetPace = Settings.targetPace;
+        if(targetPace > 0.001)
+        {
+            // meters per minute/wheel circumference in meters
+            offset = Math2.write_int16(beacon, offset, paceToRPM(targetPace, diameter));
+//Log.i("Truck", "run targetRPM=" + targetRpm);
+        }
+        else
+        {
+            offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_RPM")[0]));
+        }
+
+
+		float targetReversePace = Settings.getFileFloat("TARGET_REVERSE_PACE")[0];
+		if(targetPace > 0.001)
+		{
+			// meters per minute/wheel circumference in meters
+			offset = Math2.write_int16(beacon, offset, paceToRPM(targetReversePace, diameter));
+//Log.i("Truck", "run targetRPM=" + targetRpm);
+		}
+		else
+		{
+			offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("TARGET_REVERSE_RPM")[0]));
+		}
+
+
+
+		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+
+//						offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("STICTION_THRESHOLD")[0]);
+//						offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("STICTION_AMOUNT")[0]);
+
+
+
+
+// 						offset = Math2.write_int16(beacon, offset, mag_x_max);
+// 						offset = Math2.write_int16(beacon, offset, mag_y_max);
+// 						offset = Math2.write_int16(beacon, offset, mag_z_max);
+// 						offset = Math2.write_int16(beacon, offset, mag_x_min);
+// 						offset = Math2.write_int16(beacon, offset, mag_y_min);
+// 						offset = Math2.write_int16(beacon, offset, mag_z_min);
+
+
+
+
+
+
+		float pid[] = Settings.getFileFloat("STEERING_PID");
+		offset = writePid(offset, pid);
+
+		pid = Settings.getFileFloat("RPM_PID");
+		offset = writePid(offset, pid);
+        return offset;
+    }
+
+
+
+// 3D printed truck
+    private int sendCarConfig(int offset)
+    {
+        // wheel diameter in mm
+		float diameter = Settings.getFileFloat("DIAMETER")[0];
+	    // send config
+		beacon[offset++] = (byte) 1;
+
+
+		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_FWD")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_REV")[0]);
+
+		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
+
+
+		beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
+
+		beacon[offset++] = (byte) (Settings.getFileFloat("RPM_DV_SIZE")[0]);
+
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("GYRO_CENTER_MAX")[0]));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("MAX_GYRO_DRIFT")[0] * 256));
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
+		beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
+		beacon[offset++] = (byte)(Settings.getFileFloat("D_BANDWIDTH")[0]);
+
+
+
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("PID_DOWNSAMPLE")[0]));
+
+
+
+		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
+
+// meters per minute/wheel circumference in meters
+        offset = Math2.write_int16(beacon, offset, paceToRPM(Settings.targetPace, diameter));
+
+		float targetReversePace = Settings.getFileFloat("TARGET_REVERSE_PACE")[0];
+// meters per minute/wheel circumference in meters
+		offset = Math2.write_int16(beacon, offset, paceToRPM(targetReversePace, diameter));
+
+		float minReversePace = Settings.getFileFloat("MIN_REVERSE_PACE")[0];
+// meters per minute/wheel circumference in meters
+		offset = Math2.write_int16(beacon, offset, paceToRPM(minReversePace, diameter));
+
+		float minPace = Settings.getFileFloat("MIN_PACE")[0];
+// meters per minute/wheel circumference in meters
+		offset = Math2.write_int16(beacon, offset, paceToRPM(minPace, diameter));
+
+// wheel diameter
+        beacon[offset++] = (byte)diameter;
+        
+
+		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("BATTERY_V0")[0]);
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_STEP")[0]));
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("MAX_STEERING_STEP")[0]));
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("STEERING_OVERSHOOT")[0]));
+
+		float pid[] = Settings.getFileFloat("STEERING_PID");
+		offset = writePid(offset, pid);
+
+		pid = Settings.getFileFloat("RPM_PID");
+		offset = writePid(offset, pid);
+        return offset;
+    }
+
+	private int paceToRPM(float targetPace, float diameter) {
+        final float M_TO_MI = (float)1609.0;
+		return (int) (M_TO_MI / targetPace / (diameter * Math2.PI / 1000));
 	}
 
 
 	private int writePid(int offset, float[] pid) {
-		for(int i = 0; i < 6; i++)
+		for(int i = 0; i < 4; i++)
 		{
-			Math2.write_float32(beacon, offset, pid[i]);
+			if(i < pid.length)
+			{
+				Math2.write_float32(beacon, offset, pid[i]);
+			}
+			else
+			{
+				Math2.write_float32(beacon, offset, 0);
+			}
+			
 			offset += 4;
 		}
 		return offset;
@@ -665,14 +812,17 @@ public class Truck extends Thread {
     static float battery_voltage;
     static int gyro_center;
     static int gyro_range;
+    static int remote_steering;
+    static int remote_throttle;
     static float current_heading;
-	static float heading_feedback;
+//	static float heading_feedback;
 //	static float power;
 	static int rpm;
-	static int mag_x_min, mag_x_max;
-	static int mag_y_min, mag_y_max;
-	static int mag_z_min, mag_z_max;
-	static int vanish_x, vanish_y, bottom_x;
+	static int radio_hz, bluetooth_hz;
+// 	static int mag_x_min, mag_x_max;
+// 	static int mag_y_min, mag_y_max;
+// 	static int mag_z_min, mag_z_max;
+// 	static int vanish_x, vanish_y, bottom_x;
     
     static boolean needReset = false;
     static boolean needConfig = false;
@@ -682,8 +832,9 @@ public class Truck extends Thread {
 	// full manual controls
 // throttle to send -127 - 127
     static int throttleOut = 0;
-// throttle received -127 - 127
+// throttle PWM received
     static int throttleIn = 0;
+	static boolean gotThrottleIn = false;
 // steering to send -127 - 127
     static int steeringOut = 0;
 // steering to receive -127 - 127
@@ -717,4 +868,8 @@ public class Truck extends Thread {
 	ExecutorService executor = Executors.newFixedThreadPool(2);
 //	UUID uuid = UUID.randomUUID();
 	UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+
+// write throttle PWM to a file
+	static File debugFile = null;
+	static BufferedWriter debugWriter = null;
 }

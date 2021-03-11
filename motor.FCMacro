@@ -1,0 +1,21 @@
+# motor mount scripts
+
+import libsketch
+import importlib
+importlib.reload(libsketch)
+import math
+
+
+SHROUD = 'shroud outline'
+
+libsketch.makeBorder(SHROUD, \
+    1.0, \
+    libsketch.toRad(90), \
+    True)
+
+
+
+
+
+
+

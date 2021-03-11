@@ -1,0 +1,154 @@
+#  create sections for the traction module
+
+import libisogrid
+import importlib
+importlib.reload(libisogrid)
+
+
+BORDER = 1.0
+
+# battery wall
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(37.5, \
+        54, \
+        2, \
+        2, \
+        [ .6, .6 ], \
+        [ 1.2, 1.2 ], \
+        0, \
+        0, \
+        2, \
+        1.2)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-55.8, -10.4, -27),
+        App.Rotation(App.Vector(.58, .58, .58), 120))
+
+
+
+
+# electronical floor
+if False:
+    W = 110.2
+    H = 170.0
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(H, \
+        W, \
+        9, \
+        4, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        0.0, \
+        0.0, \
+        2.6, \
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-40.8, 50.6, 159.0),
+        App.Rotation(App.Vector(-.58, -.58, .58), 240))
+
+
+# battery door
+if False:
+    H = 41.4
+    W = 92.0
+    X_SLICES = 2
+    Y_SLICES = 3
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(H, \
+        W, \
+        X_SLICES, \
+        Y_SLICES, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        0.0, \
+        0.0, \
+        2.4, \
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-31.6, 31.6, -51.0),
+        App.Rotation(App.Vector(0.0, 0.0, 0.0), 270))
+
+
+
+# back top
+if False:
+    H = 30.4
+    W = 119.0
+    X_SLICES = 1
+    Y_SLICES = 3
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(H, \
+        W, \
+        X_SLICES, \
+        Y_SLICES, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        1.0, \
+        BORDER, \
+        1.6, \
+        BORDER)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(-45.1, 63.0, -49.0),
+        App.Rotation(App.Vector(0, 0, 1), 270))
+    extrudeTris.Placement = App.Placement(
+         App.Vector(-45.1, 63.0, -50.6),
+         App.Rotation(App.Vector(0, 0, 1), 270))
+
+
+# bottom
+if False:
+    W = 194.0
+    H = 120.0
+    X_SLICES = 10
+    Y_SLICES = 4
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(W, \
+        H, \
+        X_SLICES, \
+        Y_SLICES, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        0.0, \
+        0.0, \
+        3, \
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-45.6, 6.6, 170.0),
+        App.Rotation(App.Vector(-.58, -.58, .58), 240))
+
+
+# front
+if True:
+    W = 72.8
+    H = 119.0
+    X_SLICES = 4
+    Y_SLICES = 5
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(W, \
+        H, \
+        X_SLICES, \
+        Y_SLICES, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        0.0, \
+        0.0, \
+        2.6, \
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-45.1, 63, 154),
+        App.Rotation(App.Vector(0, 0, 1), 270))
+
+# side
+if False:
+    X = -54.6
+    Y = -12.4
+    Z = -27
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(75.4, \
+        200.0, \
+        4, \
+        8, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        0.0, \
+        0.0, \
+        3, \
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-64.6, -12.4, -27),
+        App.Rotation(App.Vector(0.58, 0.58, 0.58), 120.00))
+
+

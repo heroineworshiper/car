@@ -81,7 +81,7 @@ public class Settings {
 		try {
 			reader = new BufferedReader(new FileReader(file));
 		} catch (FileNotFoundException e) {
-            Log.v("Settings", "loadInternal 2 " + e.toString());
+            Log.i("Settings", "loadInternal 2 " + e.toString());
             return;
 		}
         String line = null;
@@ -123,6 +123,8 @@ public class Settings {
 
         
 		bluetooth_id = getFileString("BLUETOOTH", bluetooth_id);
+        writeDebug = ((int)getFileFloat("DEBUG")[0] == 1);
+        Log.i("x", "Settings.loadFile writeDebug=" + getFileFloat("DEBUG")[0]);
 	}
 
 	void load()
@@ -158,7 +160,7 @@ public class Settings {
 			if(key.toUpperCase().equals(keys.get(i).toUpperCase()))
 			{
 				String[] values = stringValues.get(i);
-				float[] newValues = new float[stringValues.size() - 1];
+				float[] newValues = new float[values.length];
 				for(int j = 0; j < values.length; j++)
 				{
 					newValues[j] = Float.parseFloat(values[j]);
@@ -234,6 +236,8 @@ public class Settings {
 	static final String CAR_FILENAME = "settings.car";
 	static final String TRUCK_FILENAME = "settings.truck";
 	static final String TRUCKCAM_FILENAME = "settings.truckcam";
+	static final String DEBUG_FILENAME = "debug";
+	static boolean writeDebug = false;
 	static String bluetooth_id = "truck";
 //	static boolean headlights = false;
 	static float targetPace = 9.00f;
@@ -270,7 +274,7 @@ public class Settings {
 	static String message = null;
 	static boolean haveMessage = false;
 
-
+// the supported vehicles
 	static final int TRUCK = 0;
 	static final int CAR = 1;
 	static final int TRUCKCAM = 2;

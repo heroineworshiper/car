@@ -1,7 +1,7 @@
 /*
- * Leg
+ * 3 phase motor driver from an ESC
  *
- * Copyright (C) 2017 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2021 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,10 @@
  * 
  */
 
-// debugging for the leg
+// debugging for the AVR
 // UART TX is used for the H bridge, so we're left with 9600 baud bit banging
 
 
-#include "leg.h"
-#include "avr_debug.h"
 
 
 
@@ -32,7 +30,8 @@ void (*volatile uart_state)();
 uint8_t current_bit;
 uint8_t uart_data;
 
-#define UART_PERIOD (-1600) // 9600
+#define UART_PERIOD (-6400) // 2400
+//#define UART_PERIOD (-1600) // 9600
 //#define UART_PERIOD (-800) // 19200
 
 // only 1024 bytes of SRAM on the ATMega8
@@ -116,10 +115,10 @@ void print_number(int number)
 		number = -number;
 	}
 
-	if(number > 10000) *ptr++ = '0' + (number / 10000);
-	if(number > 1000) *ptr++ = '0' + ((number / 1000) % 10);
-	if(number > 100) *ptr++ = '0' + ((number / 100) % 10);
-	if(number > 10) *ptr++ = '0' + ((number / 10) % 10);
+	if(number >= 10000) *ptr++ = '0' + (number / 10000);
+	if(number >= 1000) *ptr++ = '0' + ((number / 1000) % 10);
+	if(number >= 100) *ptr++ = '0' + ((number / 100) % 10);
+	if(number >= 10) *ptr++ = '0' + ((number / 10) % 10);
 	*ptr++ = '0' + (number % 10);
 	*ptr++ = ' ';
 	*ptr = 0;
@@ -130,10 +129,10 @@ void print_number_unsigned(uint16_t number)
 {
 	char string[8];
 	char *ptr = string;
-	if(number > 10000) *ptr++ = '0' + (number / 10000);
-	if(number > 1000) *ptr++ = '0' + ((number / 1000) % 10);
-	if(number > 100) *ptr++ = '0' + ((number / 100) % 10);
-	if(number > 10) *ptr++ = '0' + ((number / 10) % 10);
+	if(number >= 10000) *ptr++ = '0' + (number / 10000);
+	if(number >= 1000) *ptr++ = '0' + ((number / 1000) % 10);
+	if(number >= 100) *ptr++ = '0' + ((number / 100) % 10);
+	if(number >= 10) *ptr++ = '0' + ((number / 10) % 10);
 	*ptr++ = '0' + (number % 10);
 	*ptr++ = ' ';
 	*ptr = 0;
@@ -291,8 +290,12 @@ void stop_bit_tx()
 	bitSet(GIFR, INTF0);
 // disable the data interrupt
 	bitClear(TIMSK, TOIE1);
+
+#ifdef DO_RECEIVE
 // enable start bit interrupt
 	bitSet(GICR, INT0);
+#endif
+
 	uart_state = 0;
 }
 
@@ -428,8 +431,15 @@ void flush_serial()
 
 
 
+// detect data bits using timer 2 overflows
+ISR(TIMER1_OVF_vect)
+{
+	uart_state();
+}
 
 
+
+#ifdef DO_RECEIVE
 
 
 
@@ -501,12 +511,7 @@ ISR(INT0_vect)
 
 
 
-// detect data bits using timer 2 overflows
-ISR(TIMER1_OVF_vect)
-{
-	uart_state();
-}
-
+#endif // DO_RECEIVE
 
 void init_serial()
 {
@@ -514,6 +519,7 @@ void init_serial()
 	bitSet(TX_DDR, TX_PIN);
 	bitSet(TX_PORT, TX_PIN);
 
+#ifdef DO_RECEIVE
 // receive pin with pullup.  PWM routine needs to keep its PORT bit high
 	bitClear(RX_DDR, RX_PIN);
 	bitSet(RX_PORT, RX_PIN);
@@ -523,8 +529,7 @@ void init_serial()
 	bitClear(MCUCR, ISC00);
 // enable interrupt for the start bit
 	bitSet(GICR, INT0);
-	
-	
+#endif // DO_RECEIVE
 }
 
 

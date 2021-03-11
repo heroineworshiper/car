@@ -571,7 +571,7 @@ void calibrate_mag(imu_t *imu)
 
 void init_imu(imu_t *imu)
 {
-	init_hardi2c(&imu->i2c, I2C1);
+	init_hardi2c(&imu->i2c, I2C1, 0);
 	imu->calibrate_imu = 0;
 	imu->dump_theta = 1;
 

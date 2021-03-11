@@ -15,6 +15,7 @@ typedef struct
 	I2C_TypeDef *regs;
 	uint32_t dev_address;
 	uint32_t reg_address;
+    int pin_combo;
 // Value user reads & writes
 	uint32_t value;
 // burst output
@@ -28,6 +29,7 @@ typedef struct
 // copy of SR1
 	uint32_t status1;
 	int timeout;
+    int error;
 } hardi2c_t;
 
 
@@ -62,7 +64,7 @@ void hardi2c_read_burst(hardi2c_t *i2c,
 	int bytes);
 
 
-void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs);
+void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs, int pin_combo);
 void hardi2c_idle(void *i2c);
 
 

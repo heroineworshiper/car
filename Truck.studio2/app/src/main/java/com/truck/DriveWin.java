@@ -100,7 +100,7 @@ public class DriveWin extends WindowBase implements OnTouchListener
 				
 
 			    if(Settings.haveMessage)
-			    {q
+			    {
 					TextView text = (TextView)findViewById(R.id.messages2);
 					if(text != null) text.setText(Settings.message);
 					Settings.haveMessage = false;

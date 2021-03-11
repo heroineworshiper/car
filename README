@@ -1,0 +1,407 @@
+What you'll find here:
+
+Everything related to robotic cars.
+
+arm_cam.c: camera motor receiver
+
+arm_car.c: 2 wheel robot driven by direct drive, sensored brushless motors
+
+arm_cc1101.c: 433Mhz radio library for the ARM
+
+arm_truck.c, arm_truck.h: the lunchbox firmware
+
+arm_xbee.c: xbee library for the ARM
+
+cam_remote.X: camera remote control
+
+car.s: vehicle firmware for the G buggy
+
+car_remote.s: orginal assembly language remote for CC1101 & XBee
+
+car_remote.X: 3D printed vehicle remote control
+
+car_receive.X: 3D printed vehicle receiver
+
+car_remote.X.bak: failed remote for the XBee with frequency hopping
+
+freq_hops.ods: frequency hopping plot to aid in spreading the frequencies
+
+fuse.X: a software fuse
+
+truck3.pcb: last layout for the tamiya board
+
+
+
+
+
+
+=============================================================================
+3D printed truck
+
+arm_truck2.c, arm_truck2.h: the firmware
+
+hall.pcb: hall effect sensor board for 3D printed truck
+
+imu4.pcb: IMU for 3D printed truck
+
+tire2.FCMacro: generate tire
+    requires creating a rigid body 1st
+    .28mm layer height
+    .8mm line width
+    1.6mm wall thickness
+    1.4mm top/bottom thickness
+    100% infill
+    no support
+    230 printing temp
+    0 bed temp
+    20mm print speed
+    no retraction
+
+
+
+
+
+truck_radio.pcb: remote control tx/rx for 3D printed truck
+
+truck4.pcb: mane board for 3D printed truck
+
+
+ball.FCStd: 
+    ball link
+    print with ball.3mf
+    
+    TODO: round edge for servo clearance
+
+bumper.FCStd:
+    bumper for the front of the angle rods
+    print in TPU
+
+container.FCStd:
+    container budget:
+    radio panel: 42, 32
+    back left: 42, 23
+    back right: 36, 25
+    bottom right rear: 43, 27
+    right rear: 65, 40
+    left rear: 65, 40
+    right front: 57, 35
+    left front: 57, 35
+    bottom right front: 42, 26
+    front right: 44, 25
+    front left: 44, 27
+    bottom left front: 38, 24
+    bottom left rear: 40, 25
+
+    Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
+    TODO: shift cable hole right
+
+
+
+radio_box.FCStd:
+    container for radio modules & switches.
+    use print mask to create wall & isogrid parts
+    walls contain temporary plastic stringers to aid gluing
+    print without support & with print cooling to bridge overhangs
+    rotate it to bridge overhangs
+    TODO: 
+        Tabs to aid alignment
+        hollow border
+        shift cable hole left
+
+
+traction.FCMacro: create objects for traction
+
+traction.FCStd: traction section
+    latch pivot
+    back, front, door:
+        fillet on top
+        support to base only, 80 degrees
+    bottom, electronicals:
+        .4mm top/bottom thickness
+        no support
+    magnet holder, hall support
+        support to base
+        print motor support, encoder pieces with .8mm top/bottom thickness
+    union for both sides (motor support | side cutout) & side mask
+    union for both sides (motor support & motor mask)
+    union for both sides (motor support | side cutout) & bottom mask
+     - boolean error causes it to not print mirrored side.  Use cura mirror instead.
+    union for both sides (motor support | side cutout) & top mask
+    print 2 x hinge half
+    print latch
+     - note latch is not symmetric
+    
+    TODO:
+        use smaller rectangle for magnet support
+        captive nuts for motor farsteners
+
+
+
+
+
+
+steering.FCMacro:
+    create objects for steering
+
+steering.FCStd: steering section
+    print with 1mm nozzle 
+    .2mm layer height
+    ultimaker project: steering.3mf
+    bottom cutout
+    wheel vertical
+     - print sideways
+    wheel vertical mirror001
+    wheel fork master
+    fusion: fork bridge + wheel vertical003
+    servo bathtub
+    - support to bed only
+
+
+
+
+
+
+front_wheel.FCStd:
+rear_wheel.FCStd: motor wheel coupling
+    print with 1mm nozzle
+    .8mm line width
+    .32mm layer height
+    ultimaker project: front_wheel.3mf, rear_wheel.3mf
+    print unions with print mask
+    print rings
+    no support
+
+
+motor.FCStd: motor mount
+    use 1mm nozzle, .32 layer height, support with 80deg overhang
+    support blocker, shroud, screw support
+    gasket out of TPU
+    clamp * 4
+    motor plate
+    sensor plate
+    
+    
+
+
+car_remote.FCMacro:
+    create objects for car_remote
+
+car_remote.FCStd: remote control for vehicle
+    disable support for the top & bottom
+    use support only for the joysticks
+    no ironing
+    .4mm nozzle
+    .8mm top/bottom thickness
+    1.2mm wall thickness
+    skirt
+    bottom, top, bottomFat, topFat:
+        expand all clones
+        select base of mirror
+        select visible objects
+        no support
+        print with outside facing the bed
+    steering pivot, throttle pivot:
+        don't export magnets
+        use support from magnet holder to bed
+    steering lever, throttle lever:
+        use support from short side of hinge to bed
+    covers for power, increase speed, decrease speed:
+        no support
+        with wide part facing bed
+    TODO:
+        vertical gap between magnets & sensors
+
+
+
+
+charger.FCStd: charging stand for a Qi charger
+    print with .4mm nozzle, .4mm line width, no support
+
+
+
+
+
+filament budget for traction module:
+motor mounts: 39g * 2
+bottom: 55g
+sides: 49g * 2
+front, rear, door, battery walls:  55g
+
+
+===========================================================================
+
+Carbon fiber farsteners for a fixed gopro
+
+Key files:
+
+isogrid_plane.FCMacro:
+    create isogrids for cam_remote, car_remote, & cam_gearbox.FCStd
+
+clamshell.FCMacro:
+    create walls for cam_remote, car_remote
+
+gopro_case.FCStd: case for a gopro 7
+    print case union with print mask
+    print case cut with print mask & all base objects
+    print with support everywhere, lesser overhangs facing up
+    skirt adhesion
+    TODO: copy hinges from gopro_to_wood
+     - knobs for the wire bits
+
+
+
+gopro_to_wood.FCStd: case for mounting a gopro 7 behind a sheet of wood
+    print case union with print mask
+    print case cut with print mask
+    print with support everywhere, lesser overhangs facing up
+    skirt adhesion
+
+gopro4_to_wood.FCStd: case for mounting a gopro 4 behind a sheet of wood
+
+
+gopro.FCStd
+    top endpiece for carbon fiber
+        print with laminations distributing plasic flex along right angles
+        support everywhere
+    
+    bottom endpiece
+
+    both endpieces need "outer shroud" + "bolt loop"
+        print with laminations perpendicular to shaft
+    
+    4 * "inner shroud slice" for the top & bottom endpieces
+        print with laminations distributing plastic flex along curves
+
+    bottom needs "base"
+    
+    top needs "cam"
+
+gopro_rightangle.FCStd
+    right angle coupling between carbon fiber & handle
+    print with no support
+    print with laminations distributing plastic flex along curves
+
+    attachment + attachment mirror are required
+
+    cf collar: CF handle collar
+        100% infill
+
+=============================================================================
+
+Panning mount:
+
+cam_remote.pcb, cam.pcb: electronicals
+
+cam_gearbox.FCStd:
+    4.5:1 gear reduction for panning motor
+    walls have to be printed with .4mm thick tops & bottoms
+        to get smooth surfaces
+    print pinion with gear on bottom & no support
+    install pinion with hex facing motor hex
+
+cam_remote.FCStd:
+    remote control for camera panner
+    no ironing
+    no horizontal expansion
+    .4mm nozzle
+    .8mm top/bottom thickness
+    1.2mm wall thickness
+    support with 60 deg overhang angle
+    skirt
+    60C bed temp
+    support to bed only except for top & bottom
+    top, bottom:
+        block support over all except edges with switch covers
+        print with outside facing the bed
+        .8mm top & bottom thickness to get smooth 2mm sheets
+        print top with spring holder but not spring
+    lever, steering:
+        print with support on flatter side
+        don't print magnets
+    power, increase, decrease cover:
+        print with no support
+    top switch cover, bottom switch cover:
+        support everywhere
+
+TODO:
+    transition layers still off
+    vertical gap between magnets & sensors
+
+
+
+
+
+
+gopro_bearing.FCStd:
+    bearing for motorized panning
+
+    print bearing inner
+     - requires support + brim but not on friction surfaces
+     TODO: make longer so horizontal section doesn't need to rub
+
+    print bearing outer
+     - doesn't require support
+
+    must print with
+        4 * "inner shroud slice"
+         - TODO: make hole for tube & make base wider to compensate for lost material
+         - TODO remove alignment ring to make it easier to print
+        "outer shroud" + "bolt loop"
+    
+    print right angle coupling with right hole pattern to create a right angle
+
+    horizontal friction surfaces must be smooth
+     - print with ironing
+
+gopro_motor.FCStd:
+    coupling to motor for panning
+    must print with
+        4 * "inner shroud slice"
+         - TODO: make hole for motor shaft & make base wider to compensate for lost material
+        "outer shroud" + "bolt loop"
+
+shroud.FCStd:
+    the shroud for a direct drive panner
+    tube segment was created with 
+    ./tube shroud.stl 30 60 0 16
+    print with .4mm line width
+    205C filament 60C bed
+
+
+knob.FCStd:
+    remote control knob prototype
+    .4mm line width
+    no ironing
+    no support
+    skirt
+
+
+
+
+
+traction motors:
+20 turns 26 AWG limited by KV
+
+
+
+
+
+
+
+
+TPU esteps: 121
+PLA esteps: 92
+
+
+
+
+
+
+
+
+
+
+
+
+
+

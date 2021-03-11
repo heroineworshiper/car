@@ -24,7 +24,8 @@ import android.view.View.OnTouchListener;
 import android.widget.CheckBox;
 import android.graphics.PorterDuff;
 
-public class MainActivity extends WindowBase implements OnTouchListener {
+public class MainActivity extends WindowBase implements OnTouchListener 
+{
 
 
 	@Override
@@ -109,7 +110,8 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 		if(canvas != null)
 		{
 			Settings.initCanvas(canvas);
-			
+
+// create the widgets			
 			if(battery == null)
 			{
 				int x = Settings.border;
@@ -126,9 +128,8 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				};
 				int positions2[] = new int[]
 				{
-						Settings.screenW * 1 / 4,
-						Settings.screenW * 2 / 4,
-						Settings.screenW * 3 / 4
+						Settings.screenW * 1 / 2,
+						Settings.screenW * 1 / 2,
 				};
 
 				readouts.add(batteryAnalog = new SmallReadout(x, y, 1));
@@ -150,19 +151,40 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				gyro.update(0, "0");
 				gyro.update(1, "0");
 				y += gyro.getH(paint);
+				
+// 				readouts.add(headingFeedback = new SmallReadout(x, y, 2));
+// 				headingFeedback.setTitle("Feedback");
+// 				headingFeedback.setPositions(positions);
+// 				headingFeedback.update(0, "0.0");
+// 				y += headingFeedback.getH(paint);
+
+				SmallReadout radioTitle = null;
+				readouts.add(radioTitle = new SmallReadout(x, y, 2));
+				radioTitle.setPositions(positions);
+				radioTitle.setTitle("Radios");
+				radioTitle.update(0, "Stick");
+				radioTitle.update(1, "Bluetooth");
+				y += radioTitle.getH(paint);
+				
+				readouts.add(radios = new SmallReadout(x, y, 2));
+				radios.setPositions(positions);
+				radios.update(0, "0");
+				radios.update(1, "0");
+				y += radios.getH(paint);
+
 
 				readouts.add(heading = new SmallReadout(x, y, 2));
 				heading.setTitle("Heading");
 				heading.setPositions(positions);
 				heading.update(0, "0.0");
 				y += heading.getH(paint);
-				
-				readouts.add(headingFeedback = new SmallReadout(x, y, 2));
-				headingFeedback.setTitle("Feedback");
-				headingFeedback.setPositions(positions);
-				headingFeedback.update(0, "0.0");
-				y += headingFeedback.getH(paint);
-				
+
+				readouts.add(throttle = new SmallReadout(x, y, 1));
+				throttle.setTitle("Throttle:");
+				throttle.setPositions(positions);
+				throttle.update(0, "0");
+				y += throttle.getH(paint);
+
 //				readouts.add(power = new SmallReadout(x, y, 2));
 //				power.setTitle("Power");
 //				power.setPositions(positions);
@@ -180,29 +202,29 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 				rpm.update(0, "0.0");
 				y += rpm.getH(paint);
 
-				readouts.add(mag_x = new SmallReadout(x, y, 3));
-				mag_x.setTitle("MAG X:");
-				mag_x.setPositions(positions2);
-				y += mag_x.getH(paint);
+				readouts.add(remote_steering = new SmallReadout(x, y, 2));
+				remote_steering.setTitle("REMOTE STEERING:");
+				remote_steering.setPositions(positions2);
+				y += remote_steering.getH(paint);
 
-				readouts.add(mag_y = new SmallReadout(x, y, 3));
-				mag_y.setTitle("MAG Y:");
-				mag_y.setPositions(positions2);
-				y += mag_y.getH(paint);
+				readouts.add(remote_throttle = new SmallReadout(x, y, 2));
+				remote_throttle.setTitle("REMOTE THROTTLE:");
+				remote_throttle.setPositions(positions2);
+				y += remote_throttle.getH(paint);
 
-				readouts.add(mag_z = new SmallReadout(x, y, 3));
-				mag_z.setTitle("MAG Z:");
-				mag_z.setPositions(positions2);
-				y += mag_z.getH(paint);
+// 				readouts.add(mag_z = new SmallReadout(x, y, 3));
+// 				mag_z.setTitle("MAG Z:");
+// 				mag_z.setPositions(positions2);
+// 				y += mag_z.getH(paint);
 
 				readouts.add(messages = new SmallReadout(x, y, 1));
 				messages.update(0, Settings.message);
 			}
-			
-			
+
+
 			battery.setValue(Truck.truck.battery_voltage);
 			batteryAnalog.update(0, Integer.toString(Truck.battery_analog));
-			
+
 			gyro.update(0, Integer.toString(Truck.truck.gyro_center));
 			gyro.update(1, Integer.toString(Truck.truck.gyro_range));
 			heading.update(0, 
@@ -210,11 +232,16 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 					new StringBuilder())
 						.format("%.02f", Math2.fromRad(Truck.current_heading))
 						.toString());
-			headingFeedback.update(0, 
-				new Formatter(
-					new StringBuilder())
-						.format("%.02f", Truck.heading_feedback)
-						.toString());
+
+			radios.update(0, Integer.toString(Truck.truck.radio_hz));
+			radios.update(1, Integer.toString(Truck.truck.bluetooth_hz));
+			throttle.update(0, Integer.toString(Truck.truck.throttleIn));
+
+// 			headingFeedback.update(0, 
+// 				new Formatter(
+// 					new StringBuilder())
+// 						.format("%.02f", Truck.heading_feedback)
+// 						.toString());
 
 //			power.update(0, 
 //					new Formatter(
@@ -232,12 +259,9 @@ public class MainActivity extends WindowBase implements OnTouchListener {
 							.format("%d", Truck.rpm)
 							.toString());
 
-			mag_x.update(0, new Formatter(new StringBuilder()).format("%d", Truck.mag_x_min).toString());
-			mag_x.update(1, new Formatter(new StringBuilder()).format("%d", Truck.mag_x_max).toString());
-			mag_y.update(0, new Formatter(new StringBuilder()).format("%d", Truck.mag_y_min).toString());
-			mag_y.update(1, new Formatter(new StringBuilder()).format("%d", Truck.mag_y_max).toString());
-			mag_z.update(0, new Formatter(new StringBuilder()).format("%d", Truck.mag_z_min).toString());
-			mag_z.update(1, new Formatter(new StringBuilder()).format("%d", Truck.mag_z_max).toString());
+            remote_steering.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_steering).toString());
+            remote_throttle.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_throttle).toString());
+
 
 			
 			synchronized(Truck.truck)
@@ -260,11 +284,12 @@ public class MainActivity extends WindowBase implements OnTouchListener {
         
     Vector<Container> readouts = new Vector<Container>();
 	LargeReadout battery;
-	SmallReadout gyro, heading, headingFeedback;
-	SmallReadout mag_x, mag_y, mag_z;
+	SmallReadout gyro, heading /*, headingFeedback */;
+	SmallReadout radios, throttle;
+	SmallReadout remote_throttle, remote_steering;
 	SmallReadout rpm;
 	SmallReadout batteryAnalog;
 	SmallReadout messages;
     boolean initialized = false;
     private Paint paint;
- }
+}

@@ -1,0 +1,177 @@
+# models for container.FCSTD
+
+
+import libisogrid
+import importlib
+importlib.reload(libisogrid)
+
+ISOGRID_W = 1.0
+JOINT_W = 6.2
+EDGE_W = 1.0
+SUBDIVISION_H = 1.2
+TRIANGLES_H = 2.8
+
+# electronicals panel
+if True:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(170, \
+        102, \
+        9, \
+        5, \
+        [ EDGE_W, EDGE_W ], \
+        [ EDGE_W, EDGE_W ], \
+        0, \
+        0, \
+        1.2, \
+        ISOGRID_W)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-17.2, 99, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+
+
+    xLines, yLines = libisogrid.makeDivision(extrudeTris, 
+        1000, 
+        46)
+    yLines.Placement = extrudeTris.Placement
+
+
+# bottom
+if False:
+    W = 330
+    H = 228
+    X_SLICES = 11
+    Y_SLICES = 7
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(W, \
+        H, \
+        X_SLICES, \
+        Y_SLICES, \
+        [ JOINT_W, JOINT_W ], \
+        [ JOINT_W, JOINT_W ], \
+        SUBDIVISION_H, \
+        ISOGRID_W, \
+        TRIANGLES_H, \
+        ISOGRID_W)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(0, 0, -19.60),
+        App.Rotation(App.Vector(0, 0, 0), 0))
+    extrudeSubs.Label = "bottom"
+    extrudeTris.Placement = App.Placement(
+        App.Vector(0, 0, -18.40),
+        App.Rotation(App.Vector(0, 0, 0), 0))
+    extrudeTris.Label = "bottom"
+
+    xLines, yLines = libisogrid.makeDivision(extrudeTris, 
+        160, 
+        110)
+
+
+
+# back left
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(170, \
+        94.3, \
+        6, \
+        2.5, \
+        [ EDGE_W, EDGE_W ], \
+        [ EDGE_W, EDGE_W ], \
+        1.2, \
+        ISOGRID_W, \
+        2.8, \
+        ISOGRID_W)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(-17.2, 4.7, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-20, 4.7, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    extrudeSubs.Label = "back"
+    extrudeTris.Label = "back"
+
+# back right
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(170, \
+        22.3, \
+        6, \
+        0.5, \
+        [ EDGE_W, EDGE_W ], \
+        [ EDGE_W, EDGE_W ], \
+        1.2, \
+        ISOGRID_W, \
+        2.8, \
+        ISOGRID_W)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(-17.2, 201, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-20, 201, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    extrudeSubs.Label = "back"
+    extrudeTris.Label = "back"
+
+
+# front
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(170, \
+        218.6, \
+        6, \
+        6, \
+        [ EDGE_W, EDGE_W ], \
+        [ EDGE_W, EDGE_W ], \
+        1.2, \
+        ISOGRID_W, \
+        2.8, \
+        ISOGRID_W)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(306.0, 4.7, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(307.2, 4.7, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    extrudeSubs.Label = "front"
+    extrudeTris.Label = "front"
+
+    xLines, yLines = libisogrid.makeDivision(extrudeTris, 
+        1000, 
+        110)
+    yLines.Placement = App.Placement(
+        App.Vector(308, 4.7, 0),
+        App.Rotation(App.Vector(0, 1, 0), 90))
+    
+    
+
+# right side
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(170, \
+        330, \
+        6, \
+        9, \
+        [ EDGE_W, EDGE_W ], \
+        [ JOINT_W, JOINT_W ], \
+        1.2, \
+        ISOGRID_W, \
+        2.8, \
+        ISOGRID_W)
+    extrudeSubs.Placement = App.Placement(
+        App.Vector(0, 245.20, 0),
+        App.Rotation(App.Vector(-.58, -.58, .58), 240))
+    extrudeTris.Placement = App.Placement(
+        App.Vector(0, 248, 0),
+        App.Rotation(App.Vector(-.58, -.58, .58), 240))
+    extrudeSubs.Label = "right"
+    extrudeTris.Label = "right"
+
+    xLines, yLines = libisogrid.makeDivision(extrudeTris, 
+        1000, 
+        175)
+    yLines.Placement = extrudeTris.Placement
+
+
+
+
+
+
+
+
+
+
+
+

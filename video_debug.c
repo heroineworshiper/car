@@ -62,14 +62,14 @@ float current_heading_history[HISTORY_SIZE];
 float target_heading = 0;
 float target_heading_history[HISTORY_SIZE];
 
-float p_result = 0;
-float p_result_history[HISTORY_SIZE];
+float p_input = 0;
+float p_input_history[HISTORY_SIZE];
 
-float i_result = 0;
-float i_result_history[HISTORY_SIZE];
+float d_input = 0;
+float d_input_history[HISTORY_SIZE];
 
-float d_result = 0;
-float d_result_history[HISTORY_SIZE];
+float d2_input = 0;
+float d2_input_history[HISTORY_SIZE];
 
 float feedback = 0;
 float feedback_history[HISTORY_SIZE];
@@ -822,9 +822,9 @@ void* serial_thread(void *ptr)
 					int offset = 0;
 					current_heading = READ_FLOAT32(buffer, offset);
 					target_heading = READ_FLOAT32(buffer, offset);
-					p_result = READ_FLOAT32(buffer, offset);
-					i_result = READ_FLOAT32(buffer, offset);
-					d_result = READ_FLOAT32(buffer, offset);
+					p_input = READ_FLOAT32(buffer, offset);
+					d_input = READ_FLOAT32(buffer, offset);
+					d2_input = READ_FLOAT32(buffer, offset);
 					feedback = READ_FLOAT32(buffer, offset);
 					pthread_mutex_unlock(&serial_lock);
 					
@@ -833,15 +833,15 @@ void* serial_thread(void *ptr)
 					{
 						log_fd = fopen(serial_filename, "w");
 						fprintf(log_fd, 
-							"current_heading,target_heading,p_result,i_result,d_result,feedback\n");
+							"current_heading,target_heading,p_input,d_input,d2_input,feedback\n");
 					}
 					fprintf(log_fd, 
 						"%f,%f,%f,%f,%f,%f\n", 
 						current_heading,
 						target_heading,
-						p_result,
-						i_result,
-						d_result,
+						p_input,
+						d_input,
+						d2_input,
 						feedback);
 					fflush(log_fd);
 					
@@ -861,7 +861,7 @@ void main()
 	cam.working_w = cam.cam_w;
 	cam.working_h = cam.cam_h;
 	cam.picture_data = (unsigned char*)malloc(PICTURE_DATA_SIZE);
-	init_input((char*)DEVICE_PATH, &cam);
+	int cam_fd = init_input((char*)DEVICE_PATH, &cam);
 
 
 
@@ -944,6 +944,13 @@ void main()
 
 	while(1)
 	{
+		if(cam_fd < 0)
+		{
+			sleep(1);
+			continue;
+		}
+
+
 		read_frame(&cam,
 			in_y,
 			in_u,
@@ -976,21 +983,21 @@ void main()
 		x += GRAPH_W;
 		
 		draw_text(x - CHAR_H2, CAM_H - MARGIN, "P RESULT");
-		draw_float(x, CAM_H - MARGIN, p_result);
-		append_history(p_result_history, p_result);
-		draw_graph(x, p_result_history);
+		draw_float(x, CAM_H - MARGIN, p_input);
+		append_history(p_input_history, p_input);
+		draw_graph(x, p_input_history);
 		x += GRAPH_W;
 		
 		draw_text(x - CHAR_H2, CAM_H - MARGIN, "I RESULT");
-		draw_float(x, CAM_H - MARGIN, i_result);
-		append_history(i_result_history, i_result);
-		draw_graph(x, i_result_history);
+		draw_float(x, CAM_H - MARGIN, d_input);
+		append_history(d_input_history, d_input);
+		draw_graph(x, d_input_history);
 		x += GRAPH_W;
 		
 		draw_text(x - CHAR_H2, CAM_H - MARGIN, "D RESULT");
-		draw_float(x, CAM_H - MARGIN, d_result);
-		append_history(d_result_history, d_result);
-		draw_graph(x, d_result_history);
+		draw_float(x, CAM_H - MARGIN, d2_input);
+		append_history(d2_input_history, d2_input);
+		draw_graph(x, d2_input_history);
 		x += GRAPH_W;
 		
 		draw_text(x - CHAR_H2, CAM_H - MARGIN, "FEEDBACK");
@@ -1012,6 +1019,7 @@ void main()
 		
 		append_file(filename, picture_out, out_size);
 	}
+	
 }
 
 

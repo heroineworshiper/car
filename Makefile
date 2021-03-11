@@ -1,5 +1,5 @@
 # the leg tester
-AVR_DIR := /root/arduino-1.6.7/hardware/tools/avr/bin/
+AVR_DIR := /root/arduino-1.8.5/hardware/tools/avr/bin/
 AVR_GCC := $(AVR_DIR)avr-gcc
 AVR_CFLAGS := -O2 -mmcu=atmega8
 AVR_LFLAGS := -O2 -mmcu=atmega8 -Wl,--section-start=.text=0x0000 -nostdlib
@@ -132,7 +132,6 @@ INTERVAL_SRCS := \
 
 ARM_OBJS := \
 	../copter/stm32f4/startup_main.o \
-	cc1101.o \
 	../copter/arm/arm_math.o \
 	../copter/arm/uart.o \
 	../copter/arm/linux.o \
@@ -143,13 +142,14 @@ ARM_OBJS := \
 	../copter/stm32f4/stm32f4xx_dcmi.o \
 	../copter/stm32f4/stm32f4xx_dma.o \
 	../copter/stm32f4/stm32f4xx_i2c.o \
-	../copter/stm32f4/stm32f4xx_it.o \
+	stm32f4xx_it.o \
 	../copter/stm32f4/stm32f4xx_iwdg.o \
 	../copter/stm32f4/stm32f4xx_tim.o \
 	../copter/stm32f4/stm32f4xx_adc.o \
 	../copter/stm32f4/stm32f4xx_flash.o \
-	../copter/stm32f4/stm32f4xx_exti.o \
-	../copter/stm32f4/stm32f4xx_syscfg.o
+	stm32f4xx_exti.o \
+	../copter/stm32f4/stm32f4xx_syscfg.o \
+        ../copter/stm32f4/system_stm32f4xx.o
 
 
 VISION_OBJS := \
@@ -225,10 +225,20 @@ ARM_CAR_OBJS := \
 	arm_car.o \
 
 ARM_TRUCK_OBJS := \
+	arm_cc1101.o \
 	arm_nav.o \
 	arm_truck.o \
 	arm_imu.o \
+	arm_hardi2c.o \
+        arm_xbee.o
+
+ARM_TRUCK2_OBJS := \
+        arm_motors.o \
+	arm_truck2.o \
 	arm_hardi2c.o
+
+ARM_CAM_OBJS := \
+	arm_cam.o
 
 PI_OBJS := \
 	vision.o
@@ -241,7 +251,15 @@ PI_OBJS := \
 all: truck.bin car_remote.hex
 
 
+motor: motor.c avr_debug.c motor.h
+	$(AVR_GCC) $(AVR_CFLAGS) -o motor.o motor.c
+	$(AVR_GCC) $(AVR_LFLAGS) -o motor.elf motor.o
+	$(AVR_OBJCOPY) motor.elf motor.hex
 
+
+# program motor.hex
+motor_isp: motor
+	$(AVR_DUDE) -Uflash:w:motor.hex:i -Ulock:w:0x0F:m
 
 
 leg: arm_leg.c arm_debug.c leg.c avr_debug.c pwm_routines.c leg.h
@@ -312,7 +330,23 @@ truck.bin: $(ARM_TRUCK_OBJS) $(ARM_OBJS)
 		-T../copter/stm32f4/main.ld
 	$(OBJCOPY) -O binary truck.elf truck.bin
 
-$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_CAR_OBJS):
+truck2.bin: $(ARM_TRUCK2_OBJS) $(ARM_OBJS) motor_table
+	$(GCC_ARM) -o truck2.elf \
+		$(ARM_TRUCK2_OBJS) \
+		$(ARM_OBJS) \
+		$(ARM_LFLAGS) \
+		-T../copter/stm32f4/main.ld
+	$(OBJCOPY) -O binary truck2.elf truck2.bin
+
+cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS)
+	$(GCC_ARM) -o cam.elf \
+		$(ARM_CAM_OBJS) \
+		$(ARM_OBJS) \
+		$(ARM_LFLAGS) \
+		-T../copter/stm32f4/main.ld
+	$(OBJCOPY) -O binary cam.elf cam.bin
+
+$(ARM_OBJS) $(ARM_TRUCK_OBJS) arm_motors.o arm_truck2.o $(ARM_CAR_OBJS) $(ARM_CAM_OBJS):
 	`cat arm_gcc` -c $< -o $*.o
 
 car: car.hex car_remote.s
@@ -330,6 +364,9 @@ sensor: sensor.s
 remote: remote_tx.s remote_rx.s
 	gpasm -I../copter/pic -o remote_tx.hex remote_tx.s
 	gpasm -I../copter/pic -o remote_rx.hex remote_rx.s
+
+motor_table: motor_table.c
+	gcc -o motor_table motor_table.c -lm
 
 
 cfl2.hex: cfl2.s
@@ -439,13 +476,9 @@ clean:
 		*.lst \
 		*.asm \
 		*.cod \
-		sdcc_cflags \
-		sdcc_lflags \
 		*.ps \
 		*.z \
-		compressaudio \
-		decompressaudio \
-		pcmtoasm
+		motor_table
 
 
 test.hex: test.s pic_util.inc
@@ -511,17 +544,22 @@ oscilloscope: oscilloscope.c
 ../copter/stm32f4/stm32f4xx_dcmi.o:  ../copter/stm32f4/stm32f4xx_dcmi.c
 ../copter/stm32f4/stm32f4xx_dma.o:   ../copter/stm32f4/stm32f4xx_dma.c
 ../copter/stm32f4/stm32f4xx_i2c.o:   ../copter/stm32f4/stm32f4xx_i2c.c
-../copter/stm32f4/stm32f4xx_it.o:    ../copter/stm32f4/stm32f4xx_it.c
+stm32f4xx_it.o:    stm32f4xx_it.c
 ../copter/stm32f4/stm32f4xx_iwdg.o:  ../copter/stm32f4/stm32f4xx_iwdg.c
 ../copter/stm32f4/stm32f4xx_tim.o:   ../copter/stm32f4/stm32f4xx_tim.c
 ../copter/stm32f4/stm32f4xx_adc.o:   ../copter/stm32f4/stm32f4xx_adc.c
 ../copter/stm32f4/stm32f4xx_flash.o: ../copter/stm32f4/stm32f4xx_flash.c
-../copter/stm32f4/stm32f4xx_exti.o: ../copter/stm32f4/stm32f4xx_exti.c
+stm32f4xx_exti.o: stm32f4xx_exti.c
 ../copter/stm32f4/stm32f4xx_syscfg.o: ../copter/stm32f4/stm32f4xx_syscfg.c
+../copter/stm32f4/system_stm32f4xx.o: ../copter/stm32f4/system_stm32f4xx.c
+arm_cam.o: 			     arm_cam.c
 arm_car.o: 			     arm_car.c
+arm_motors.o:                        arm_motors.c
 arm_nav.o:                           arm_nav.c
 arm_truck.o: 			     arm_truck.c
-cc1101.o: 			     cc1101.c
+arm_truck2.o: 			     arm_truck2.c
+arm_cc1101.o: 			     arm_cc1101.c
+arm_xbee.o: 			     arm_xbee.c
 arm_hardi2c.o:                       arm_hardi2c.c
 arm_imu.o: 			     arm_imu.c
 vision.o: vision.c

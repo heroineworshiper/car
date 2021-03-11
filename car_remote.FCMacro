@@ -1,0 +1,86 @@
+# create sections for car_remote
+
+import libclamshell
+import libisogrid
+import importlib
+importlib.reload(libclamshell)
+importlib.reload(libisogrid)
+import math
+
+CLAMSHELL = 'clamshell003'
+
+# clamshell walls
+if False:
+    libclamshell.makeClam(libclamshell.getObj(CLAMSHELL), 
+        4.6, 
+        -4.6, 
+        math.pi / 2,
+        True)
+
+# isogrid
+if False:
+    W = 58
+    H = 160
+    X_SLICES = 4
+    Y_SLICES = 9
+    BORDER = 4.0
+    TRIANGLE_THICKNESS = 1.0
+    TRIANGLE_W = 1.2
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(W, \
+        H, \
+        X_SLICES, \
+        Y_SLICES, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ],\
+        0.0, \
+        0.0, \
+        TRIANGLE_THICKNESS, \
+        TRIANGLE_W)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-67, 36, -10.8),
+        App.Rotation(App.Vector(0, 0, 1), 270))
+
+# isogrid borders
+if False:
+    BORDER_W = 4.0
+    BORDER_H = 2.0
+    libisogrid.cropBorder(CLAMSHELL, \
+        None, \
+        0, \
+        0, \
+        8.2, \
+        BORDER_W, \
+        BORDER_H, \
+        math.pi / 2,
+        None,
+        False)
+
+#    libisogrid.cropBorder(CLAMSHELL, \
+#        None, \
+#        0, \
+#        0, \
+#        -10.4, \
+#        BORDER_W, \
+#        BORDER_H, \
+#        math.pi / 2,
+#        None,
+#        False)
+
+# bevel union tool
+if True:
+#    libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
+#        5.4, 
+#        -1.0, 
+#        1.6, 
+#        math.pi / 2,
+#        True)
+    libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
+        -5.4, 
+        1, 
+        1.6,
+        math.pi / 2,
+        True)
+
+
+
+

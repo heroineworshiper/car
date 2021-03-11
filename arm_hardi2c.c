@@ -50,7 +50,8 @@
 			TRACE2 \
 			print_text("WAIT_STATUS_TRUE flags="); \
 			print_hex(i2c->status1); \
-			init_hardi2c(i2c, i2c->regs); \
+			init_hardi2c(i2c, i2c->regs, i2c->pin_combo); \
+            i2c->error = 1; \
 		} \
 	} \
 }
@@ -72,7 +73,7 @@
 			TRACE2 \
 			print_text("WAIT_STATUS_FALSE flags="); \
 			print_hex(i2c->status1); \
-			init_hardi2c(i2c, i2c->regs); \
+			init_hardi2c(i2c, i2c->regs, i2c->pin_combo); \
 		} \
 	} \
 }
@@ -410,12 +411,14 @@ void I2C3_EV_IRQHandler()
 
 #endif
 
-void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs)
+void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs, int pin_combo)
 {
 	I2C_InitTypeDef  I2C_InitStructure;
 	GPIO_InitTypeDef  GPIO_InitStructure;
 
+    i2c->error = 0;
 	i2c->regs = regs;
+    i2c->pin_combo = pin_combo;
 
 	if(regs == I2C1)
 	{
@@ -424,12 +427,26 @@ void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs)
 		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 		GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
 		GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-		GPIO_Init(GPIOB, &GPIO_InitStructure);
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-		GPIO_Init(GPIOB, &GPIO_InitStructure);
-		GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);
-		GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);  
+        
+        
+        if(pin_combo == 0)
+        {
+		    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+		    GPIO_Init(GPIOB, &GPIO_InitStructure);
+		    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+		    GPIO_Init(GPIOB, &GPIO_InitStructure);
+		    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);
+		    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);
+        }
+        else
+        {
+		    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+		    GPIO_Init(GPIOB, &GPIO_InitStructure);
+		    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+		    GPIO_Init(GPIOB, &GPIO_InitStructure);
+		    GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
+		    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
+        }
 	}
 
 	I2C_Cmd(i2c->regs, DISABLE);

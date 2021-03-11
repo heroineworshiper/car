@@ -35,6 +35,18 @@
 ; atcn
 
 
+; XBee 900 configuration
+; +++
+;  - 115200 baud
+; ATBD07
+;  - write flash
+; ATWR
+;  - exit command mode
+; ATCN
+
+
+
+
 
 
 
@@ -49,7 +61,8 @@ PROCESSOR 18f1220
 ; A4
 
 
-;#define USE_XBEE
+; enables a timer delay between packets
+#define USE_XBEE
 
 
 #define DIRECTION_PIN 3
@@ -94,10 +107,16 @@ PROCESSOR 18f1220
 #define BUFFER_SIZE 12
 
 
-#define BAUD 9600
-#define BAUD_RATE_CODE (CLOCKSPEED / (BAUD * 4) - 1)
+;#define BAUD 9600
+;#define BAUD 57600
+#define BAUD 115200
+;#define BAUD_RATE_CODE (CLOCKSPEED / (BAUD * 4) - 1)
+#define BAUD_RATE_CODE 17
 
-#define TIMER_RELOAD (-40960)
+; 48Hz maximum for 2.4Ghz Xbee
+;#define TIMER_RELOAD (-40960)
+; 50Hz for 3DRRadio
+#define TIMER_RELOAD (-40000)
 
 
 #define SYNC_CODE 0xe5
@@ -156,7 +175,8 @@ start:
 
 ; must delay between each packet
 #ifdef USE_XBEE
-	SET_REGISTER T0CON, B'10001000'
+;	SET_REGISTER T0CON, B'10001000'
+	SET_REGISTER T0CON, B'10000000'
 #endif
 
 

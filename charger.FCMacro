@@ -1,0 +1,53 @@
+#  create sections for the remote charger
+
+import libisogrid
+import libclamshell
+import importlib
+importlib.reload(libclamshell)
+importlib.reload(libisogrid)
+import math
+
+
+BORDER = 1.0
+CLAMSHELL = 'clamshell'
+ISOGRID_H = 3.2
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(83, \
+        167, \
+        5, \
+        7, \
+        [ BORDER, BORDER ], \
+        [ BORDER, BORDER ], \
+        0.0, \
+        0.0, \
+        ISOGRID_H, \
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-42, 0, -24),
+        App.Rotation(App.Vector(0, 0, 1), 0))
+
+if True:
+# isogrid outline & cropping tool
+    libisogrid.cropBorder('outline', \
+        None, \
+        0, \
+        0, \
+        0, \
+        BORDER, \
+        ISOGRID_H, \
+        math.pi / 2,
+        None,
+        True,
+        True)
+
+
+
+# clamshell walls
+if False:
+    libclamshell.makeClam(libclamshell.getObj(CLAMSHELL), 
+        9.2 / 2, 
+        0, 
+        math.pi / 2,
+        True)
+
+

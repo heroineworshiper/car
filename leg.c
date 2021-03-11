@@ -38,7 +38,6 @@
 
 
 #include "leg.h"
-#include "avr_debug.h"
 #include <string.h> // memcpy
 
 
@@ -47,6 +46,8 @@ volatile uint8_t have_new_table = 0;
 // entry in pwm_table we're playing back
 pwm_table_t *pwm_ptr;
 
+#define DO_RECEIVE
+#include "avr_debug.c"
 #include "pwm_routines.c"
 
 // timer 2 overflow

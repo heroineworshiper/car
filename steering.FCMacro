@@ -1,0 +1,42 @@
+# create models for steering.FCSTD
+
+import libisogrid
+import importlib
+importlib.reload(libisogrid)
+import math
+
+
+W = 74.5
+H = 77.6
+X_SLICES = 4
+Y_SLICES = 3
+BORDER = 1.2
+extrudeTris, extrudeSubs = libisogrid.makeGrid(W, \
+    H, \
+    X_SLICES, \
+    Y_SLICES, \
+    [ BORDER, BORDER ], \
+    [ BORDER, BORDER ], \
+    0, \
+    0, \
+    2.4, \
+    BORDER)
+extrudeTris.Placement = App.Placement(
+    App.Vector(-33.2, -35.5, 18.7),
+    App.Rotation(App.Vector(0, 0, 1), 90))
+
+if True:
+    libisogrid.cropBorder('servo border001', \
+        'servo plate back', \
+        0, \
+        0, \
+        37.5, \
+        2.0, \
+        3.6, \
+        math.pi / 2,
+        extrudeTris)
+
+
+
+
+

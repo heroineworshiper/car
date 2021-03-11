@@ -1,54 +1,46 @@
 # settings for car
-#            P      I      D     I limit O limit
-STEERING_PID 100    2.0    10    100     100
-THROTTLE_PID 0.1    0.02   0     100     100
-#RPM_PID      1      0.20   1     100     100
-RPM_PID      40     0.50   5     100     100
-#RPM_PID      0      0.10   1     100     100
-PATH_PID      0.03     0      0   100     100
-SIDE_PID      0.02     0      0   100     100
+#            P     I      D    D2
+STEERING_PID 400   0.2    400  0
+RPM_PID      400    2.0   40     0
 
 BLUETOOTH car
-# if magnetometer is attached
-ENABLE_MAG 0
-ENABLE_VISION 0
-PATH_CENTER 126
-BOTTOM_CENTER 70
-VISION_BANDWIDTH 0.10
-# PWM_HZ * seconds
-MANUAL_OVERRIDE_DELAY 50
+
+# dump PWM to a file.  Restart to apply change
+DEBUG 0
 
 # wheel diameter in mm
-DIAMETER 45
-# if nonzero, replaces TARGET_REVERSE_RPM
-TARGET_REVERSE_PACE 20.00
+DIAMETER 107
 
-# PWM positions 0 - 100
-MID_STEERING 40
-MID_THROTTLE 50
-# Maximum throttle for bluetooth driving
-MAX_THROTTLE_FWD 40
-# Reverse throttle
-MAX_THROTTLE_REV 30
+# fastest reverse pace in auto throttle
+TARGET_REVERSE_PACE 10.00
 
-# starting PWM for THROTTLE_RAMP state & minimum throttle settings
-MIN_THROTTLE_FWD 13
-MIN_THROTTLE_REV 12
+# slowest fwd pace in auto throttle
+MIN_PACE 15.00
+# slowest reverse pace in auto throttle
+MIN_REVERSE_PACE 15.00
 
 
-# PWM for THROTTLE_WAIT state
-THROTTLE_BASE 40
-THROTTLE_REVERSE_BASE 10
 
-# number of PWM cycles for each throttle step
-THROTTLE_RAMP_DELAY 1
-THROTTLE_RAMP_STEP 30
+
+# Center PWM position 0 - 100
+MID_STEERING 50
+# maximum stick induced steering 0 - 100
+MAX_STEERING 100
+# minimum stick induced steering 0 - 100
+MIN_STEERING 30
+
+# lowest PWM in manual throttle 0-100
+MIN_THROTTLE_FWD 1
+MIN_THROTTLE_REV 1
+
+
+# maximum PWM in manual throttle 0-100
+THROTTLE_BASE 100
+THROTTLE_REVERSE_BASE 100
 
 # rpm derivative size
 RPM_DV_SIZE 10
-# Steering PWM with no throttle
-MAX_STEERING 100
-MIN_STEERING 25
+
 # enable heading hold
 AUTO_STEERING 1
 # enable RPM hold
@@ -57,20 +49,19 @@ AUTO_THROTTLE 1
 GYRO_CENTER_MAX 100
 MAX_GYRO_DRIFT 0.1
 # analog reading to radians
-ANGLE_TO_GYRO -450
-# lowpass filtering 1-255.  Not used for car.
+ANGLE_TO_GYRO -3500
+# lowpass filtering 1-255.
 GYRO_BANDWIDTH 255
+# 0-100
+D_BANDWIDTH 90
 
 
 
 # PWM cycles between I steps
 PID_DOWNSAMPLE 1
-# number of PWM cycles for each steering step
-STEERING_STEP_DELAY 2
-# degrees to increment heading after every step delay
-STEERING_STEP 1.0
-STEERING_OVERSHOOT -20
-BATTERY_ANALOG 965
+# degrees to increment heading every second
+STEERING_STEP 20
+MAX_STEERING_STEP 90.0
+STEERING_OVERSHOOT 30
+BATTERY_ANALOG 980
 BATTERY_V0 8.67
-
-

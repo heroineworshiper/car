@@ -1,17 +1,11 @@
 # settings for truck with no camera
-#            P     I      D     Plimit Ilimit Dlimit
-STEERING_PID 100   0.1    -400  20     100    20
-RPM_PID      40    0.50   5     100    100    100
+#            P     I      D    D2
+STEERING_PID 200   0.1    200  0
+RPM_PID      40    0.50   5    0
 
 BLUETOOTH truck
-# if magnetometer is attached
-ENABLE_MAG 0
-ENABLE_VISION 0
-PATH_CENTER 126
-BOTTOM_CENTER 70
-VISION_BANDWIDTH 0.10
-# PWM_HZ * seconds
-MANUAL_OVERRIDE_DELAY 50
+# dump PWM to a file.  Restart to apply change
+DEBUG 0
 
 # wheel diameter in mm
 DIAMETER 107
@@ -19,7 +13,7 @@ DIAMETER 107
 TARGET_REVERSE_PACE 20.00
 
 # PWM positions 0 - 100
-MID_STEERING 40
+MID_STEERING 45
 MID_THROTTLE 46
 
 
@@ -38,8 +32,8 @@ MAX_THROTTLE_REV 30
 
 # number of PWM cycles for each throttle step
 THROTTLE_RAMP_DELAY 1
-THROTTLE_RAMP_STEP 4
-#THROTTLE_RAMP_STEP 30
+#THROTTLE_RAMP_STEP 4
+THROTTLE_RAMP_STEP 30
 
 # rpm derivative size
 RPM_DV_SIZE 10
@@ -54,10 +48,11 @@ AUTO_THROTTLE 1
 GYRO_CENTER_MAX 200
 MAX_GYRO_DRIFT 0.4
 # analog reading to radians
-ANGLE_TO_GYRO 450
+ANGLE_TO_GYRO 4000
 # lowpass filtering 1-255  Not used for car.
 GYRO_BANDWIDTH 255
-
+# 0-100
+D_BANDWIDTH 90
 
 
 
@@ -69,11 +64,6 @@ STEERING_STEP_DELAY 2
 STEERING_STEP 1.0
 STEERING_OVERSHOOT -20
 
-
-# degrees off in opposite direction before kicking integral
-STICTION_THRESHOLD 20
-# amount to kick integral
-STICTION_AMOUNT 0
 
 BATTERY_ANALOG 965
 BATTERY_V0 8.67
