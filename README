@@ -1,6 +1,32 @@
+
+3D printed truck
+
+
+Copyright (C) 2012-2021 Adam Williams <broadcast at earthling dot net>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
+
+
+
+
+
+
 What you'll find here:
 
-Everything related to robotic cars.
 
 arm_cam.c: camera motor receiver
 
@@ -93,7 +119,7 @@ container.FCStd:
     bottom left rear: 40, 25
 
     Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
-    TODO: shift cable hole right
+    TODO: shift cable hole right.  Create tab for aligning handle.
 
 
 
