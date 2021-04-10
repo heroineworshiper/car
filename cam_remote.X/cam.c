@@ -40,7 +40,7 @@
 #pragma config PLLEN = OFF      // 4 X PLL Enable bit (PLL is under software control)
 
 // CONFIG2L
-#pragma config PWRTEN = OFF     // Power-up Timer Enable bit (PWRT disabled)
+#pragma config PWRTEN = ON     // Power-up Timer Enable bit (PWRT disabled)
 #pragma config BOREN = SBORDIS  // Brown-out Reset Enable bits (Brown-out Reset enabled in hardware only (SBOREN is disabled))
 #pragma config BORV = 22        // Brown-out Reset Voltage bits (VBOR set to 3.0 V nominal)
 
@@ -567,6 +567,7 @@ void interrupt isr()
             flags.interrupt_complete = 0;
             adc_accum += ADRES;
             adc_count++;
+            PIR1bits.ADIF = 0;
             ADCON0bits.GO = 1;
             
             

@@ -136,7 +136,13 @@
 
 #define MAX_PERIOD 65535
 
-
+//#define DEBUG_I2C
+#ifdef DEBUG_I2C
+#define I2C_SIZE 1024
+int i2c_offset = 0;
+uint8_t i2c_capture[I2C_SIZE];
+int capture_i2c = 0;
+#endif
 
 
 
@@ -1392,35 +1398,56 @@ void handle_steering()
         switch(truck.binary_steering)
         {
             case FAST_LEFT:
-                truck.target_heading -= truck.max_steering_step / TIMER_HZ;
+                if(truck.reverse)
+                {
+                    truck.target_heading += truck.max_steering_step / TIMER_HZ;
+                }
+                else
+                {
+                    truck.target_heading -= truck.max_steering_step / TIMER_HZ;
+                }
                 truck.target_heading = fix_angle(truck.target_heading);
                 truck.need_steering_feedback = 1;
-//                 truck.steering_pwm = truck.mid_steering_pwm +
-//                     truck.max_steering_magnitude;
-//                 truck.need_steering_feedback = 0;
-//                 steering_overshoot = truck.steering_overshoot;
                 break;
 
             case SLOW_LEFT:
-                truck.target_heading -= truck.min_steering_step / TIMER_HZ;
+                if(truck.reverse)
+                {
+                    truck.target_heading += truck.min_steering_step / TIMER_HZ;
+                }
+                else
+                {
+                    truck.target_heading -= truck.min_steering_step / TIMER_HZ;
+                }
+                
                 truck.target_heading = fix_angle(truck.target_heading);
                 truck.need_steering_feedback = 1;
                 break;
 
             case SLOW_RIGHT:
-                truck.target_heading += truck.min_steering_step / TIMER_HZ;
+                if(truck.reverse)
+                {
+                    truck.target_heading -= truck.min_steering_step / TIMER_HZ;
+                }
+                else
+                {
+                    truck.target_heading += truck.min_steering_step / TIMER_HZ;
+                }
                 truck.target_heading = fix_angle(truck.target_heading);
                 truck.need_steering_feedback = 1;
                 break;
 
             case FAST_RIGHT:
-                truck.target_heading += truck.max_steering_step / TIMER_HZ;
+                if(truck.reverse)
+                {
+                    truck.target_heading -= truck.max_steering_step / TIMER_HZ;
+                }
+                else
+                {
+                    truck.target_heading += truck.max_steering_step / TIMER_HZ;
+                }
                 truck.target_heading = fix_angle(truck.target_heading);
                 truck.need_steering_feedback = 1;
-//                 truck.steering_pwm = truck.mid_steering_pwm -
-//                     truck.max_steering_magnitude;
-//                 steering_overshoot = -truck.steering_overshoot;
-//                 truck.need_steering_feedback = 0;
                 break;
             
             default:
@@ -2756,6 +2783,13 @@ void radio_get_data()
     if(truck.radio.counter >= 3)
     {
         truck.radio.current_function = radio_get_code1;
+
+// DEBUG
+// TRACE2
+// print_number(truck.radio.packet[0]);
+// print_number(truck.radio.packet[1]);
+// print_number(truck.radio.packet[2]);
+
         truck.radio.got_packet = 1;
     }
 }
@@ -2809,8 +2843,26 @@ static void imu_read_gyros(void *ptr)
 	int gyro_z = (int16_t)((imu->i2c.burst[0] << 8) | (imu->i2c.burst[1]));
     imu->total_gyro++;
 
+
+#ifdef DEBUG_I2C
+    capture_i2c = 0;
+    int i;
+    for(i = 0; i < i2c_offset; i++)
+    {
+        print_number((i2c_capture[i] & 2) ? 1 : 0);
+        print_number(i2c_capture[i] & 1);
+        print_lf();
+        flush_uart();
+    }
+#endif
+
 //TRACE2
-//    print_number(gyro_z);
+//print_number(gyro_z);
+//print_number(imu->i2c.value);
+//print_number(PIN_IS_SET(((GPIO_TypeDef*)imu->i2c.clock_gpio), imu->i2c.clock_pin));
+//print_number(PIN_IS_SET(((GPIO_TypeDef*)imu->i2c.data_gpio), imu->i2c.data_pin));
+
+
     if(!truck.have_gyro_center)
     {
         truck.led_counter++;
@@ -2885,21 +2937,33 @@ static void imu_read_gyros(void *ptr)
 
 
 // start gyro status read
-	imu_status1(imu);
+    imu_status1(imu);
 }
 
 
-
+static int debug_counter = 0;
 static void imu_status2(void *ptr)
 {
 	imu_t *imu = (imu_t*)ptr;
-
-	if(imu->i2c.value & 0x01)
+//debug_counter++;
+//TRACE2
+//print_number(imu->i2c.value);
+	if((imu->i2c.value & 0x01))
 	{
-		hardi2c_read_burst(&imu->i2c,
+#ifdef DEBUG_I2C
+        capture_i2c = 1;
+        i2c_offset = 0;
+#endif
+//TRACE2
+//print_number(debug_counter);
+//debug_counter = 0;
+ 		i2c_read_burst(&imu->i2c,
 			IMU_ADDRESS, 
-			0x47,
-			2);
+ 			0x47,
+ 			2);
+//		i2c_read_device(&imu->i2c,
+//			IMU_ADDRESS, 
+//			0x48);
 		imu->current_function = imu_read_gyros;
 	}
  	else
@@ -2912,7 +2976,7 @@ static void imu_status1(void *ptr)
 {
 // get gyro status
 	imu_t *imu = (imu_t*)ptr;
-	hardi2c_read_device(&imu->i2c, IMU_ADDRESS, 0x3a);
+	i2c_read_device(&imu->i2c, IMU_ADDRESS, 0x3a);
 	imu->current_function = imu_status2;
 }
 
@@ -2922,7 +2986,7 @@ static void imu_config3(void *ptr)
 // gyro full scale range
 // 500 deg/sec
 	imu_t *imu = (imu_t*)ptr;
-	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x1b, 0x08);
+	i2c_write_device(&imu->i2c, IMU_ADDRESS, 0x1b, 0x08);
 	imu->current_function = imu_status1;
 	
 }
@@ -2932,7 +2996,7 @@ static void imu_config2(void *ptr)
 {
 // digital low pass filter
 	imu_t *imu = (imu_t*)ptr;
-	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x1a, 0x0);
+	i2c_write_device(&imu->i2c, IMU_ADDRESS, 0x1a, 0x0);
 	imu->current_function = imu_config3;
 }
 
@@ -2942,8 +3006,8 @@ static void imu_config1(void *ptr)
 // sample rate divider
 // high enough to keep i2c from dropping samples
 	imu_t *imu = (imu_t*)ptr;
-//	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 6);
-	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 18);
+	i2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 18);
+//	i2c_write_device(&imu->i2c, IMU_ADDRESS, 0x19, 255);
 	imu->current_function = imu_config2;
 	
 }
@@ -2952,9 +3016,8 @@ static void imu_config0(void *ptr)
 {
 // wake up.  Use gyro as clock source.
 	imu_t *imu = (imu_t*)ptr;
-	hardi2c_write_device(&imu->i2c, IMU_ADDRESS, 0x6b, 0x1);
+	i2c_write_device(&imu->i2c, IMU_ADDRESS, 0x6b, 0x1);
 	imu->current_function = imu_config1;
-	
 }
 
 // Needs a few read requests to warm up, for some reason
@@ -2981,14 +3044,26 @@ static void imu_test1(void *ptr)
 // get gyro status
 	imu_t *imu = (imu_t*)ptr;
 // device ID
-	hardi2c_read_device(&imu->i2c, IMU_ADDRESS, 0x75);
+	i2c_read_device(&imu->i2c, IMU_ADDRESS, 0x75);
 	imu->current_function = imu_test2;
 }
 
 
 void init_imu(imu_t *imu)
 {
+#ifdef ARM_HARDI2C_H
 	init_hardi2c(&imu->i2c, I2C1, 1);
+#endif
+
+#ifdef ARM_SOFTI2C_H
+    init_softi2c(&imu->i2c,
+	    256, // delay
+	    GPIOB, // data_gpio
+	    GPIOB, // clock_gpio
+	    GPIO_Pin_9, // data_pin
+	    GPIO_Pin_8); // clock_pin
+#endif
+
 	truck.have_gyro_center = 0;
 
 	imu->gyro_bandwidth = 1.0f;
@@ -3229,12 +3304,28 @@ int main(void)
 
 
 
-
 /*
  * 	TRACE2
  * 	print_text("\nimu.angle_to_gyro=");
  * 	print_number(truck.imu.angle_to_gyro);
  */
+
+// // DEBUG
+// while(1)
+// {
+// 	if((USART6->SR & USART_FLAG_TC) != 0 &&
+// 		uart.uart_offset < uart.uart_size)
+// 	{
+// 		USART6->DR = uart.uart_buffer[uart.uart_offset++];
+// 	}
+//     handle_i2c(&truck.imu.i2c);
+// 	if(i2c_ready(&truck.imu.i2c))
+// 	{
+// 		truck.imu.current_function(&truck.imu);
+// 	}
+//     PET_WATCHDOG
+// }
+
 
     int debug_phase = 0;
     int debug_rpm = 0;
@@ -3251,14 +3342,40 @@ int main(void)
         handle_halls();
         handle_motors();
 
-	    handle_hardi2c(&truck.imu.i2c);
-	    if(hardi2c_ready(&truck.imu.i2c))
+#ifdef ARM_HARDI2C_H
+	    handle_i2c(&truck.imu.i2c);
+#endif
+
+#ifdef ARM_SOFTI2C_H
+        handle_i2c_nodelay(&truck.imu.i2c);
+#endif
+
+#ifdef DEBUG_I2C
+        if(capture_i2c && i2c_offset < I2C_SIZE 
+    #ifdef ARM_SOFTI2C_H
+        && truck.imu.i2c.delay_counter == 0
+    #endif
+        )
+        {
+            i2c_capture[i2c_offset++] = 
+                (PIN_IS_SET(GPIOB, GPIO_Pin_9) << 1) | // data_pin
+                (PIN_IS_SET(GPIOB, GPIO_Pin_8)); // clock_pin
+        }
+#endif
+
+	    if(i2c_ready(&truck.imu.i2c))
 	    {
 		    truck.imu.current_function(&truck.imu);
 	    }
+
         if(truck.imu.i2c.error)
         {
             reset_imu(&truck.imu);
+// #ifdef ARM_SOFTI2C_H
+// // DEBUG
+// flush_uart();
+// while(1) {}
+// #endif
         }
 
         if(uart.got_input)

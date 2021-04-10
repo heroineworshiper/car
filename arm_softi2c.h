@@ -18,26 +18,36 @@
  * 
  */
 
+#ifndef ARM_SOFTI2C_H
+#define ARM_SOFTI2C_H
 
 
-#ifndef ARM_HARDI2C_H
-#define ARM_HARDI2C_H
-
-
+// Software I2C
 #include <stdint.h>
-#include "stm32f4xx_i2c.h"
 
-// doesn't work because I2C_FLAG_BUSY is polled
-//#define I2C_INTERRUPTS
+#define i2c_ready(i2c) ((i2c)->state1 == i2c_idle)
+#define handle_i2c(i2c) \
+{ \
+	if(++(i2c)->delay_counter > (i2c)->delay) \
+	{ \
+		(i2c)->delay_counter = 0; \
+ 		(i2c)->state1(i2c); \
+	} \
+}
+
+#define handle_i2c_nodelay(i2c) \
+{ \
+	(i2c)->state1(i2c); \
+}
 
 typedef struct 
 {
-	void (*state)(void *);
+	void (*state1)(void *);
+	void (*state2)(void *);
+	void (*state3)(void *);
 	
-	I2C_TypeDef *regs;
 	uint32_t dev_address;
 	uint32_t reg_address;
-    int pin_combo;
 // Value for single byte reads & writes
 	uint32_t value;
 // burst output
@@ -46,54 +56,38 @@ typedef struct
 	int bytes;
 	int bytes_read;
 
-	uint32_t want_event;
-	int got_event;
-// copy of SR1
-	uint32_t status1;
+	uint32_t write_byte;
+	uint32_t counter;
 	int timeout;
+	int delay_counter;
+	void *data_gpio;
+	void *clock_gpio;
+	int data_pin;
+	int clock_pin;
+	int delay;
     int error;
 } i2c_t;
 
-
-
-#define i2c_ready(i2c) ((i2c)->state == i2c_idle)
-
-#ifndef I2C_INTERRUPTS
-#define handle_i2c(i2c) \
-{ \
-	(i2c)->state(i2c); \
-}
-#else
-#define handle_i2c(i2c) \
-{ \
-}
-#endif
-
-
-
-void init_hardi2c(i2c_t *i2c, 
-    I2C_TypeDef *regs, 
-    int pin_combo);
+void init_softi2c(i2c_t *i2c,
+	int delay,
+	void *data_gpio,
+	void *clock_gpio,
+	int data_pin,
+	int clock_pin);
 void i2c_write_device(i2c_t *i2c,
 	unsigned char dev_address, 
 	unsigned char reg_address,
 	unsigned char value);
-
 void i2c_read_device(i2c_t *i2c,
 	unsigned char dev_address, 
 	unsigned char reg_address);
-
 void i2c_read_burst(i2c_t *i2c,
 	unsigned char dev_address, 
 	unsigned char reg_address,
 	int bytes);
-
-
 void i2c_idle(void *i2c);
-
-
+void flush_i2c(i2c_t *i2c);
 
 
 #endif
-
 

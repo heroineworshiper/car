@@ -861,7 +861,7 @@ Element["" "Pad strip" "" "Pad strip" 120.5100mm 54.9400mm 196.00mil -100.00mil 
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "1206" 117.4400mm 69.4300mm -31.50mil -31.50mil 0 100 ""]
+Element["" "Standard SMT resistor, capacitor etc" "" "1206" 117.6000mm 68.9200mm -31.50mil -31.50mil 0 100 ""]
 (
 	Pad[-64.05mil -11.81mil -64.05mil 11.81mil 41.18mil 20.00mil 57.18mil "1" "1" "square"]
 	Pad[64.05mil -11.81mil 64.05mil 11.81mil 41.18mil 20.00mil 57.18mil "2" "2" "square"]
@@ -897,23 +897,23 @@ Element["" "PAD" "" "" 103.0400mm 67.0700mm 184.00mil 50.00mil 3 100 ""]
 
 	)
 
-Element["" "PAD" "" "" 125.4900mm 62.4400mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 132.4100mm 59.2900mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 125.5900mm 65.0900mm -25.74mil 23.01mil 1 100 ""]
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 125.3500mm 65.3700mm -25.74mil 23.01mil 1 100 ""]
 (
 	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
 	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 124.7700mm 59.9500mm -31.50mil -31.50mil 0 100 ""]
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 124.7200mm 60.7800mm -31.50mil 31.50mil 1 100 ""]
 (
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
 
 	)
 
@@ -924,291 +924,56 @@ Element["" "Crystal" "" "5x3.2mm" 125.5365mm 68.9906mm -184.00mil -50.00mil 1 10
 
 	)
 
-Element["" "QFN20" "" "QFN20" 108.1800mm 79.1000mm 70.00mil 90.00mil 0 100 ""]
-(
-	Pad[40.00mil -28.00mil 40.00mil 12.00mil 10.00mil 30.00mil 16.00mil "1" "1" "square"]
-	Pad[60.00mil -28.00mil 60.00mil 22.00mil 10.00mil 30.00mil 16.00mil "1" "2" "square"]
-	Pad[80.00mil -28.00mil 80.00mil 22.00mil 10.00mil 30.00mil 16.00mil "1" "3" "square"]
-	Pad[100.00mil -28.00mil 100.00mil 12.00mil 10.00mil 30.00mil 16.00mil "1" "4" "square"]
-	Pad[40.00mil 168.00mil 40.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "5" "square,edge2"]
-	Pad[60.00mil 158.00mil 60.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "6" "square,edge2"]
-	Pad[80.00mil 158.00mil 80.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "7" "square,edge2"]
-	Pad[100.00mil 168.00mil 100.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "8" "square,edge2"]
-	Pad[70.00mil 62.00mil 70.00mil 118.00mil 70.00mil 30.00mil 76.00mil "1" "9" "square"]
-	Pad[-28.00mil 20.00mil 12.00mil 20.00mil 10.00mil 30.00mil 16.00mil "1" "10" "square"]
-	Pad[-28.00mil 40.00mil 12.00mil 40.00mil 10.00mil 30.00mil 16.00mil "1" "11" "square"]
-	Pad[-28.00mil 60.00mil 12.00mil 60.00mil 10.00mil 30.00mil 16.00mil "1" "12" "square"]
-	Pad[-28.00mil 80.00mil 12.00mil 80.00mil 10.00mil 30.00mil 16.00mil "1" "13" "square"]
-	Pad[-28.00mil 100.00mil 12.00mil 100.00mil 10.00mil 30.00mil 16.00mil "1" "14" "square"]
-	Pad[-28.00mil 120.00mil 12.00mil 120.00mil 10.00mil 30.00mil 16.00mil "1" "15" "square"]
-	Pad[-28.00mil 140.00mil 12.00mil 140.00mil 10.00mil 30.00mil 16.00mil "1" "16" "square"]
-	Pad[-28.00mil 160.00mil 12.00mil 160.00mil 10.00mil 30.00mil 16.00mil "1" "17" "square"]
-	Pad[128.00mil 20.00mil 168.00mil 20.00mil 10.00mil 30.00mil 16.00mil "1" "18" "square,edge2"]
-	Pad[128.00mil 40.00mil 168.00mil 40.00mil 10.00mil 30.00mil 16.00mil "1" "19" "square,edge2"]
-	Pad[128.00mil 60.00mil 168.00mil 60.00mil 10.00mil 30.00mil 16.00mil "1" "20" "square,edge2"]
-	Pad[128.00mil 80.00mil 168.00mil 80.00mil 10.00mil 30.00mil 16.00mil "1" "21" "square,edge2"]
-	Pad[128.00mil 100.00mil 168.00mil 100.00mil 10.00mil 30.00mil 16.00mil "1" "22" "square,edge2"]
-	Pad[128.00mil 120.00mil 168.00mil 120.00mil 10.00mil 30.00mil 16.00mil "1" "23" "square,edge2"]
-	Pad[128.00mil 140.00mil 168.00mil 140.00mil 10.00mil 30.00mil 16.00mil "1" "24" "square,edge2"]
-	Pad[128.00mil 160.00mil 168.00mil 160.00mil 10.00mil 30.00mil 16.00mil "1" "25" "square,edge2"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 104.7300mm 81.7900mm 23.01mil 25.74mil 2 100 ""]
-(
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 104.7100mm 83.4200mm 23.01mil 25.74mil 2 100 ""]
-(
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 104.0100mm 78.5700mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.1800mm 77.8100mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.2100mm 76.1700mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.2100mm 74.5000mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 109.1800mm 76.1100mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 113.7100mm 79.2000mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 115.4000mm 79.7400mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 116.9300mm 80.2500mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 118.4600mm 80.8000mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 4600.00mil 83.0500mm -25.74mil 23.01mil 1 100 ""]
-(
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 113.6100mm 84.0600mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 115.1860mm 3289.50mil -25.74mil 23.01mil 1 100 ""]
-(
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "PAD" "" "" 103.4600mm 75.0100mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 117.3900mm 71.4300mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
 
-Element["" "PAD" "" "" 113.4800mm 75.0900mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 121.2300mm 76.5400mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 112.1567mm 77.1360mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 109.2467mm 74.5260mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "0805" "" "0805" 105.8600mm 84.9600mm 153.00mil 50.00mil 3 100 ""]
-(
-	Pad[-44.00mil -5.00mil -44.00mil 5.00mil 40.00mil 30.00mil 46.00mil "1" "1" "square"]
-	Pad[44.00mil -5.00mil 44.00mil 5.00mil 40.00mil 30.00mil 46.00mil "1" "2" "square"]
-
-	)
-
-Element["" "PAD" "" "" 125.3900mm 71.8900mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 121.1900mm 72.4900mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 123.6300mm 74.2200mm 23.01mil 25.74mil 2 100 ""]
-(
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "PAD" "" "" 115.3600mm 71.8100mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 131.2400mm 73.7300mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
 
-Element["" "PAD" "" "" 118.2200mm 76.1200mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 113.5000mm 66.5200mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 120.4300mm 73.8800mm -25.74mil 23.01mil 1 100 ""]
-(
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "PAD" "" "" 118.1000mm 73.2300mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 113.7000mm 69.8800mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
 
-Element["" "PAD" "" "" 122.8000mm 71.5300mm 184.00mil 50.00mil 3 100 ""]
-(
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
-
-	)
-
-Element["" "QFN20" "" "QFN20" 120.8300mm 76.8400mm 3.4100mm 1.3000mm 0 100 ""]
-(
-	Pad[70.00mil 34.00mil 70.00mil 66.00mil 36.00mil 30.00mil 42.00mil "1" "1" "square"]
-	Pad[-8.00mil 18.00mil 38.00mil 18.00mil 8.00mil 30.00mil 14.00mil "1" "2" "square"]
-	Pad[-8.00mil 34.00mil 38.00mil 34.00mil 8.00mil 30.00mil 14.00mil "1" "3" "square"]
-	Pad[-8.00mil 50.00mil 38.00mil 50.00mil 8.00mil 30.00mil 14.00mil "1" "4" "square"]
-	Pad[-8.00mil 66.00mil 38.00mil 66.00mil 8.00mil 30.00mil 14.00mil "1" "5" "square"]
-	Pad[-8.00mil 82.00mil 38.00mil 82.00mil 8.00mil 30.00mil 14.00mil "1" "6" "square"]
-	Pad[102.00mil 18.00mil 148.00mil 18.00mil 8.00mil 30.00mil 14.00mil "1" "7" "square,edge2"]
-	Pad[102.00mil 34.00mil 148.00mil 34.00mil 8.00mil 30.00mil 14.00mil "1" "8" "square,edge2"]
-	Pad[102.00mil 50.00mil 148.00mil 50.00mil 8.00mil 30.00mil 14.00mil "1" "9" "square,edge2"]
-	Pad[102.00mil 66.00mil 148.00mil 66.00mil 8.00mil 30.00mil 14.00mil "1" "10" "square,edge2"]
-	Pad[102.00mil 82.00mil 148.00mil 82.00mil 8.00mil 30.00mil 14.00mil "1" "11" "square,edge2"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 121.9400mm 81.9100mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 123.7600mm 81.9100mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 125.3500mm 81.9100mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "PAD" "" "" 123.1800mm 84.5000mm 184.00mil 50.00mil 3 100 ""]
-(
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 125.8900mm 74.7800mm 25.74mil -23.01mil 3 100 ""]
-(
-	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "PAD" "" "" 113.4000mm 66.5400mm 184.00mil 50.00mil 3 100 ""]
-(
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
-
-	)
-
-Element["" "PAD" "" "" 113.5600mm 69.2600mm 184.00mil 50.00mil 3 100 ""]
-(
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
-	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
-
-	)
-
-Element["" "0805" "" "0805" 103.4600mm 70.2300mm 50.00mil -153.00mil 0 100 ""]
+Element["" "0805" "" "0805" 102.6500mm 70.1400mm 50.00mil -153.00mil 0 100 ""]
 (
 	Pad[-5.00mil 44.00mil 5.00mil 44.00mil 40.00mil 30.00mil 46.00mil "1" "1" "square"]
 	Pad[-5.00mil -44.00mil 5.00mil -44.00mil 40.00mil 30.00mil 46.00mil "1" "2" "square"]
 
 	)
 
-Element["" "Mini small outline package, .65mm" "" "MSOP8" 106.6802mm 68.7801mm 99.00mil 38.00mil 3 100 ""]
+Element["" "Mini small outline package, .65mm" "" "MSOP8" 104.7400mm 69.1200mm 99.00mil 38.00mil 3 100 ""]
 (
 	Pad[-35.00mil 0.0000 7.00mil 0.0000 16.00mil 30.00mil 22.00mil "1" "1" ""]
 	Pad[-35.00mil 26.00mil 7.00mil 26.00mil 16.00mil 30.00mil 22.00mil "2" "2" "square"]
@@ -1261,20 +1026,6 @@ Element["" "Thin shrink small outline package, standard (4.4mm)" "" "TSSOP16" 11
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.5400mm 66.2900mm -31.50mil 31.50mil 1 100 ""]
-(
-	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 108.1000mm 66.2900mm -31.50mil 31.50mil 1 100 ""]
-(
-	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
 Element["" "PAD" "" "" 102.9400mm 54.9600mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
@@ -1282,17 +1033,10 @@ Element["" "PAD" "" "" 102.9400mm 54.9600mm 184.00mil 50.00mil 3 100 ""]
 
 	)
 
-Element["" "PAD" "" "" 125.5700mm 57.7600mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 128.0700mm 54.9400mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
-
-	)
-
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 109.6200mm 66.3000mm 31.50mil -31.50mil 3 100 ""]
-(
-	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
 
 	)
 
@@ -1514,16 +1258,346 @@ Element["" "PAD" "" "" 61.1100mm 68.8900mm 184.00mil 50.00mil 3 100 ""]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
+
+Element["" "Shrink small outline package, .5mm, narrow" "" "SSOP20" 127.7000mm 61.3400mm 201.00mil 98.00mil 3 100 ""]
+(
+	Pad[96.00mil 18.00mil 143.00mil 18.00mil 10.00mil 30.00mil 16.00mil "1" "1" "square,edge2"]
+	Pad[96.00mil 38.00mil 143.00mil 38.00mil 10.00mil 30.00mil 16.00mil "1" "2" "square,edge2"]
+	Pad[96.00mil 58.00mil 143.00mil 58.00mil 10.00mil 30.00mil 16.00mil "1" "3" "square,edge2"]
+	Pad[96.00mil 78.00mil 143.00mil 78.00mil 10.00mil 30.00mil 16.00mil "1" "4" "square,edge2"]
+	Pad[-47.00mil 18.00mil 0.0000 18.00mil 10.00mil 30.00mil 16.00mil "1" "5" "square"]
+	Pad[-47.00mil 38.00mil 0.0000 38.00mil 10.00mil 30.00mil 16.00mil "1" "6" "square"]
+	Pad[-47.00mil 58.00mil 0.0000 58.00mil 10.00mil 30.00mil 16.00mil "1" "7" "square"]
+	Pad[-47.00mil 78.00mil 0.0000 78.00mil 10.00mil 30.00mil 16.00mil "1" "8" "square"]
+	Pad[18.00mil 96.00mil 18.00mil 143.00mil 10.00mil 30.00mil 16.00mil "1" "9" "square,edge2"]
+	Pad[38.00mil 96.00mil 38.00mil 143.00mil 10.00mil 30.00mil 16.00mil "1" "10" "square,edge2"]
+	Pad[58.00mil 96.00mil 58.00mil 143.00mil 10.00mil 30.00mil 16.00mil "1" "11" "square,edge2"]
+	Pad[78.00mil 96.00mil 78.00mil 143.00mil 10.00mil 30.00mil 16.00mil "1" "12" "square,edge2"]
+	Pad[18.00mil -47.00mil 18.00mil 0.0000 10.00mil 30.00mil 16.00mil "1" "13" "square"]
+	Pad[38.00mil -47.00mil 38.00mil 0.0000 10.00mil 30.00mil 16.00mil "1" "14" "square"]
+	Pad[58.00mil -47.00mil 58.00mil 0.0000 10.00mil 30.00mil 16.00mil "1" "15" "square"]
+	Pad[78.00mil -47.00mil 78.00mil 0.0000 10.00mil 30.00mil 16.00mil "1" "16" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 131.3300mm 68.1100mm -31.50mil -31.50mil 0 100 ""]
+(
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "PAD" "" "" 128.7900mm 69.7900mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
+
+Element["" "0805" "" "0805" 125.7800mm 58.3400mm 50.00mil -153.00mil 0 100 ""]
+(
+	Pad[-35.00mil -28.00mil -28.00mil -35.00mil 40.00mil 30.00mil 46.00mil "1" "1" "square"]
+	Pad[28.00mil 35.00mil 35.00mil 28.00mil 40.00mil 30.00mil 46.00mil "1" "2" "square,edge2"]
+
+	)
+
+Element["" "PAD" "" "" 131.2300mm 76.3400mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 123.2200mm 73.9700mm -25.74mil 23.01mil 1 100 ""]
+(
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "QFN20" "" "QFN20" 123.6200mm 76.9300mm 3.4100mm 1.3000mm 0 100 ""]
+(
+	Pad[70.00mil 34.00mil 70.00mil 66.00mil 36.00mil 30.00mil 42.00mil "1" "1" "square"]
+	Pad[-8.00mil 18.00mil 38.00mil 18.00mil 8.00mil 30.00mil 14.00mil "1" "2" "square"]
+	Pad[-8.00mil 34.00mil 38.00mil 34.00mil 8.00mil 30.00mil 14.00mil "1" "3" "square"]
+	Pad[-8.00mil 50.00mil 38.00mil 50.00mil 8.00mil 30.00mil 14.00mil "1" "4" "square"]
+	Pad[-8.00mil 66.00mil 38.00mil 66.00mil 8.00mil 30.00mil 14.00mil "1" "5" "square"]
+	Pad[-8.00mil 82.00mil 38.00mil 82.00mil 8.00mil 30.00mil 14.00mil "1" "6" "square"]
+	Pad[102.00mil 18.00mil 148.00mil 18.00mil 8.00mil 30.00mil 14.00mil "1" "7" "square,edge2"]
+	Pad[102.00mil 34.00mil 148.00mil 34.00mil 8.00mil 30.00mil 14.00mil "1" "8" "square,edge2"]
+	Pad[102.00mil 50.00mil 148.00mil 50.00mil 8.00mil 30.00mil 14.00mil "1" "9" "square,edge2"]
+	Pad[102.00mil 66.00mil 148.00mil 66.00mil 8.00mil 30.00mil 14.00mil "1" "10" "square,edge2"]
+	Pad[102.00mil 82.00mil 148.00mil 82.00mil 8.00mil 30.00mil 14.00mil "1" "11" "square,edge2"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 124.7300mm 82.0000mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 126.5500mm 82.0000mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 128.1400mm 82.0000mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "PAD" "" "" 125.9700mm 84.5900mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 128.6800mm 74.8700mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "QFN20" "" "QFN20" 109.5100mm 79.1000mm 70.00mil 90.00mil 0 100 ""]
+(
+	Pad[40.00mil -28.00mil 40.00mil 12.00mil 10.00mil 30.00mil 16.00mil "1" "1" "square"]
+	Pad[60.00mil -28.00mil 60.00mil 22.00mil 10.00mil 30.00mil 16.00mil "1" "2" "square"]
+	Pad[80.00mil -28.00mil 80.00mil 22.00mil 10.00mil 30.00mil 16.00mil "1" "3" "square"]
+	Pad[100.00mil -28.00mil 100.00mil 12.00mil 10.00mil 30.00mil 16.00mil "1" "4" "square"]
+	Pad[40.00mil 168.00mil 40.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "5" "square,edge2"]
+	Pad[60.00mil 158.00mil 60.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "6" "square,edge2"]
+	Pad[80.00mil 158.00mil 80.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "7" "square,edge2"]
+	Pad[100.00mil 168.00mil 100.00mil 208.00mil 10.00mil 30.00mil 16.00mil "1" "8" "square,edge2"]
+	Pad[70.00mil 62.00mil 70.00mil 118.00mil 70.00mil 30.00mil 76.00mil "1" "9" "square"]
+	Pad[-28.00mil 20.00mil 12.00mil 20.00mil 10.00mil 30.00mil 16.00mil "1" "10" "square"]
+	Pad[-28.00mil 40.00mil 12.00mil 40.00mil 10.00mil 30.00mil 16.00mil "1" "11" "square"]
+	Pad[-28.00mil 60.00mil 12.00mil 60.00mil 10.00mil 30.00mil 16.00mil "1" "12" "square"]
+	Pad[-28.00mil 80.00mil 12.00mil 80.00mil 10.00mil 30.00mil 16.00mil "1" "13" "square"]
+	Pad[-28.00mil 100.00mil 12.00mil 100.00mil 10.00mil 30.00mil 16.00mil "1" "14" "square"]
+	Pad[-28.00mil 120.00mil 12.00mil 120.00mil 10.00mil 30.00mil 16.00mil "1" "15" "square"]
+	Pad[-28.00mil 140.00mil 12.00mil 140.00mil 10.00mil 30.00mil 16.00mil "1" "16" "square"]
+	Pad[-28.00mil 160.00mil 12.00mil 160.00mil 10.00mil 30.00mil 16.00mil "1" "17" "square"]
+	Pad[128.00mil 20.00mil 168.00mil 20.00mil 10.00mil 30.00mil 16.00mil "1" "18" "square,edge2"]
+	Pad[128.00mil 40.00mil 168.00mil 40.00mil 10.00mil 30.00mil 16.00mil "1" "19" "square,edge2"]
+	Pad[128.00mil 60.00mil 168.00mil 60.00mil 10.00mil 30.00mil 16.00mil "1" "20" "square,edge2"]
+	Pad[128.00mil 80.00mil 168.00mil 80.00mil 10.00mil 30.00mil 16.00mil "1" "21" "square,edge2"]
+	Pad[128.00mil 100.00mil 168.00mil 100.00mil 10.00mil 30.00mil 16.00mil "1" "22" "square,edge2"]
+	Pad[128.00mil 120.00mil 168.00mil 120.00mil 10.00mil 30.00mil 16.00mil "1" "23" "square,edge2"]
+	Pad[128.00mil 140.00mil 168.00mil 140.00mil 10.00mil 30.00mil 16.00mil "1" "24" "square,edge2"]
+	Pad[128.00mil 160.00mil 168.00mil 160.00mil 10.00mil 30.00mil 16.00mil "1" "25" "square,edge2"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 105.3400mm 78.5700mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 108.1300mm 77.8300mm -23.01mil -25.74mil 0 100 ""]
+(
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 108.1200mm 76.1700mm -23.01mil -25.74mil 0 100 ""]
+(
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 108.1000mm 74.5200mm -23.01mil -25.74mil 0 100 ""]
+(
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 116.7300mm 79.7400mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 118.2600mm 80.2500mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 119.7900mm 80.8000mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 118.1700mm 83.0500mm -25.74mil 23.01mil 1 100 ""]
+(
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 114.9400mm 84.0600mm 25.74mil -23.01mil 3 100 ""]
+(
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 116.5160mm 3289.50mil -25.74mil 23.01mil 1 100 ""]
+(
+	Pad[-4.92mil 25.59mil 4.92mil 25.59mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -25.59mil 4.92mil -25.59mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "PAD" "" "" 105.1700mm 75.4000mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
+
+Element["" "PAD" "" "" 115.8800mm 75.2700mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 110.9000mm 74.5100mm -23.01mil -25.74mil 0 100 ""]
+(
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "0805" "" "0805" 107.1900mm 84.9600mm 153.00mil 50.00mil 3 100 ""]
+(
+	Pad[-44.00mil -5.00mil -44.00mil 5.00mil 40.00mil 30.00mil 46.00mil "1" "1" "square"]
+	Pad[44.00mil -5.00mil 44.00mil 5.00mil 40.00mil 30.00mil 46.00mil "1" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 110.9100mm 76.1300mm -23.01mil -25.74mil 0 100 ""]
+(
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 129.1400mm 67.1100mm -31.50mil 31.50mil 1 100 ""]
+(
+	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 132.2900mm 63.3200mm -31.50mil 31.50mil 1 100 ""]
+(
+	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 113.4700mm 77.2100mm 31.50mil 31.50mil 2 100 ""]
+(
+	Pad[30.00mil -4.92mil 30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-30.00mil -4.92mil -30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 126.3900mm 74.0200mm 31.50mil 31.50mil 2 100 ""]
+(
+	Pad[30.00mil -4.92mil 30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-30.00mil -4.92mil -30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.5400mm 66.2800mm 31.50mil -31.50mil 3 100 ""]
+(
+	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 108.0600mm 66.2900mm 31.50mil -31.50mil 3 100 ""]
+(
+	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 109.5800mm 66.3000mm 31.50mil -31.50mil 3 100 ""]
+(
+	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.0500mm 81.8500mm -31.50mil -31.50mil 0 100 ""]
+(
+	Pad[-30.00mil -4.92mil -30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[30.00mil -4.92mil 30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 106.0500mm 83.3500mm -31.50mil -31.50mil 0 100 ""]
+(
+	Pad[-30.00mil -4.92mil -30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[30.00mil -4.92mil 30.00mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 115.1500mm 79.1100mm -31.50mil 31.50mil 1 100 ""]
+(
+	Pad[-4.92mil 30.00mil 4.92mil 30.00mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-4.92mil -30.00mil 4.92mil -30.00mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "0603" 125.0100mm 63.2000mm 31.50mil 31.50mil 2 100 ""]
+(
+	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
+	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
+
+	)
+
+Element["" "Standard SMT resistor, capacitor etc" "" "1206" 111.2600mm 70.0600mm -31.50mil 31.50mil 1 100 ""]
+(
+	Pad[-11.81mil 64.05mil 11.81mil 64.05mil 41.18mil 20.00mil 57.18mil "1" "1" "square"]
+	Pad[-11.81mil -64.05mil 11.81mil -64.05mil 41.18mil 20.00mil 57.18mil "2" "2" "square"]
+	ElementLine [37.40mil -23.62mil 37.40mil 23.62mil 8.00mil]
+	ElementLine [-37.40mil -23.62mil -37.40mil 23.62mil 8.00mil]
+
+	)
 Layer(1 "top")
 (
 )
 Layer(2 "ground")
 (
+	Line[113.5700mm 69.2700mm 128.8400mm 69.8000mm 0.2500mm 20.00mil "clearline"]
+	Line[104.6400mm 61.0500mm 126.8800mm 60.6700mm 0.2500mm 20.00mil "clearline"]
 )
 Layer(3 "signal2")
 (
 	Line[107.7900mm 54.9500mm 113.5400mm 69.2700mm 10.00mil 20.00mil "clearline"]
-	Line[120.4900mm 54.8500mm 115.3200mm 71.9600mm 10.00mil 20.00mil "clearline"]
+	Line[120.4900mm 54.8500mm 117.4300mm 71.9000mm 10.00mil 20.00mil "clearline"]
 	Line[59.7000mm 55.1700mm 63.9400mm 69.0800mm 10.00mil 20.00mil "clearline"]
 	Line[2900.00mil 55.2100mm 66.5100mm 68.9600mm 10.00mil 20.00mil "clearline"]
 )
@@ -1543,104 +1617,11 @@ Layer(5 "power")
 	Line[116.9100mm 61.4000mm 114.4900mm 61.4000mm 10.00mil 20.00mil "clearline"]
 	Line[116.7500mm 62.0300mm 114.4600mm 62.0300mm 10.00mil 20.00mil "clearline"]
 	Line[116.8300mm 62.7300mm 114.5200mm 62.7300mm 10.00mil 20.00mil "clearline"]
-	Line[125.5700mm 62.1300mm 125.5600mm 59.8400mm 10.00mil 20.00mil "clearline"]
-	Line[125.5700mm 62.7300mm 125.5700mm 64.3744mm 10.00mil 20.00mil "clearline"]
-	Line[107.4800mm 83.1900mm 107.4800mm 83.7800mm 10.00mil 20.00mil "clearline"]
-	Line[107.4800mm 83.7800mm 108.0600mm 84.3600mm 10.00mil 20.00mil "clearline"]
-	Line[108.0600mm 84.3600mm 109.1800mm 84.3600mm 10.00mil 20.00mil "clearline"]
-	Line[109.1800mm 84.3600mm 109.1900mm 84.3700mm 10.00mil 20.00mil "clearline"]
-	Line[109.1900mm 84.3700mm 109.1900mm 84.7300mm 10.00mil 20.00mil "clearline"]
-	Line[109.1900mm 84.7300mm 109.5600mm 85.1000mm 10.00mil 20.00mil "clearline"]
-	Line[109.5600mm 85.1000mm 110.5000mm 85.1000mm 10.00mil 20.00mil "clearline"]
-	Line[110.5000mm 85.1000mm 110.7200mm 84.8800mm 10.00mil 20.00mil "clearline"]
-	Line[110.7200mm 84.8800mm 110.7200mm 84.1000mm 10.00mil 20.00mil "clearline"]
-	Line[109.2000mm 78.4700mm 109.2000mm 78.0300mm 10.00mil 20.00mil "clearline"]
-	Line[109.2000mm 78.0300mm 109.4600mm 77.7700mm 10.00mil 20.00mil "clearline"]
-	Line[109.4600mm 77.7700mm 110.5500mm 77.7700mm 10.00mil 20.00mil "clearline"]
-	Line[110.5500mm 77.7700mm 110.7300mm 77.9500mm 10.00mil 20.00mil "clearline"]
-	Line[110.7300mm 77.9500mm 110.7300mm 78.5700mm 10.00mil 20.00mil "clearline"]
-	Line[105.5400mm 77.5500mm 103.9000mm 77.5500mm 10.00mil 20.00mil "clearline"]
-	Line[103.9000mm 77.5500mm 102.7100mm 3100.00mil 10.00mil 20.00mil "clearline"]
-	Line[102.7100mm 3100.00mil 102.7100mm 79.8700mm 10.00mil 20.00mil "clearline"]
-	Line[102.7100mm 79.8700mm 104.0300mm 81.1900mm 10.00mil 20.00mil "clearline"]
-	Line[104.0300mm 81.1900mm 104.0300mm 83.6300mm 10.00mil 20.00mil "clearline"]
-	Line[105.5600mm 77.6000mm 105.5600mm 74.4700mm 10.00mil 20.00mil "clearline"]
-	Line[106.9500mm 73.7700mm 106.9500mm 77.9000mm 10.00mil 20.00mil "clearline"]
-	Line[107.9100mm 80.6300mm 105.1300mm 80.6300mm 10.00mil 20.00mil "clearline"]
-	Line[105.1300mm 80.6300mm 104.7300mm 81.0300mm 10.00mil 20.00mil "clearline"]
-	Line[104.7300mm 81.0300mm 104.7300mm 84.6700mm 10.00mil 20.00mil "clearline"]
-	Line[107.8600mm 81.1400mm 105.9400mm 81.1400mm 10.00mil 20.00mil "clearline"]
-	Line[105.9500mm 81.1400mm 105.3000mm 81.7900mm 10.00mil 20.00mil "clearline"]
-	Line[107.9400mm 81.6600mm 106.7800mm 81.6600mm 10.00mil 20.00mil "clearline"]
-	Line[106.7800mm 81.6600mm 106.2400mm 82.2000mm 10.00mil 20.00mil "clearline"]
-	Line[106.2400mm 82.2000mm 106.2400mm 82.7900mm 10.00mil 20.00mil "clearline"]
-	Line[106.2400mm 82.7900mm 105.5200mm 83.5100mm 10.00mil 20.00mil "clearline"]
-	Line[107.9700mm 79.6200mm 107.0600mm 79.6200mm 10.00mil 20.00mil "clearline"]
-	Line[107.0900mm 79.6500mm 105.3800mm 77.9400mm 10.00mil 20.00mil "clearline"]
-	Line[107.8700mm 80.1100mm 105.0000mm 80.1100mm 10.00mil 20.00mil "clearline"]
-	Line[105.0000mm 80.1100mm 4100.00mil 79.2500mm 10.00mil 20.00mil "clearline"]
-	Line[107.7400mm 79.5800mm 107.7300mm 76.8700mm 10.00mil 20.00mil "clearline"]
-	Line[107.7500mm 76.9000mm 108.6300mm 76.0100mm 10.00mil 20.00mil "clearline"]
-	Line[112.1600mm 79.6000mm 112.1600mm 77.7100mm 10.00mil 20.00mil "clearline"]
-	Line[109.9000mm 76.2200mm 109.9000mm 74.2700mm 10.00mil 20.00mil "clearline"]
-	Line[111.9500mm 80.1300mm 113.6900mm 80.1300mm 10.00mil 20.00mil "clearline"]
-	Line[112.1200mm 79.1800mm 116.3300mm 79.1800mm 10.00mil 20.00mil "clearline"]
-	Line[116.3300mm 79.1800mm 116.7800mm 79.6300mm 10.00mil 20.00mil "clearline"]
-	Line[116.7800mm 79.6300mm 117.8300mm 79.6300mm 10.00mil 20.00mil "clearline"]
-	Line[117.8300mm 79.6300mm 118.4800mm 80.2800mm 10.00mil 20.00mil "clearline"]
-	Line[112.0000mm 80.6100mm 115.6200mm 80.6100mm 10.00mil 20.00mil "clearline"]
-	Line[112.0000mm 81.1400mm 117.0100mm 81.1400mm 10.00mil 20.00mil "clearline"]
-	Line[112.0000mm 81.6400mm 118.5800mm 81.6400mm 10.00mil 20.00mil "clearline"]
-	Line[111.9300mm 82.1400mm 116.9200mm 82.1400mm 10.00mil 20.00mil "clearline"]
-	Line[112.0200mm 82.6600mm 115.3300mm 82.6600mm 10.00mil 20.00mil "clearline"]
-	Line[115.3300mm 82.6600mm 115.3500mm 82.6400mm 10.00mil 20.00mil "clearline"]
-	Line[112.0200mm 83.1700mm 113.6500mm 83.1700mm 10.00mil 20.00mil "clearline"]
-	Line[113.6900mm 78.2900mm 4650.00mil 78.2900mm 10.00mil 20.00mil "clearline"]
-	Line[4650.00mil 78.2900mm 119.4100mm 79.5900mm 10.00mil 20.00mil "clearline"]
-	Line[116.7000mm 84.2500mm 115.1200mm 84.2500mm 10.00mil 20.00mil "clearline"]
-	Line[115.1200mm 84.2500mm 114.6400mm 84.7300mm 10.00mil 20.00mil "clearline"]
-	Line[114.6400mm 84.7300mm 110.7300mm 84.7300mm 10.00mil 20.00mil "clearline"]
-	Line[110.7300mm 84.7300mm 110.7100mm 84.7500mm 10.00mil 20.00mil "clearline"]
-	Line[108.5500mm 76.1300mm 108.5500mm 74.5700mm 10.00mil 20.00mil "clearline"]
-	Line[108.5500mm 74.5700mm 108.5400mm 74.5600mm 10.00mil 20.00mil "clearline"]
-	Line[109.9300mm 74.5100mm 109.9500mm 74.4900mm 10.00mil 20.00mil "clearline"]
-	Line[112.1600mm 78.0400mm 112.1600mm 76.4200mm 10.00mil 20.00mil "clearline"]
-	Line[112.1800mm 76.4300mm 111.8200mm 76.0700mm 10.00mil 20.00mil "clearline"]
-	Line[111.8400mm 76.1300mm 109.8300mm 76.1300mm 10.00mil 20.00mil "clearline"]
-	Line[110.7200mm 77.8500mm 111.3200mm 77.2500mm 10.00mil 20.00mil "clearline"]
-	Line[112.8100mm 77.2900mm 112.8100mm 77.3100mm 10.00mil 20.00mil "clearline"]
-	Line[112.8100mm 77.3100mm 113.9300mm 78.4300mm 10.00mil 20.00mil "clearline"]
-	Line[107.7100mm 84.0100mm 106.9600mm 84.7600mm 10.00mil 20.00mil "clearline"]
-	Line[106.9100mm 74.4700mm 106.9100mm 73.8000mm 10.00mil 20.00mil "clearline"]
-	Line[106.9100mm 73.8000mm 106.5500mm 73.4400mm 10.00mil 20.00mil "clearline"]
-	Line[106.5500mm 73.4400mm 104.5200mm 73.4400mm 10.00mil 20.00mil "clearline"]
-	Line[104.5200mm 73.4400mm 103.5800mm 74.3800mm 10.00mil 20.00mil "clearline"]
-	Line[109.9300mm 74.4000mm 113.7500mm 74.4000mm 10.00mil 20.00mil "clearline"]
-	Line[113.7500mm 74.4000mm 113.7700mm 74.3800mm 10.00mil 20.00mil "clearline"]
-	Line[120.0400mm 78.9600mm 119.4000mm 79.6100mm 10.00mil 20.00mil "clearline"]
-	Line[123.6100mm 77.2100mm 123.6100mm 71.6000mm 10.00mil 20.00mil "clearline"]
-	Line[120.8600mm 74.6400mm 116.9800mm 74.6400mm 10.00mil 20.00mil "clearline"]
-	Line[116.9800mm 74.6400mm 116.5100mm 75.1100mm 10.00mil 20.00mil "clearline"]
-	Line[116.5100mm 75.1100mm 116.5100mm 77.3100mm 10.00mil 20.00mil "clearline"]
-	Line[116.5100mm 77.3100mm 116.9400mm 77.7400mm 10.00mil 20.00mil "clearline"]
-	Line[116.9400mm 77.7400mm 119.1000mm 77.7400mm 10.00mil 20.00mil "clearline"]
-	Line[116.9200mm 74.7400mm 115.5900mm 73.4100mm 10.00mil 20.00mil "clearline"]
-	Line[115.5900mm 73.4100mm 109.5200mm 73.4100mm 10.00mil 20.00mil "clearline"]
-	Line[109.5200mm 73.4100mm 108.8700mm 72.7600mm 10.00mil 20.00mil "clearline"]
-	Line[108.8700mm 72.7600mm 102.4800mm 72.7600mm 10.00mil 20.00mil "clearline"]
-	Line[102.4800mm 72.7600mm 101.8300mm 73.4100mm 10.00mil 20.00mil "clearline"]
-	Line[101.8300mm 73.4100mm 101.8300mm 83.0700mm 10.00mil 20.00mil "clearline"]
-	Line[101.8300mm 83.0700mm 103.7700mm 85.0100mm 10.00mil 20.00mil "clearline"]
-	Line[103.7700mm 85.0100mm 104.8200mm 85.0100mm 10.00mil 20.00mil "clearline"]
-	Line[120.5200mm 73.2200mm 118.6400mm 73.2200mm 10.00mil 20.00mil "clearline"]
-	Line[118.6400mm 73.2200mm 118.6200mm 73.2400mm 10.00mil 20.00mil "clearline"]
-	Line[120.6100mm 72.0100mm 122.6900mm 74.1000mm 10.00mil 20.00mil "clearline"]
-	Line[125.2100mm 71.5400mm 122.9800mm 71.5400mm 10.00mil 20.00mil "clearline"]
-	Line[122.7600mm 77.7100mm 122.7600mm 74.0800mm 10.00mil 20.00mil "clearline"]
-	Line[122.7300mm 74.1200mm 120.9800mm 72.3800mm 10.00mil 20.00mil "clearline"]
-	Line[120.6100mm 71.9800mm 120.6100mm 68.9800mm 10.00mil 20.00mil "clearline"]
+	Line[124.9300mm 61.4500mm 124.3100mm 62.0700mm 10.00mil 20.00mil "clearline"]
+	Line[123.3000mm 74.6400mm 118.1000mm 74.6400mm 10.00mil 20.00mil "clearline"]
+	Line[123.3100mm 73.2200mm 121.2100mm 73.2200mm 10.00mil 20.00mil "clearline"]
 	Line[121.0400mm 69.4000mm 121.0700mm 69.3700mm 10.00mil 20.00mil "clearline"]
-	Line[115.1200mm 71.9500mm 103.8200mm 71.9400mm 25.00mil 20.00mil "clearline"]
+	Line[117.5200mm 71.9500mm 102.9500mm 71.9300mm 25.00mil 20.00mil "clearline"]
 	Line[114.5200mm 59.4600mm 117.6100mm 59.4400mm 10.00mil 20.00mil "clearline"]
 	Line[114.4400mm 57.4500mm 114.4200mm 57.4700mm 10.00mil 20.00mil "clearline"]
 	Line[117.6100mm 56.8800mm 116.0200mm 56.8800mm 10.00mil 20.00mil "clearline"]
@@ -1648,70 +1629,28 @@ Layer(5 "power")
 	Line[116.8900mm 56.8100mm 116.8600mm 56.7800mm 10.00mil 20.00mil "clearline"]
 	Line[119.3400mm 60.1000mm 114.2700mm 60.1100mm 10.00mil 20.00mil "clearline"]
 	Line[117.8000mm 54.8800mm 123.2400mm 54.8800mm 10.00mil 20.00mil "clearline"]
-	Line[117.0400mm 83.7000mm 118.2300mm 83.7000mm 0.2500mm 20.00mil "clearline"]
-	Line[118.2300mm 83.7000mm 119.5500mm 82.3800mm 0.2500mm 20.00mil "clearline"]
-	Line[119.5500mm 82.3800mm 119.5500mm 79.7300mm 0.2500mm 20.00mil "clearline"]
-	Line[119.5500mm 79.7300mm 118.0800mm 78.2600mm 0.2500mm 20.00mil "clearline"]
-	Line[116.6900mm 84.2400mm 117.2300mm 83.7000mm 0.2500mm 20.00mil "clearline"]
-	Line[123.7000mm 78.9700mm 123.6900mm 79.3800mm 10.00mil 20.00mil "clearline"]
-	Line[125.2400mm 78.8200mm 125.2200mm 79.5700mm 10.00mil 20.00mil "clearline"]
-	Line[125.7900mm 78.5600mm 125.7900mm 81.3100mm 10.00mil 20.00mil "clearline"]
-	Line[120.8700mm 81.3400mm 120.8700mm 78.9700mm 10.00mil 20.00mil "clearline"]
-	Line[120.6900mm 82.1200mm 120.6900mm 79.1600mm 25.00mil 20.00mil "clearline"]
-	Line[123.7800mm 79.2300mm 121.8700mm 81.1400mm 10.00mil 20.00mil "clearline"]
-	Line[125.2300mm 79.5200mm 123.6700mm 81.0800mm 10.00mil 20.00mil "clearline"]
-	Line[125.4200mm 82.5700mm 121.2500mm 82.5700mm 10.00mil 20.00mil "clearline"]
-	Line[121.2500mm 82.5700mm 120.8700mm 82.1900mm 10.00mil 20.00mil "clearline"]
-	Line[123.1300mm 84.3200mm 123.1500mm 82.5400mm 10.00mil 20.00mil "clearline"]
-	Line[123.1000mm 84.3700mm 123.1000mm 82.7200mm 25.00mil 20.00mil "clearline"]
-	Line[125.4800mm 82.5900mm 121.1100mm 82.5900mm 25.00mil 20.00mil "clearline"]
-	Line[121.1100mm 82.5900mm 120.6900mm 82.1700mm 25.00mil 20.00mil "clearline"]
-	Line[122.8200mm 78.9300mm 120.0100mm 78.9300mm 0.2000mm 20.00mil "clearline"]
-	Line[123.9700mm 77.7000mm 125.1600mm 77.7000mm 0.2000mm 20.00mil "clearline"]
-	Line[125.1600mm 77.7000mm 125.5500mm 77.3100mm 0.2000mm 20.00mil "clearline"]
-	Line[124.0800mm 78.1100mm 125.3000mm 78.1100mm 0.2000mm 20.00mil "clearline"]
-	Line[125.3000mm 78.1100mm 125.8000mm 78.6100mm 0.2000mm 20.00mil "clearline"]
-	Line[124.0400mm 78.5200mm 124.9000mm 78.5200mm 0.2000mm 20.00mil "clearline"]
-	Line[124.9000mm 78.5300mm 125.2500mm 78.8800mm 0.2000mm 20.00mil "clearline"]
-	Line[125.5600mm 76.6500mm 124.3000mm 75.3900mm 0.2500mm 20.00mil "clearline"]
-	Line[124.3000mm 75.3900mm 124.3000mm 74.1500mm 0.2500mm 20.00mil "clearline"]
-	Line[125.5500mm 76.5700mm 125.5500mm 77.3200mm 0.2500mm 20.00mil "clearline"]
-	Line[124.4100mm 73.9100mm 125.8900mm 73.9100mm 0.2500mm 20.00mil "clearline"]
-	Line[120.8300mm 77.7100mm 120.0000mm 77.7100mm 0.2000mm 20.00mil "clearline"]
-	Line[120.0000mm 77.7000mm 119.0700mm 76.7700mm 0.2000mm 20.00mil "clearline"]
-	Line[120.8700mm 78.5200mm 119.7800mm 78.5200mm 0.2000mm 20.00mil "clearline"]
-	Line[119.7800mm 78.5200mm 119.0000mm 77.7400mm 0.2000mm 20.00mil "clearline"]
-	Line[120.5000mm 74.6900mm 120.5000mm 77.1200mm 0.2500mm 20.00mil "clearline"]
-	Line[120.5000mm 77.1200mm 120.6300mm 77.2500mm 0.2500mm 20.00mil "clearline"]
-	Line[122.7500mm 63.3400mm 124.9244mm 63.3359mm 10.00mil 20.00mil "clearline"]
-	Line[103.8400mm 71.7200mm 103.3600mm 71.2400mm 25.00mil 20.00mil "clearline"]
-	Line[104.0700mm 71.9500mm 103.8400mm 71.7200mm 25.00mil 20.00mil "clearline"]
+	Line[122.1400mm 77.8000mm 121.1100mm 76.7700mm 0.2000mm 20.00mil "clearline"]
+	Line[102.9100mm 71.8700mm 102.4300mm 71.3900mm 25.00mil 20.00mil "clearline"]
 	Line[107.4600mm 71.9500mm 104.0700mm 71.9500mm 25.00mil 20.00mil "clearline"]
-	Line[116.0600mm 71.6100mm 118.2600mm 69.4100mm 25.00mil 20.00mil "clearline"]
-	Line[118.2600mm 69.4100mm 121.6600mm 69.4100mm 25.00mil 20.00mil "clearline"]
-	Line[105.4200mm 70.0900mm 106.4900mm 70.0900mm 10.00mil 20.00mil "clearline"]
-	Line[111.0001mm 68.8098mm 109.6102mm 68.8098mm 10.00mil 20.00mil "clearline"]
-	Line[111.8900mm 70.1000mm 111.8900mm 70.8500mm 10.00mil 20.00mil "clearline"]
-	Line[109.6501mm 68.8200mm 107.7299mm 70.7402mm 10.00mil 20.00mil "clearline"]
-	Line[107.7400mm 70.6899mm 106.6300mm 70.6899mm 10.00mil 20.00mil "clearline"]
-	Line[106.3800mm 68.7800mm 103.5258mm 68.7778mm 10.00mil 20.00mil "clearline"]
-	Line[110.8600mm 70.1000mm 114.5800mm 70.1001mm 10.00mil 20.00mil "clearline"]
-	Line[111.1500mm 68.7800mm 111.1500mm 68.7500mm 0.2500mm 20.00mil "clearline"]
-	Line[111.1500mm 68.7500mm 113.1900mm 66.7100mm 0.2500mm 20.00mil "clearline"]
+	Line[117.2900mm 71.1800mm 119.4000mm 69.0500mm 25.00mil 20.00mil "clearline"]
+	Line[119.0200mm 68.4000mm 121.5500mm 68.4000mm 25.00mil 20.00mil "clearline"]
+	Line[103.2800mm 70.3900mm 104.6500mm 70.3900mm 10.00mil 20.00mil "clearline"]
+	Line[110.0800mm 69.1200mm 107.8701mm 69.1200mm 10.00mil 20.00mil "clearline"]
+	Line[109.6600mm 70.4300mm 109.6600mm 71.1800mm 10.00mil 20.00mil "clearline"]
+	Line[107.8700mm 69.1400mm 105.9498mm 71.0602mm 10.00mil 20.00mil "clearline"]
+	Line[106.0300mm 71.0600mm 104.9200mm 71.0600mm 10.00mil 20.00mil "clearline"]
+	Line[104.7500mm 69.1500mm 102.4158mm 69.1478mm 10.00mil 20.00mil "clearline"]
+	Line[109.4700mm 70.4000mm 113.1900mm 70.4001mm 10.00mil 20.00mil "clearline"]
+	Line[110.0000mm 69.1400mm 113.1500mm 65.9900mm 0.2500mm 20.00mil "clearline"]
 	Line[106.0700mm 62.6700mm 105.0400mm 62.6700mm 0.2500mm 20.00mil "clearline"]
 	Line[105.8600mm 62.7000mm 105.0400mm 62.7000mm 0.2500mm 20.00mil "clearline"]
 	Line[105.0400mm 62.7000mm 104.8000mm 62.9400mm 0.2500mm 20.00mil "clearline"]
 	Line[104.8000mm 62.9400mm 104.8000mm 64.2400mm 0.2500mm 20.00mil "clearline"]
 	Line[104.8000mm 64.2400mm 103.9500mm 65.0900mm 0.2500mm 20.00mil "clearline"]
-	Line[103.7600mm 71.7500mm 105.4400mm 70.0699mm 10.00mil 20.00mil "clearline"]
+	Line[102.3400mm 71.3800mm 103.3100mm 70.3999mm 10.00mil 20.00mil "clearline"]
 	Line[121.4500mm 64.6600mm 122.7873mm 64.6600mm 10.00mil 20.00mil "clearline"]
 	Line[122.6742mm 63.3443mm 4864.80mil 63.3443mm 10.00mil 20.00mil "clearline"]
-	Line[122.6942mm 62.6806mm 120.9804mm 62.6806mm 10.00mil 20.00mil "clearline"]
-	Line[123.0100mm 64.0000mm 123.8400mm 64.0000mm 0.2500mm 20.00mil "clearline"]
-	Line[123.8400mm 64.0000mm 124.4000mm 64.5600mm 0.2500mm 20.00mil "clearline"]
-	Line[124.4000mm 64.5600mm 124.4000mm 65.0100mm 0.2500mm 20.00mil "clearline"]
-	Line[124.4000mm 65.0100mm 125.2800mm 65.8900mm 0.2500mm 20.00mil "clearline"]
-	Line[114.3400mm 2700.00mil 115.3500mm 67.5700mm 0.2500mm 20.00mil "clearline"]
+	Line[113.3800mm 69.5200mm 115.3500mm 67.5700mm 0.2500mm 20.00mil "clearline"]
 	Line[115.3500mm 67.5700mm 115.3500mm 65.5700mm 0.2500mm 20.00mil "clearline"]
 	Line[105.8500mm 66.2900mm 109.6500mm 66.2900mm 0.2500mm 20.00mil "clearline"]
 	Line[105.5200mm 63.4100mm 105.5200mm 65.9300mm 0.2500mm 20.00mil "clearline"]
@@ -1726,12 +1665,9 @@ Layer(5 "power")
 	Line[104.4000mm 62.0300mm 103.4600mm 62.9700mm 0.2500mm 20.00mil "clearline"]
 	Line[107.4900mm 60.1300mm 103.2500mm 60.1300mm 0.2500mm 20.00mil "clearline"]
 	Line[103.2500mm 60.1300mm 103.2400mm 60.1400mm 0.2500mm 20.00mil "clearline"]
-	Line[125.3700mm 58.2700mm 123.1100mm 58.2700mm 0.2500mm 20.00mil "clearline"]
-	Line[123.1300mm 58.2600mm 120.6700mm 60.7200mm 0.2500mm 20.00mil "clearline"]
-	Line[120.6800mm 60.7300mm 114.3700mm 60.7300mm 0.2500mm 20.00mil "clearline"]
+	Line[120.3400mm 60.7300mm 114.3700mm 60.7300mm 0.2500mm 20.00mil "clearline"]
 	Line[114.2400mm 60.7300mm 114.2200mm 60.7100mm 0.2500mm 20.00mil "clearline"]
-	Line[125.7000mm 54.8800mm 120.4800mm 60.1000mm 0.2500mm 20.00mil "clearline"]
-	Line[120.4800mm 60.1000mm 114.1200mm 60.1000mm 0.2500mm 20.00mil "clearline"]
+	Line[120.2400mm 60.1000mm 114.1200mm 60.1000mm 0.2500mm 20.00mil "clearline"]
 	Line[114.4500mm 58.1600mm 113.4600mm 58.1600mm 0.2500mm 20.00mil "clearline"]
 	Line[113.4600mm 58.1600mm 113.1300mm 57.8300mm 0.2500mm 20.00mil "clearline"]
 	Line[113.1300mm 57.8300mm 113.1300mm 57.0600mm 0.2500mm 20.00mil "clearline"]
@@ -1754,7 +1690,7 @@ Layer(5 "power")
 	Line[105.8600mm 66.2900mm 4350.00mil 66.2900mm 0.2500mm 20.00mil "clearline"]
 	Line[4350.00mil 66.2900mm 110.8800mm 65.9000mm 0.2500mm 20.00mil "clearline"]
 	Line[110.8800mm 65.9000mm 110.8800mm 65.0000mm 0.2500mm 20.00mil "clearline"]
-	Line[110.8800mm 65.0000mm 111.9300mm 63.9500mm 0.2500mm 20.00mil "clearline"]
+	Line[110.8800mm 65.0000mm 111.8200mm 64.0900mm 0.2500mm 20.00mil "clearline"]
 	Line[109.5900mm 65.5300mm 109.5900mm 55.6200mm 0.2500mm 20.00mil "clearline"]
 	Line[105.9600mm 59.4400mm 108.2600mm 59.4400mm 0.2500mm 20.00mil "clearline"]
 	Line[108.2600mm 59.4400mm 109.5900mm 58.1100mm 0.2500mm 20.00mil "clearline"]
@@ -1770,16 +1706,10 @@ Layer(5 "power")
 	Line[104.5200mm 56.6800mm 104.5200mm 57.5300mm 0.2500mm 20.00mil "clearline"]
 	Line[105.5600mm 55.0000mm 107.7900mm 55.0000mm 0.2500mm 20.00mil "clearline"]
 	Line[116.4400mm 64.6500mm 115.6200mm 64.6500mm 0.2500mm 20.00mil "clearline"]
-	Line[115.6200mm 64.6500mm 114.9400mm 63.9700mm 0.2500mm 20.00mil "clearline"]
-	Line[114.9400mm 63.9700mm 111.9200mm 63.9700mm 0.2500mm 20.00mil "clearline"]
-	Line[111.9200mm 63.9700mm 111.9100mm 63.9600mm 0.2500mm 20.00mil "clearline"]
-	Line[114.0700mm 69.2600mm 116.6900mm 69.2600mm 0.2500mm 20.00mil "clearline"]
-	Line[116.6900mm 69.2600mm 120.3700mm 65.5800mm 0.2500mm 20.00mil "clearline"]
-	Line[120.3700mm 65.5800mm 120.3700mm 62.0800mm 0.2500mm 20.00mil "clearline"]
-	Line[120.3700mm 62.0800mm 122.3500mm 60.1000mm 0.2500mm 20.00mil "clearline"]
-	Line[122.3500mm 60.1000mm 124.1500mm 60.1000mm 0.2500mm 20.00mil "clearline"]
-	Line[122.8100mm 62.7000mm 120.4000mm 62.7000mm 0.2500mm 20.00mil "clearline"]
-	Line[120.4000mm 62.7000mm 120.3900mm 62.6900mm 0.2500mm 20.00mil "clearline"]
+	Line[115.6200mm 64.6500mm 115.0500mm 64.0800mm 0.2500mm 20.00mil "clearline"]
+	Line[115.0500mm 64.0800mm 111.8400mm 64.0800mm 0.2500mm 20.00mil "clearline"]
+	Line[120.3700mm 61.8900mm 122.1400mm 60.1100mm 0.7580mm 20.00mil "clearline"]
+	Line[122.1900mm 60.1100mm 125.4600mm 60.1100mm 0.7580mm 20.00mil "clearline"]
 	Line[70.9500mm 57.4700mm 70.9600mm 54.7800mm 10.00mil 20.00mil "clearline"]
 	Line[67.9700mm 58.5200mm 66.6558mm 58.5238mm 10.00mil 20.00mil "clearline"]
 	Line[67.6200mm 57.9100mm 68.5700mm 57.9100mm 10.00mil 20.00mil "clearline"]
@@ -1832,7 +1762,7 @@ Layer(5 "power")
 	Line[59.8300mm 54.7200mm 61.8100mm 54.7200mm 0.2500mm 20.00mil "clearline"]
 	Line[61.7100mm 56.1700mm 63.8900mm 56.1700mm 0.2500mm 20.00mil "clearline"]
 	Line[62.7500mm 58.4400mm 62.7500mm 55.8000mm 0.2500mm 20.00mil "clearline"]
-	Line[59.8900mm 54.8000mm 57.4700mm 54.8000mm 0.2500mm 20.00mil "clearline"]
+	Line[59.8700mm 54.7200mm 57.4500mm 54.7200mm 0.2500mm 20.00mil "clearline"]
 	Line[56.5000mm 60.3600mm 56.5000mm 58.1600mm 0.2500mm 20.00mil "clearline"]
 	Line[72.3800mm 67.8100mm 74.3500mm 67.8100mm 0.2500mm 20.00mil "clearline"]
 	Line[74.3500mm 67.8100mm 74.4200mm 67.7400mm 0.2500mm 20.00mil "clearline"]
@@ -1859,10 +1789,202 @@ Layer(5 "power")
 	Line[57.6800mm 63.0400mm 56.9300mm 63.7900mm 0.2500mm 20.00mil "clearline"]
 	Line[56.9300mm 63.7900mm 56.9300mm 65.6800mm 0.2500mm 20.00mil "clearline"]
 	Line[67.6100mm 59.7800mm 70.7100mm 59.7800mm 0.2500mm 20.00mil "clearline"]
-	Line[126.2600mm 75.4200mm 126.2600mm 84.6100mm 0.2500mm 20.00mil "clearline"]
-	Line[126.2800mm 84.5300mm 124.5500mm 86.2600mm 0.2500mm 20.00mil "clearline"]
-	Line[124.5500mm 86.2600mm 105.6500mm 86.2600mm 0.2500mm 20.00mil "clearline"]
-	Line[105.6500mm 86.2600mm 104.6700mm 85.2800mm 0.2500mm 20.00mil "clearline"]
+	Line[127.4300mm 86.2600mm 106.9500mm 86.2600mm 0.2500mm 20.00mil "clearline"]
+	Line[130.7200mm 62.8200mm 132.4500mm 62.8200mm 0.2500mm 20.00mil "clearline"]
+	Line[129.1700mm 66.2700mm 129.1800mm 64.3700mm 0.2500mm 20.00mil "clearline"]
+	Line[128.5000mm 55.1400mm 128.5200mm 55.1400mm 0.2500mm 20.00mil "clearline"]
+	Line[122.9900mm 70.5500mm 121.7200mm 69.2800mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2000mm 67.1200mm 129.9500mm 67.1200mm 0.2500mm 20.00mil "clearline"]
+	Line[129.9500mm 67.1200mm 130.1900mm 66.8800mm 0.2500mm 20.00mil "clearline"]
+	Line[130.1900mm 66.8800mm 130.1900mm 65.7300mm 0.2500mm 20.00mil "clearline"]
+	Line[130.1900mm 65.7300mm 129.6700mm 65.2100mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2000mm 67.1300mm 131.4000mm 67.1300mm 0.2500mm 20.00mil "clearline"]
+	Line[131.3300mm 67.1200mm 132.1800mm 67.9700mm 0.2500mm 20.00mil "clearline"]
+	Line[130.5800mm 67.8700mm 129.2900mm 67.8700mm 0.2500mm 20.00mil "clearline"]
+	Line[129.2900mm 67.8700mm 129.2900mm 69.4900mm 0.2500mm 20.00mil "clearline"]
+	Line[126.7300mm 71.2300mm 130.7200mm 71.2300mm 0.2500mm 20.00mil "clearline"]
+	Line[130.7200mm 71.2300mm 132.1000mm 2750.00mil 0.2500mm 20.00mil "clearline"]
+	Line[132.1000mm 2750.00mil 132.1000mm 67.7900mm 0.2500mm 20.00mil "clearline"]
+	Line[125.1200mm 59.3500mm 128.2000mm 56.2800mm 0.2500mm 20.00mil "clearline"]
+	Line[128.1800mm 56.3400mm 128.1800mm 55.1900mm 0.2500mm 20.00mil "clearline"]
+	Line[125.1300mm 59.3300mm 122.0700mm 59.3300mm 0.2500mm 20.00mil "clearline"]
+	Line[121.7700mm 59.3300mm 122.0700mm 59.3300mm 0.2500mm 20.00mil "clearline"]
+	Line[121.7400mm 59.3400mm 120.3400mm 60.7400mm 0.2500mm 20.00mil "clearline"]
+	Line[121.5300mm 58.8200mm 124.9600mm 58.8200mm 0.2500mm 20.00mil "clearline"]
+	Line[124.9600mm 58.8200mm 126.2000mm 57.5800mm 0.2500mm 20.00mil "clearline"]
+	Line[126.2000mm 57.5800mm 126.2000mm 55.2000mm 0.2500mm 20.00mil "clearline"]
+	Line[121.5600mm 58.8000mm 120.2600mm 60.1000mm 0.2500mm 20.00mil "clearline"]
+	Line[125.0500mm 57.4900mm 125.0400mm 57.4900mm 0.2500mm 20.00mil "clearline"]
+	Line[125.0400mm 57.4900mm 123.0200mm 55.4700mm 0.2500mm 20.00mil "clearline"]
+	Line[125.3900mm 60.1500mm 126.6000mm 58.9400mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2800mm 62.8300mm 125.5700mm 62.8300mm 0.2500mm 20.00mil "clearline"]
+	Line[129.6900mm 60.5500mm 129.6900mm 59.8500mm 0.2500mm 20.00mil "clearline"]
+	Line[129.6900mm 59.8400mm 128.8500mm 59.0000mm 0.2500mm 20.00mil "clearline"]
+	Line[128.9200mm 59.0200mm 126.3800mm 59.0200mm 0.2500mm 20.00mil "clearline"]
+	Line[128.6600mm 60.6200mm 128.6600mm 59.6700mm 0.2500mm 20.00mil "clearline"]
+	Line[132.1400mm 64.0100mm 132.1400mm 68.0500mm 0.2500mm 20.00mil "clearline"]
+	Line[120.3700mm 65.5500mm 120.3700mm 62.0500mm 0.7580mm 20.00mil "clearline"]
+	Line[122.9100mm 62.7100mm 120.4600mm 62.7100mm 0.2500mm 20.00mil "clearline"]
+	Line[122.9300mm 64.0200mm 123.6600mm 64.0200mm 0.2500mm 20.00mil "clearline"]
+	Line[123.6600mm 64.0200mm 124.1500mm 64.5100mm 0.2500mm 20.00mil "clearline"]
+	Line[124.1400mm 64.4400mm 124.1400mm 65.3800mm 0.2500mm 20.00mil "clearline"]
+	Line[124.1100mm 65.2300mm 125.0200mm 66.1500mm 0.2500mm 20.00mil "clearline"]
+	Line[126.4000mm 77.3000mm 126.4000mm 73.3200mm 10.00mil 20.00mil "clearline"]
+	Line[125.5500mm 77.8000mm 125.5500mm 74.1700mm 10.00mil 20.00mil "clearline"]
+	Line[126.7600mm 79.0600mm 126.7500mm 79.4700mm 10.00mil 20.00mil "clearline"]
+	Line[128.0300mm 78.9100mm 128.0100mm 79.6600mm 10.00mil 20.00mil "clearline"]
+	Line[128.5800mm 78.6500mm 128.5800mm 81.4000mm 10.00mil 20.00mil "clearline"]
+	Line[126.7700mm 79.3500mm 124.8600mm 81.2600mm 10.00mil 20.00mil "clearline"]
+	Line[128.0200mm 79.6100mm 126.4600mm 81.1700mm 10.00mil 20.00mil "clearline"]
+	Line[128.2100mm 82.6600mm 124.0400mm 82.6600mm 10.00mil 20.00mil "clearline"]
+	Line[124.0400mm 82.6600mm 123.6600mm 82.2800mm 10.00mil 20.00mil "clearline"]
+	Line[125.9200mm 84.4100mm 125.9400mm 82.6300mm 10.00mil 20.00mil "clearline"]
+	Line[125.8900mm 84.4600mm 125.8900mm 82.8100mm 25.00mil 20.00mil "clearline"]
+	Line[5050.00mil 82.6800mm 123.9000mm 82.6800mm 25.00mil 20.00mil "clearline"]
+	Line[123.9000mm 82.6800mm 123.4800mm 82.2600mm 25.00mil 20.00mil "clearline"]
+	Line[125.6100mm 79.0200mm 119.5100mm 79.0200mm 0.2000mm 20.00mil "clearline"]
+	Line[126.7600mm 77.7900mm 127.9500mm 77.7900mm 0.2000mm 20.00mil "clearline"]
+	Line[127.9500mm 77.7900mm 128.3400mm 77.4000mm 0.2000mm 20.00mil "clearline"]
+	Line[126.8700mm 78.2000mm 128.0900mm 78.2000mm 0.2000mm 20.00mil "clearline"]
+	Line[128.0900mm 78.2000mm 128.5900mm 78.7000mm 0.2000mm 20.00mil "clearline"]
+	Line[126.8300mm 78.6100mm 127.6900mm 78.6100mm 0.2000mm 20.00mil "clearline"]
+	Line[127.6900mm 78.6200mm 128.0400mm 78.9700mm 0.2000mm 20.00mil "clearline"]
+	Line[128.3500mm 76.7400mm 127.0900mm 75.4800mm 0.2500mm 20.00mil "clearline"]
+	Line[127.0900mm 75.4800mm 127.0900mm 74.2400mm 0.2500mm 20.00mil "clearline"]
+	Line[128.3400mm 76.6600mm 128.3400mm 77.4100mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2000mm 74.0000mm 128.6800mm 74.0000mm 0.2500mm 20.00mil "clearline"]
+	Line[123.6200mm 77.8000mm 122.0600mm 77.8000mm 0.2000mm 20.00mil "clearline"]
+	Line[123.6600mm 78.6100mm 119.8500mm 78.6100mm 0.2000mm 20.00mil "clearline"]
+	Line[123.2900mm 74.7800mm 123.2900mm 77.2100mm 0.2500mm 20.00mil "clearline"]
+	Line[123.2900mm 77.2100mm 123.4200mm 77.3400mm 0.2500mm 20.00mil "clearline"]
+	Line[129.0500mm 75.5100mm 129.0500mm 84.7000mm 0.2500mm 20.00mil "clearline"]
+	Line[129.0700mm 84.6200mm 127.3400mm 86.3500mm 0.2500mm 20.00mil "clearline"]
+	Line[130.5500mm 72.9200mm 126.8400mm 72.9200mm 0.2500mm 20.00mil "clearline"]
+	Line[126.9000mm 72.8600mm 126.3500mm 73.4100mm 0.2500mm 20.00mil "clearline"]
+	Line[131.1300mm 73.2500mm 131.1300mm 76.2300mm 0.2500mm 20.00mil "clearline"]
+	Line[131.1000mm 75.4600mm 131.1300mm 75.4900mm 0.2500mm 20.00mil "clearline"]
+	Line[125.4400mm 77.7400mm 125.4400mm 73.2700mm 25.00mil 20.00mil "clearline"]
+	Line[125.4400mm 73.2700mm 121.5700mm 69.4000mm 25.00mil 20.00mil "clearline"]
+	Line[119.9400mm 78.5800mm 118.2400mm 76.8800mm 0.2500mm 20.00mil "clearline"]
+	Line[108.8100mm 83.1900mm 108.8100mm 83.7800mm 10.00mil 20.00mil "clearline"]
+	Line[108.8100mm 83.7800mm 109.3900mm 84.3600mm 10.00mil 20.00mil "clearline"]
+	Line[109.3900mm 84.3600mm 110.5100mm 84.3600mm 10.00mil 20.00mil "clearline"]
+	Line[110.5100mm 84.3600mm 110.5200mm 84.3700mm 10.00mil 20.00mil "clearline"]
+	Line[110.5200mm 84.3700mm 110.5200mm 84.7300mm 10.00mil 20.00mil "clearline"]
+	Line[110.5200mm 84.7300mm 110.8900mm 85.1000mm 10.00mil 20.00mil "clearline"]
+	Line[110.8900mm 85.1000mm 111.8300mm 85.1000mm 10.00mil 20.00mil "clearline"]
+	Line[111.8300mm 85.1000mm 112.0500mm 84.8800mm 10.00mil 20.00mil "clearline"]
+	Line[112.0500mm 84.8800mm 112.0500mm 84.1000mm 10.00mil 20.00mil "clearline"]
+	Line[110.5300mm 78.4700mm 110.5300mm 78.0300mm 10.00mil 20.00mil "clearline"]
+	Line[110.5300mm 78.0300mm 110.7900mm 77.7700mm 10.00mil 20.00mil "clearline"]
+	Line[110.7900mm 77.7700mm 111.8800mm 77.7700mm 10.00mil 20.00mil "clearline"]
+	Line[111.8800mm 77.7700mm 112.0600mm 77.9500mm 10.00mil 20.00mil "clearline"]
+	Line[112.0600mm 77.9500mm 112.0600mm 78.5700mm 10.00mil 20.00mil "clearline"]
+	Line[107.5300mm 77.8200mm 105.2000mm 77.8200mm 10.00mil 20.00mil "clearline"]
+	Line[105.0600mm 77.7300mm 104.0400mm 3100.00mil 10.00mil 20.00mil "clearline"]
+	Line[104.0400mm 3100.00mil 104.0400mm 79.8700mm 10.00mil 20.00mil "clearline"]
+	Line[104.0400mm 79.8700mm 105.3600mm 81.1900mm 10.00mil 20.00mil "clearline"]
+	Line[105.3600mm 81.1900mm 105.3600mm 83.6300mm 10.00mil 20.00mil "clearline"]
+	Line[107.5000mm 77.5800mm 107.5000mm 74.4500mm 10.00mil 20.00mil "clearline"]
+	Line[108.7900mm 73.7900mm 108.7900mm 77.9200mm 10.00mil 20.00mil "clearline"]
+	Line[109.2400mm 80.6300mm 106.4600mm 80.6300mm 10.00mil 20.00mil "clearline"]
+	Line[106.4600mm 80.6300mm 106.0600mm 81.0300mm 10.00mil 20.00mil "clearline"]
+	Line[106.0600mm 81.0300mm 106.0600mm 84.6700mm 10.00mil 20.00mil "clearline"]
+	Line[109.1900mm 81.1400mm 107.2700mm 81.1400mm 10.00mil 20.00mil "clearline"]
+	Line[107.2800mm 81.1400mm 106.6300mm 81.7900mm 10.00mil 20.00mil "clearline"]
+	Line[109.2700mm 81.6600mm 108.1100mm 81.6600mm 10.00mil 20.00mil "clearline"]
+	Line[108.1100mm 81.6600mm 107.5700mm 82.2000mm 10.00mil 20.00mil "clearline"]
+	Line[107.5700mm 82.2000mm 107.5700mm 82.7900mm 10.00mil 20.00mil "clearline"]
+	Line[107.5700mm 82.7900mm 106.8500mm 83.5100mm 10.00mil 20.00mil "clearline"]
+	Line[109.3000mm 79.6200mm 108.7000mm 79.6200mm 10.00mil 20.00mil "clearline"]
+	Line[108.8000mm 79.6100mm 107.3100mm 78.1100mm 10.00mil 20.00mil "clearline"]
+	Line[109.2000mm 80.1100mm 106.3300mm 80.1100mm 10.00mil 20.00mil "clearline"]
+	Line[106.3300mm 80.1100mm 105.4700mm 79.2500mm 10.00mil 20.00mil "clearline"]
+	Line[109.6500mm 79.6000mm 109.6400mm 76.8900mm 10.00mil 20.00mil "clearline"]
+	Line[109.6600mm 76.9400mm 110.5400mm 76.0500mm 10.00mil 20.00mil "clearline"]
+	Line[113.4900mm 79.6000mm 113.4900mm 77.7100mm 10.00mil 20.00mil "clearline"]
+	Line[113.2800mm 80.1300mm 115.0200mm 80.1300mm 10.00mil 20.00mil "clearline"]
+	Line[113.4300mm 79.1000mm 117.6400mm 79.1000mm 10.00mil 20.00mil "clearline"]
+	Line[117.6400mm 79.1000mm 118.0900mm 79.5500mm 10.00mil 20.00mil "clearline"]
+	Line[4650.00mil 79.6300mm 119.1600mm 79.6300mm 10.00mil 20.00mil "clearline"]
+	Line[119.1600mm 79.6300mm 119.8100mm 80.2800mm 10.00mil 20.00mil "clearline"]
+	Line[113.3300mm 80.6100mm 116.9500mm 80.6100mm 10.00mil 20.00mil "clearline"]
+	Line[113.3300mm 81.1400mm 118.3400mm 81.1400mm 10.00mil 20.00mil "clearline"]
+	Line[113.3300mm 81.6400mm 119.9100mm 81.6400mm 10.00mil 20.00mil "clearline"]
+	Line[113.2600mm 82.1400mm 118.2500mm 82.1400mm 10.00mil 20.00mil "clearline"]
+	Line[113.3500mm 82.6600mm 116.6600mm 82.6600mm 10.00mil 20.00mil "clearline"]
+	Line[116.6600mm 82.6600mm 116.6800mm 82.6400mm 10.00mil 20.00mil "clearline"]
+	Line[113.3500mm 83.1700mm 114.9800mm 83.1700mm 10.00mil 20.00mil "clearline"]
+	Line[116.4500mm 84.2500mm 115.9700mm 84.7300mm 30.00mil 20.00mil "clearline"]
+	Line[112.0600mm 84.7300mm 112.0400mm 84.7500mm 10.00mil 20.00mil "clearline"]
+	Line[113.4900mm 78.0400mm 113.4900mm 76.4200mm 10.00mil 20.00mil "clearline"]
+	Line[113.5100mm 76.4300mm 113.1500mm 76.0700mm 10.00mil 20.00mil "clearline"]
+	Line[113.1700mm 76.1300mm 111.6700mm 76.1300mm 10.00mil 20.00mil "clearline"]
+	Line[112.0500mm 77.8500mm 112.6500mm 77.2500mm 10.00mil 20.00mil "clearline"]
+	Line[114.1400mm 77.2900mm 114.1400mm 77.3100mm 10.00mil 20.00mil "clearline"]
+	Line[114.1400mm 77.3100mm 115.2600mm 78.4300mm 10.00mil 20.00mil "clearline"]
+	Line[109.0400mm 84.0100mm 108.2900mm 84.7600mm 10.00mil 20.00mil "clearline"]
+	Line[108.7900mm 73.8000mm 108.4300mm 73.4400mm 10.00mil 20.00mil "clearline"]
+	Line[108.4400mm 73.4400mm 106.3700mm 73.4500mm 10.00mil 20.00mil "clearline"]
+	Line[106.4100mm 73.4300mm 104.9600mm 74.9200mm 10.00mil 20.00mil "clearline"]
+	Line[111.2600mm 74.4000mm 115.0800mm 74.4000mm 10.00mil 20.00mil "clearline"]
+	Line[115.0800mm 74.4000mm 115.1000mm 74.3800mm 10.00mil 20.00mil "clearline"]
+	Line[118.2500mm 74.6100mm 118.2500mm 76.9100mm 10.00mil 20.00mil "clearline"]
+	Line[118.2500mm 74.7400mm 116.9200mm 73.4100mm 10.00mil 20.00mil "clearline"]
+	Line[116.9200mm 73.4100mm 110.8500mm 73.4100mm 10.00mil 20.00mil "clearline"]
+	Line[110.8500mm 73.4100mm 110.2000mm 72.7600mm 10.00mil 20.00mil "clearline"]
+	Line[110.2000mm 72.7600mm 103.8100mm 72.7600mm 10.00mil 20.00mil "clearline"]
+	Line[103.8100mm 72.7600mm 103.1600mm 73.4100mm 10.00mil 20.00mil "clearline"]
+	Line[103.1600mm 73.4100mm 103.1600mm 83.0700mm 10.00mil 20.00mil "clearline"]
+	Line[103.1600mm 83.0700mm 105.1000mm 85.0100mm 10.00mil 20.00mil "clearline"]
+	Line[105.1000mm 85.0100mm 106.1500mm 85.0100mm 10.00mil 20.00mil "clearline"]
+	Line[106.9800mm 86.2600mm 106.0000mm 85.2800mm 0.2500mm 20.00mil "clearline"]
+	Line[115.2400mm 78.3600mm 118.8800mm 78.3600mm 0.2500mm 20.00mil "clearline"]
+	Line[118.8800mm 78.3600mm 119.5900mm 79.0700mm 0.2500mm 20.00mil "clearline"]
+	Line[111.6300mm 76.2400mm 111.6300mm 74.2900mm 10.00mil 20.00mil "clearline"]
+	Line[110.2800mm 76.1500mm 110.2800mm 74.5900mm 10.00mil 20.00mil "clearline"]
+	Line[110.2800mm 74.5900mm 110.2700mm 74.5800mm 10.00mil 20.00mil "clearline"]
+	Line[111.6600mm 74.5300mm 111.6800mm 74.5100mm 10.00mil 20.00mil "clearline"]
+	Line[130.7100mm 71.2300mm 123.4000mm 71.2300mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2300mm 63.3200mm 127.2400mm 70.1200mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2400mm 70.1200mm 126.1200mm 71.2400mm 0.2500mm 20.00mil "clearline"]
+	Line[119.7500mm 82.6900mm 118.7600mm 83.6800mm 0.7580mm 20.00mil "clearline"]
+	Line[124.6800mm 82.7000mm 119.7200mm 82.7000mm 0.7580mm 20.00mil "clearline"]
+	Line[118.0200mm 84.2400mm 118.5600mm 83.7000mm 0.7580mm 20.00mil "clearline"]
+	Line[118.0300mm 84.2500mm 116.4500mm 84.2500mm 30.00mil 20.00mil "clearline"]
+	Line[116.2100mm 84.7100mm 112.3000mm 84.7100mm 30.00mil 20.00mil "clearline"]
+	Line[130.6800mm 63.3300mm 133.0300mm 63.3300mm 0.2500mm 20.00mil "clearline"]
+	Line[133.0200mm 63.3200mm 133.3200mm 63.0200mm 0.2500mm 20.00mil "clearline"]
+	Line[133.3300mm 63.0500mm 133.3300mm 59.8800mm 0.2500mm 20.00mil "clearline"]
+	Line[125.4100mm 78.5600mm 125.4100mm 79.4600mm 25.00mil 20.00mil "clearline"]
+	Line[125.4100mm 79.4600mm 124.8400mm 80.0300mm 25.00mil 20.00mil "clearline"]
+	Line[124.8400mm 80.0300mm 124.1800mm 80.0300mm 25.00mil 20.00mil "clearline"]
+	Line[124.1800mm 80.0300mm 123.4700mm 80.7400mm 25.00mil 20.00mil "clearline"]
+	Line[123.4700mm 80.7400mm 123.4700mm 82.7100mm 25.00mil 20.00mil "clearline"]
+	Line[127.3000mm 61.8000mm 128.1700mm 61.8000mm 0.2500mm 20.00mil "clearline"]
+	Line[128.1400mm 61.7800mm 129.6800mm 63.3200mm 0.2500mm 20.00mil "clearline"]
+	Line[129.6800mm 63.3200mm 129.6800mm 65.1600mm 0.2500mm 20.00mil "clearline"]
+	Line[129.6800mm 65.1600mm 129.6900mm 65.1700mm 0.2500mm 20.00mil "clearline"]
+	Line[128.1500mm 60.7800mm 128.1500mm 61.8200mm 0.2500mm 20.00mil "clearline"]
+	Line[127.2500mm 63.3200mm 128.0100mm 63.3200mm 0.2500mm 20.00mil "clearline"]
+	Line[128.0100mm 63.3100mm 128.8800mm 62.4400mm 0.2500mm 20.00mil "clearline"]
+	Line[124.3100mm 62.0800mm 124.3100mm 63.0600mm 0.2500mm 20.00mil "clearline"]
+	Line[124.3100mm 63.0600mm 124.3200mm 63.0700mm 0.2500mm 20.00mil "clearline"]
+	Line[123.0200mm 63.3500mm 124.3800mm 63.3500mm 0.2500mm 20.00mil "clearline"]
+	Line[125.1800mm 64.7500mm 124.3200mm 63.8900mm 0.2500mm 20.00mil "clearline"]
+	Line[124.3200mm 63.8900mm 124.3200mm 63.1700mm 0.2500mm 20.00mil "clearline"]
+	Line[128.6700mm 59.7000mm 128.0500mm 59.0800mm 0.2500mm 20.00mil "clearline"]
+	Line[126.9600mm 62.3000mm 126.2300mm 62.3000mm 0.2500mm 20.00mil "clearline"]
+	Line[126.2300mm 62.3000mm 125.9300mm 62.0000mm 0.2500mm 20.00mil "clearline"]
+	Line[125.9300mm 62.0000mm 125.9300mm 61.2600mm 0.2500mm 20.00mil "clearline"]
+	Line[125.9300mm 61.2600mm 126.5500mm 60.6400mm 0.2500mm 20.00mil "clearline"]
+	Line[106.1300mm 60.7700mm 104.7400mm 60.7700mm 0.2500mm 20.00mil "clearline"]
+	Line[104.6000mm 60.9000mm 104.6000mm 61.2300mm 0.7580mm 20.00mil "clearline"]
+	Line[126.5100mm 60.6800mm 127.2300mm 60.6800mm 25.00mil 20.00mil "clearline"]
+	Line[114.3600mm 69.8600mm 114.3600mm 69.8300mm 25.00mil 20.00mil "clearline"]
+	Line[114.3600mm 69.8300mm 117.3000mm 66.8900mm 25.00mil 20.00mil "clearline"]
+	Line[117.3000mm 66.8900mm 119.0200mm 66.8900mm 25.00mil 20.00mil "clearline"]
+	Line[119.0200mm 66.8900mm 120.4100mm 65.5000mm 25.00mil 20.00mil "clearline"]
 )
 Layer(6 "bottom")
 (
@@ -1879,70 +2001,43 @@ Layer(9 "silk")
 Layer(10 "silk")
 (
 	Text[109.3000mm 63.9900mm 0 78 "10k" ""]
-	Text[110.3400mm 63.6000mm 1 95 "18F14K50" "clearline"]
+	Text[109.2900mm 63.1600mm 1 95 "18F14K50" "clearline"]
 	Text[117.4200mm 53.4000mm 1 100 "GND" ""]
 	Text[111.8800mm 53.3900mm 1 100 "PGC" ""]
 	Text[109.8500mm 53.2800mm 1 78 "MCLR" ""]
 	Text[114.6300mm 53.3600mm 1 100 "PGD" ""]
-	Text[115.4500mm 57.6800mm 0 65 "4.7uF" "clearline"]
-	Text[116.1300mm 67.0300mm 0 78 "100uF" ""]
+	Text[118.3200mm 59.1300mm 1 65 "4.7uF" "clearline"]
+	Text[116.5600mm 67.0000mm 0 78 "100uF" ""]
 	Text[3989.40mil 42.7114mm 0 117 "TRANSMITTER" "clearline"]
 	Text[101.8474mm 44.6069mm 0 117 "car_remote.X" "clearline"]
 	Text[99.0100mm 64.4400mm 0 78 "220R" ""]
 	Text[119.9300mm 53.3600mm 1 100 "GND" ""]
 	Text[97.3700mm 66.5400mm 0 78 "LED GND" ""]
 	Text[107.4500mm 53.4100mm 1 77 "LED 3.3V" ""]
-	Text[127.2800mm 62.0400mm 0 56 "ANTENNA" ""]
-	Text[126.7100mm 64.5000mm 0 78 "16nH" ""]
-	Text[126.3500mm 59.3100mm 0 78 "100nH" ""]
-	Text[111.9100mm 71.1700mm 0 78 "GND" ""]
-	Text[122.7000mm 69.7300mm 1 78 "10Mhz" ""]
-	Text[112.0800mm 72.6300mm 0 78 "COIL" ""]
-	Text[104.9037mm 85.7890mm 0 78 "10uF" ""]
-	Text[108.4900mm 85.3800mm 0 78 "BQ51013" ""]
-	Text[100.5736mm 82.9090mm 0 78 "22nF" ""]
-	Text[102.5200mm 76.1600mm 0 78 "68nF" ""]
-	Text[108.0000mm 72.4900mm 0 78 "100pF" ""]
-	Text[107.3200mm 76.6100mm 0 78 "1800pF" ""]
-	Text[117.5100mm 79.8600mm 1 78 "22nF" ""]
-	Text[116.5400mm 86.7900mm 1 78 "140R" ""]
-	Text[114.6000mm 86.4700mm 1 78 "10k" ""]
-	Text[100.2136mm 81.0590mm 0 78 "470nF" ""]
-	Text[100.8300mm 78.5600mm 0 78 "10nF" ""]
-	Text[104.8100mm 78.2700mm 0 78 "47nF" ""]
-	Text[104.1600mm 72.5700mm 0 78 "68nF" ""]
-	Text[111.5500mm 77.7200mm 0 78 "0R" ""]
-	Text[116.5500mm 78.8800mm 1 78 "470nF" ""]
-	Text[115.0800mm 78.3500mm 1 78 "10nF" ""]
-	Text[113.0700mm 87.9600mm 1 78 "250R" ""]
-	Text[113.6000mm 78.1500mm 1 78 "10uF" ""]
-	Text[100.0900mm 74.4400mm 0 78 "COIL" ""]
-	Text[122.9100mm 74.9700mm 0 78 "10k" ""]
-	Text[126.7700mm 71.7200mm 0 78 "BATT 4.2V" ""]
-	Text[121.0700mm 74.3700mm 1 78 "1k" ""]
-	Text[117.5600mm 70.9000mm 0 78 "LED+" ""]
-	Text[115.1000mm 73.9900mm 0 78 "LED-" ""]
-	Text[100.4700mm 76.3200mm 0 78 "5V" ""]
-	Text[127.1200mm 70.3700mm 0 77 "BATT SWITCH" ""]
-	Text[125.3800mm 77.4600mm 0 78 "AAT3693" ""]
-	Text[120.8600mm 86.6600mm 1 78 "0.22uF" ""]
-	Text[124.2500mm 84.1700mm 1 78 "1k" ""]
-	Text[125.6700mm 84.7500mm 1 78 "10k" ""]
-	Text[122.5600mm 90.8700mm 1 78 "BATT GND" ""]
-	Text[127.0400mm 74.0700mm 0 78 "10k" ""]
-	Text[106.8200mm 69.3000mm 0 78 "LP2989" ""]
-	Text[102.2100mm 69.7100mm 0 65 "10uF" "clearline"]
-	Text[119.1676mm 65.6623mm 1 78 "SI4421" ""]
-	Text[127.1200mm 57.0900mm 0 77 "THROTTLE" ""]
+	Text[134.0100mm 60.1100mm 0 78 "ANTENNA" ""]
+	Text[125.8500mm 66.7100mm 1 78 "16nH" ""]
+	Text[121.2200mm 59.4400mm 0 78 "100nH" ""]
+	Text[116.7100mm 72.9400mm 0 78 "GND" ""]
+	Text[122.8200mm 70.0000mm 1 78 "10Mhz" ""]
+	Text[113.7200mm 72.7900mm 0 78 "COIL" ""]
+	Text[109.9400mm 72.5300mm 0 78 "100pF" ""]
+	Text[119.4700mm 84.5600mm 1 78 "22nF" ""]
+	Text[106.8300mm 72.5300mm 0 78 "68nF" ""]
+	Text[119.7100mm 70.1700mm 0 78 "LED+" ""]
+	Text[119.5000mm 74.0600mm 0 78 "LED-" ""]
+	Text[125.6200mm 91.3500mm 1 78 "BATT GND" ""]
+	Text[105.0200mm 67.3900mm 0 78 "LP2989" ""]
+	Text[100.7600mm 71.0100mm 1 65 "10uF" "clearline"]
+	Text[118.5900mm 65.7200mm 1 78 "SI4421" ""]
+	Text[127.6300mm 53.3200mm 1 77 "THROTTLE" ""]
 	Text[122.3500mm 53.2700mm 1 100 "GND" ""]
 	Text[105.2900mm 63.9700mm 0 78 "10k" ""]
 	Text[97.5700mm 59.7200mm 0 77 "SPEED+" ""]
-	Text[127.1600mm 54.3800mm 0 77 "STEERING" ""]
 	Text[107.3900mm 63.9200mm 0 78 "10k" ""]
 	Text[96.9300mm 54.2800mm 0 77 "SPEAKER" ""]
 	Text[96.8200mm 57.0300mm 0 77 "SPEAKER" ""]
 	Text[105.1400mm 53.4600mm 1 77 "LED 3.3V" ""]
-	Text[111.1700mm 64.1800mm 0 77 "BATT SWITCH" ""]
+	Text[112.1500mm 65.2000mm 1 77 "BATT SWITCH" ""]
 	Text[61.0500mm 56.7500mm 0 78 "10k" ""]
 	Text[70.5900mm 53.7600mm 1 100 "GND" ""]
 	Text[65.0500mm 53.7500mm 1 100 "PGC" ""]
@@ -1970,4 +2065,38 @@ Layer(10 "silk")
 	Text[80.2400mm 57.7800mm 0 56 "RX DEBUG" ""]
 	Text[53.2300mm 65.3800mm 0 56 "DEBUG" ""]
 	Text[97.6800mm 62.2900mm 0 77 "SPEED-" ""]
+	Text[133.0000mm 64.0300mm 1 78 "3nH" ""]
+	Text[127.5000mm 68.5500mm 1 78 "5.6nH" ""]
+	Text[125.1000mm 2100.00mil 1 77 "STEERING" ""]
+	Text[129.9500mm 61.2600mm 1 78 "RFX1010" ""]
+	Text[130.5900mm 68.6300mm 0 78 "10nF" ""]
+	Text[126.0300mm 57.0400mm 0 78 "10uF" ""]
+	Text[125.0400mm 74.6800mm 0 78 "10k" ""]
+	Text[132.6600mm 75.7800mm 0 78 "BATT 4.2V" ""]
+	Text[122.6600mm 72.6700mm 1 78 "1k" ""]
+	Text[132.6500mm 72.3700mm 0 77 "BATT SWITCH" ""]
+	Text[128.1700mm 77.5500mm 0 78 "AAT3693" ""]
+	Text[122.8900mm 83.7500mm 1 78 "0.22uF" ""]
+	Text[125.8600mm 80.5600mm 1 78 "1k" ""]
+	Text[127.6600mm 80.6800mm 1 78 "10k" ""]
+	Text[128.0900mm 73.6000mm 1 78 "10k" ""]
+	Text[106.2337mm 85.7890mm 0 78 "10uF" ""]
+	Text[109.8200mm 85.3800mm 0 78 "BQ51013" ""]
+	Text[101.9036mm 82.9090mm 0 78 "22nF" ""]
+	Text[104.6500mm 76.2800mm 0 78 "68nF" ""]
+	Text[108.8900mm 76.5300mm 0 78 "1800pF" ""]
+	Text[117.5400mm 86.8800mm 1 78 "140R" ""]
+	Text[101.5436mm 81.0590mm 0 78 "470nF" ""]
+	Text[102.1600mm 78.5600mm 0 78 "10nF" ""]
+	Text[106.9000mm 78.3400mm 0 78 "47nF" ""]
+	Text[112.8800mm 77.7200mm 0 78 "0R" ""]
+	Text[116.3200mm 78.1500mm 1 78 "10nF" ""]
+	Text[114.4000mm 87.9600mm 1 78 "250R" ""]
+	Text[114.9300mm 78.1500mm 1 78 "10uF" ""]
+	Text[101.9200mm 74.0600mm 0 78 "COIL" ""]
+	Text[101.8000mm 76.3200mm 0 78 "5V" ""]
+	Text[117.8400mm 78.7900mm 1 78 "470nF" ""]
+	Text[115.9300mm 86.5200mm 1 78 "10k" ""]
+	Text[123.9000mm 61.6000mm 0 78 "15pF" ""]
+	Text[110.2300mm 71.2400mm 1 78 "100uF" ""]
 )

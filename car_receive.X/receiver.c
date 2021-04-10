@@ -1,6 +1,6 @@
 /*
  * REMOTE CONTROL RECEIVER FOR CAR
- * Copyright (C) 2020 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2021 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,6 +91,11 @@ const uint8_t PACKET_KEY[] =
     0xff, 0xe7, 0xa9, 0x38, 0x33, 0x30, 0x9e, 0x08
 };
 
+const uint8_t DATA_KEY[] =
+{
+    0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xaa, 0xaa, 0xaa, 0x55, 0x55, 0x55
+};
+
 
 
 
@@ -127,6 +132,7 @@ const uint8_t PACKET_KEY[] =
 
 // frequency hopping table.  64 steps = 480khz
 // Check temp_sensor.X & cam_remote.X for taken frequencies
+// 901-928Mhz
 #define MAX_FREQ 3839
 #define MIN_FREQ 160
 #define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
@@ -346,7 +352,15 @@ void get_data()
         
         uint8_t i;
         uint8_t failed = 0;
-        for(i = 0; i < DATA_SIZE; i += 3)
+
+// XOR the data key
+        for(i = 0; i < DATA_SIZE; i++)
+        {
+            serial_data[i] ^= DATA_KEY[i];
+        }
+
+
+        for(i = 3; i < DATA_SIZE; i += 3)
         {
             if(serial_data[0] != serial_data[i] &&
                 serial_data[1] != serial_data[i + 1] &&
@@ -436,7 +450,9 @@ void main()
     while(1)
     {
         ClrWdt();
-        
+
+
+// guaranteed to fire before the radio gets the next packet
         if(flags.got_packet)
         {
             flags.got_packet = 0;

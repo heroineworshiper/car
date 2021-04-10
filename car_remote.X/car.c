@@ -1,6 +1,6 @@
 /*
  * REMOTE CONTROL TRANSMITTER FOR CAR
- * Copyright (C) 2020 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2021 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,9 +40,9 @@
 #pragma config PLLEN = ON      // 4 X PLL Enable bit
 
 // CONFIG2L
-#pragma config PWRTEN = OFF     // Power-up Timer Enable bit (PWRT disabled)
+#pragma config PWRTEN = ON     // Power-up Timer Enable bit (PWRT disabled)
 #pragma config BOREN = SBORDIS  // Brown-out Reset Enable bits (Brown-out Reset enabled in hardware only (SBOREN is disabled))
-#pragma config BORV = 22        // Brown-out Reset Voltage bits (VBOR set to 3.0 V nominal)
+#pragma config BORV = 22        // Brown-out Reset Voltage bits (VBOR set to 2.2 V nominal)
 
 // CONFIG2H
 #pragma config WDTEN = ON       // Watchdog Timer Enable bit (WDT is always enabled. SWDTEN bit has no effect.)
@@ -76,6 +76,12 @@ const uint8_t PACKET_KEY[] =
     0xff, 0xe7, 0xa9, 0x38, 0x33, 0x30, 0x9e, 0x08
 };
 
+const uint8_t DATA_KEY[] =
+{
+    0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xaa, 0xaa, 0xaa, 0x55, 0x55, 0x55
+};
+
+
 
 // AN4 steering
 // AN5 throttle
@@ -93,8 +99,13 @@ const uint8_t PACKET_KEY[] =
 #define LED_LAT LATCbits.LATC7
 #define LED_TRIS TRISCbits.TRISC7
 
-#define RADIO_CS_LAT LATBbits.LATB5
-#define RADIO_CS_TRIS TRISBbits.TRISB5
+#define AMP_LAT LATCbits.LATC4
+#define AMP_TRIS TRISCbits.TRISC4
+
+
+// B5 is stuck high when it's an output
+#define RADIO_CS_LAT LATBbits.LATB6
+#define RADIO_CS_TRIS TRISBbits.TRISB6
 
 #define RADIO_SCK_LAT LATBbits.LATB4
 #define RADIO_SCK_TRIS TRISBbits.TRISB4
@@ -122,9 +133,11 @@ const uint8_t PACKET_KEY[] =
 
 // frequency hopping table.  64 frequency steps = 480khz 
 // Check temp_sensor.X & cam_remote.X for taken frequencies
+// 901-928Mhz
 #define MAX_FREQ 3839
 #define MIN_FREQ 160
 #define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
+// freq hopping
 uint16_t channels[] = 
 {
     MIN_FREQ, 
@@ -138,6 +151,13 @@ uint16_t channels[] =
     MIN_FREQ + FREQ_RANGE * 5 / 8, 
 };
 
+// single freq for testing
+// uint16_t channels[] = 
+// {
+//     MIN_FREQ + FREQ_RANGE * 1 / 2
+// };
+
+
 #define TOTAL_CHANNELS (sizeof(channels) / sizeof(uint16_t))
 
 //#define RADIO_CHANNEL 96
@@ -146,8 +166,10 @@ uint16_t channels[] =
 #define FIFORSTREG 0xCA81
 // read continuously
 //#define FIFORSTREG              (0xCA81 | 0x0004)
+
 // 915MHz
 #define FREQ_BAND 0x0030
+
 // Center Frequency: 915.000MHz
 //#define CFSREG (0xA000 | RADIO_CHANNEL)
 #define CFSREG(chan) (0xA000 | (chan))
@@ -155,6 +177,7 @@ uint16_t channels[] =
 #define XTAL_LD_CAP 0x0003
 // power management page 16
 #define PMCREG 0x8201
+// config page 16
 #define GENCREG (0x8000 | XTAL_LD_CAP | FREQ_BAND)
 
 
@@ -182,7 +205,9 @@ uint16_t channels[] =
 #define RXCREG 0x9420       // BW 400KHz, LNA gain 0dB, RSSI -103dBm
 
 //#define TXCREG 0x9850     // FSK shift: 90kHz
-#define TXCREG 0x98f0       // FSK shift: 165kHz
+#define TXCREG 0x98f0       // FSK shift: 165kHz TX power: 0db
+//#define TXCREG 0x98f7       // FSK shift: 165kHz TX power: -17.5db
+//#define TXCREG 0x98f4       // FSK shift: 165kHz TX power: -10db
 #define STSREG 0x0000
 #define RXFIFOREG 0xb000
 
@@ -190,7 +215,7 @@ uint16_t channels[] =
 #define BBFCREG                 0xc23c
 
 
-// notes
+// audio
 // speaker goes from 500-3500
 #define MIN_NOTE -3000
 #define MAX_NOTE -1500
@@ -241,6 +266,7 @@ typedef union
         unsigned playing_sound : 1;
         unsigned increase_pressed : 1;
         unsigned decrease_pressed : 1;
+        unsigned disable_adc : 1;
 	};
 	
 	unsigned char value;
@@ -304,11 +330,14 @@ uint8_t increase_debounce = 0;
 uint8_t decrease_debounce = 0;
 #define DEBOUNCE_THRESHOLD (HZ / 10)
 
+
 // hall effect sensors
 uint32_t steering_accum = 0;
 uint32_t steering_count = 0;
 uint32_t throttle_accum = 0;
 uint32_t throttle_count = 0;
+uint8_t adc_watchdog = 0;
+#define ADC_TIMEOUT HZ
 int8_t speed_offset = 0;
 // limited by song length
 #define MIN_SPEED_OFFSET -8
@@ -328,8 +357,6 @@ int8_t speed_offset2 = 0;
 
 void write_radio(uint16_t data)
 {
-    ClrWdt();
-
     RADIO_CS_LAT = 0;
     uint8_t i;
     for(i = 0; i < 16; i++)
@@ -368,6 +395,7 @@ void radio_on()
     write_radio(BBFCREG);
 // turn on the transmitter to tune
     write_radio(PMCREG | 0x0020);
+//    write_radio(PMCREG | 0x0038);
 
     current_channel++;
     if(current_channel >= TOTAL_CHANNELS)
@@ -385,14 +413,29 @@ void radio_on()
 
     while(!PIR1bits.TMR1IF)
     {
-        ClrWdt();
     }
     T1CON = 0b10000000;
-//    LED_LAT = 1;
+// DEBUG
+//LED_LAT = 1;
+
+// can't use ADC & amplifier
+    flags.disable_adc = 1;
+// turn on amplifier
+    AMP_TRIS = 0;
+    AMP_LAT = 1;
+    ClrWdt();
 }
 
 void radio_off()
 {
+// turn off amplifier
+    AMP_TRIS = 0;
+    AMP_LAT = 0;
+    flags.disable_adc = 0;
+    ADCON0bits.GO = 1;
+// DEBUG
+//LED_LAT = 0;
+
     RADIO_CS_LAT = 1;
     RADIO_CS_TRIS = 0;
     
@@ -408,6 +451,7 @@ void radio_off()
     RADIO_CS_TRIS = 1;
     RADIO_SDO_TRIS = 1;
     RADIO_SCK_TRIS = 1;
+    
 }
 
 void serial_on()
@@ -422,7 +466,6 @@ void serial_on()
 
 void flush_serial()
 {
-    ClrWdt();
     while(!PIR1bits.TXIF)
     {
     }
@@ -442,8 +485,6 @@ void serial_off()
 
 void write_serial(uint8_t value)
 {
-    ClrWdt();
-
     while(!PIR1bits.TXIF)
     {
     }
@@ -651,10 +692,17 @@ void main()
 
 
 // LED on
-    LED_LAT = 0;
+    LED_LAT = 1;
     LED_TRIS = 0;
     SPEAKER_TRIS1 = 0;
     SPEAKER_TRIS2 = 0;
+
+//LATBbits.LATB5 = 0;
+//TRISBbits.TRISB5 = 0;
+
+// turn off amplifier
+    AMP_TRIS = 0;
+    AMP_LAT = 0;
 
 	flags.value = 0;
     tick = 0;
@@ -664,11 +712,13 @@ void main()
     ANSEL = 0b00110000;
     ANSELH = 0b00000000;
     ADCON0 = 0b00010001;
-    ADCON2 = 0b10111110;
+// the RC is the only reliable conversion clock when using the amplifier
+    ADCON2 = 0b10111111;
     PIR1bits.ADIF = 0;
     PIE1bits.ADIE = 1;
-    
+
     radio_off();
+    serial_on();
 
     read_speed_offset();
 
@@ -677,15 +727,31 @@ void main()
     T0CON = 0b10000100;
     TMR0 = TIMER0_VALUE;
 
+
+//     uint8_t init_delay = 0;
+//     while(init_delay < HZ * 2)
+//     {
+//         if(INTCONbits.TMR0IF)
+//         {
+//             ClrWdt();
+//             TMR0 = TIMER0_VALUE;
+//             INTCONbits.TMR0IF = 0;
+//             init_delay++;
+//         }
+//     }
+
+
+
     INTCON = 0b11100000;
 
 // start getting stick values
     ADCON0bits.GO = 1;
 
-
     while(1)
     {
-        ClrWdt();
+//        ClrWdt();
+// DEBUG
+//LED_LAT = !LED_LAT;
 
         if(flags.send_packet)
         {
@@ -703,10 +769,10 @@ if(glitch_counter >= 8) glitch_counter = 0;
             uint8_t steering_value = steering_accum2 / steering_count2 / 4;
             uint8_t throttle_value = throttle_accum2 / throttle_count2 / 4;
 
-
-
             radio_on();
-            serial_on();
+// delay for amplifier
+            write_serial(0xff);
+
             uint8_t i;
             for(i = 0; i < sizeof(PACKET_KEY); i++)
             {
@@ -719,18 +785,23 @@ if(!glitch_counter && i == 4)
 }
 #endif
             }
-            write_serial(steering_value);
-            write_serial(throttle_value);
-            write_serial(speed_offset2);
-            write_serial(steering_value);
-            write_serial(throttle_value);
-            write_serial(speed_offset2);
-            write_serial(steering_value);
-            write_serial(throttle_value);
-            write_serial(speed_offset2);
-            write_serial(steering_value);
-            write_serial(throttle_value);
-            write_serial(speed_offset2);
+
+
+            write_serial(steering_value ^ DATA_KEY[0]);
+            write_serial(throttle_value ^ DATA_KEY[1]);
+            write_serial(speed_offset2 ^ DATA_KEY[2]);
+
+            write_serial(steering_value ^ DATA_KEY[3]);
+            write_serial(throttle_value ^ DATA_KEY[4]);
+            write_serial(speed_offset2 ^ DATA_KEY[5]);
+
+            write_serial(steering_value ^ DATA_KEY[6]);
+            write_serial(throttle_value ^ DATA_KEY[7]);
+            write_serial(speed_offset2 ^ DATA_KEY[8]);
+
+            write_serial(steering_value ^ DATA_KEY[9]);
+            write_serial(throttle_value ^ DATA_KEY[10]);
+            write_serial(speed_offset2 ^ DATA_KEY[11]);
 
 // DEBUG
 //                 write_serial(tick);
@@ -742,28 +813,43 @@ if(!glitch_counter && i == 4)
 //                 write_serial(tick);
 //                 write_serial(blink_counter);
 
-            serial_off();
+            flush_serial();
             radio_off();
         }
     }
     
 }
 
-void interrupt isr()
+void __interrupt(low_priority) isr1()
 {
-	while(1)
+}
+
+void __interrupt(high_priority) isr()
+{
+    flags.interrupt_complete = 0;
+// DEBUG
+//LED_LAT = !LED_LAT;
+	while(!flags.interrupt_complete)
 	{
-		ClrWdt();
 		flags.interrupt_complete = 1;
 
 // tick counter
 		if(INTCONbits.TMR0IF)
 		{
+// DEBUG
+//LED_LAT = !LED_LAT;
 			INTCONbits.TMR0IF = 0;
             TMR0 = TIMER0_VALUE;
 			flags.interrupt_complete = 0;
             tick++;
+            adc_watchdog++;
 
+            if(adc_watchdog > ADC_TIMEOUT &&
+                (steering_count == 0 ||
+                throttle_count == 0))
+            {
+                Reset();
+            }
 
 // send packet
             if(flags.have_stick &&
@@ -835,33 +921,40 @@ void interrupt isr()
 // ADC
         if(PIR1bits.ADIF)
         {
+// DEBUG
+//LED_LAT = !LED_LAT;
             flags.interrupt_complete = 0;
             PIR1bits.ADIF = 0;
+            adc_watchdog = 0;
             
-            if(ADCON0 == 0b00010001)
+            if(!flags.disable_adc)
             {
-                ADCON0 = 0b00010101;
-                steering_accum += ADRES;
-                steering_count++;
-            }
-            else
-            {
-                ADCON0 = 0b00010001;
-                throttle_accum += ADRES;
-                throttle_count++;
-            }
-            ADCON0bits.GO = 1;
 
-// capture real data after warming up
-            if(!flags.have_stick &&
-                tick >= HZ / 5)
-            {
-                throttle_accum = 0;
-                throttle_count = 0;
-                steering_accum = 0;
-                steering_count = 0;
-                flags.have_stick = 1;
-                play_current_speed();
+                if(ADCON0 == 0b00010001)
+                {
+                    ADCON0 = 0b00010101;
+                    steering_accum += ADRES;
+                    steering_count++;
+                }
+                else
+                {
+                    ADCON0 = 0b00010001;
+                    throttle_accum += ADRES;
+                    throttle_count++;
+                }
+                ADCON0bits.GO = 1;
+
+    // capture real data after warming up
+                if(!flags.have_stick &&
+                    tick >= HZ / 5)
+                {
+                    throttle_accum = 0;
+                    throttle_count = 0;
+                    steering_accum = 0;
+                    steering_count = 0;
+                    flags.have_stick = 1;
+                    play_current_speed();
+                }
             }
         }
 
@@ -878,9 +971,6 @@ void interrupt isr()
                 SPEAKER_LAT2 = !SPEAKER_LAT2;
             }
         }
-
-
-		if(flags.interrupt_complete) break;
     }
 }
 

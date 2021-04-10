@@ -26,7 +26,8 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 #include "arm_math.h"
-#include "arm_hardi2c.h"
+//#include "arm_hardi2c.h"
+#include "arm_softi2c.h"
 
 
 
@@ -200,7 +201,7 @@ typedef struct
 	float current_heading;
 	int total_gyro;
     int gyro_valid;
-	hardi2c_t i2c;
+	i2c_t i2c;
 } imu_t;
 
 

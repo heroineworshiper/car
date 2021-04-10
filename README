@@ -70,7 +70,13 @@ hall.pcb: hall effect sensor board for 3D printed truck
 
 imu4.pcb: IMU for 3D printed truck
 
-tire2.FCMacro: generate tire
+
+cring.FCStd: retaining ring for the motors
+    .4mm nozzle
+    .2mm layer height out of PLA
+    no cooling fan
+
+tire2.FCMacro: generate procedural tire.  Not used anymore.
     requires creating a rigid body 1st
     .28mm layer height
     .8mm line width
@@ -83,8 +89,16 @@ tire2.FCMacro: generate tire
     20mm print speed
     no retraction
 
+front_tire.FCStd: front tire
+    timelapse mode with fixcura.py has better stringing
 
-
+rear_tire.FCStd: most recent rear tire/wheel design
+    print hub cap in PLA 
+        .4mm nozzle
+        .4mm top & bottom
+    print tire in TPU 1.0mm nozzle
+    timelapse mode with fixcura.py has better stringing
+    TODO: 16 spokes
 
 
 truck_radio.pcb: remote control tx/rx for 3D printed truck
@@ -101,6 +115,7 @@ ball.FCStd:
 bumper.FCStd:
     bumper for the front of the angle rods
     print in TPU
+
 
 container.FCStd:
     container budget:
@@ -120,7 +135,6 @@ container.FCStd:
 
     Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
     TODO: shift cable hole right.  Create tab for aligning handle.
-
 
 
 radio_box.FCStd:
@@ -187,7 +201,9 @@ steering.FCStd: steering section
 
 
 
-front_wheel.FCStd:
+front_wheel.FCStd: front wheel
+    modeled for a .4mm nozzle
+
 rear_wheel.FCStd: motor wheel coupling
     print with 1mm nozzle
     .8mm line width

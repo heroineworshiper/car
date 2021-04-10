@@ -1,6 +1,6 @@
 /*
- * I2C driver
- * Copyright (C) 2012-2013 Adam Williams <broadcast at earthling dot net>
+ * STM32 Controller for direct drive truck
+ * Copyright (C) 2012-2021 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,22 +80,22 @@
 
 
 
-void hardi2c_idle(void *i2c)
+void i2c_idle(void *i2c)
 {
 }
 
 static void i2c_write_device5(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_FALSE(1)
 
-	i2c->state = hardi2c_idle;
+	i2c->state = i2c_idle;
 }
 
 
 static void i2c_write_device4(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 
 
 	WAIT_STATUS_TRUE(1)
@@ -109,14 +109,14 @@ static void i2c_write_device4(void *ptr)
   	i2c->timeout = I2C_TIMEOUT_MAX;
  	i2c->state = i2c_write_device5;
 #else
-	i2c->state = hardi2c_idle;
+	i2c->state = i2c_idle;
 #endif
 }
 
 
 static void i2c_write_device3(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 
 
 	WAIT_STATUS_TRUE(1)
@@ -133,7 +133,7 @@ static void i2c_write_device3(void *ptr)
 
 static void i2c_write_device2(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(1)
 	
 	i2c->got_event = 0;
@@ -146,7 +146,7 @@ static void i2c_write_device2(void *ptr)
 
 static void i2c_write_device1(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(1)
 	
 	i2c->got_event = 0;
@@ -159,7 +159,7 @@ static void i2c_write_device1(void *ptr)
 
 static void i2c_write_device0(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_FALSE(1)
 	
 	i2c->got_event = 0;
@@ -171,7 +171,7 @@ static void i2c_write_device0(void *ptr)
 }
 
 
-void hardi2c_write_device(hardi2c_t *i2c,
+void i2c_write_device(i2c_t *i2c,
 	unsigned char dev_address, 
 	unsigned char reg_address,
 	unsigned char value)
@@ -205,17 +205,17 @@ void hardi2c_write_device(hardi2c_t *i2c,
 
 static void i2c_read_device7(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_FALSE(1)
 	
-	i2c->state = hardi2c_idle;
+	i2c->state = i2c_idle;
 }
 
 
 
 static void i2c_read_device6(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(1)
 	
 	i2c->value = I2C_ReceiveData(i2c->regs);
@@ -248,7 +248,7 @@ static void i2c_read_device6(void *ptr)
 		i2c->want_event = I2C_FLAG_BUSY;
 #else
 
-		i2c->state = hardi2c_idle;
+		i2c->state = i2c_idle;
 #endif
 
 
@@ -260,7 +260,7 @@ static void i2c_read_device6(void *ptr)
 
 static void i2c_read_device5(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(1)
 	
 	if(i2c->bytes > 1)
@@ -282,7 +282,7 @@ static void i2c_read_device5(void *ptr)
 
 static void i2c_read_device4(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(1)
 	
 	i2c->got_event = 0;
@@ -296,7 +296,7 @@ static void i2c_read_device4(void *ptr)
 
 static void i2c_read_device3(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(2)
 	
 	i2c->got_event = 0;
@@ -311,7 +311,7 @@ static void i2c_read_device3(void *ptr)
 
 static void i2c_read_device2(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(2)
 	
 	i2c->got_event = 0;
@@ -324,7 +324,7 @@ static void i2c_read_device2(void *ptr)
 
 static void i2c_read_device1(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 	WAIT_STATUS_TRUE(1)
 	
 	i2c->got_event = 0;
@@ -337,7 +337,7 @@ static void i2c_read_device1(void *ptr)
 
 static void i2c_read_device0(void *ptr)
 {
-	hardi2c_t *i2c = (hardi2c_t*)ptr;
+	i2c_t *i2c = (i2c_t*)ptr;
 
 	WAIT_STATUS_FALSE(1)
 
@@ -350,7 +350,7 @@ static void i2c_read_device0(void *ptr)
 }
 
 
-void hardi2c_read_device(hardi2c_t *i2c,
+void i2c_read_device(i2c_t *i2c,
 	unsigned char dev_address, 
 	unsigned char reg_address)
 {
@@ -372,7 +372,7 @@ void hardi2c_read_device(hardi2c_t *i2c,
 #endif
 }
 
-void hardi2c_read_burst(hardi2c_t *i2c,
+void i2c_read_burst(i2c_t *i2c,
 	unsigned char dev_address, 
 	unsigned char reg_address,
 	int bytes)
@@ -411,7 +411,7 @@ void I2C3_EV_IRQHandler()
 
 #endif
 
-void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs, int pin_combo)
+void init_hardi2c(i2c_t *i2c, I2C_TypeDef *regs, int pin_combo)
 {
 	I2C_InitTypeDef  I2C_InitStructure;
 	GPIO_InitTypeDef  GPIO_InitStructure;
@@ -460,12 +460,14 @@ void init_hardi2c(hardi2c_t *i2c, I2C_TypeDef *regs, int pin_combo)
 	I2C_InitStructure.I2C_OwnAddress1 = 0xFE;
 	I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
 	I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-	I2C_InitStructure.I2C_ClockSpeed = 150000;
+	I2C_InitStructure.I2C_ClockSpeed = 100000;
+//	I2C_InitStructure.I2C_ClockSpeed = 100000;
+//	I2C_InitStructure.I2C_ClockSpeed = 150000;
 //	I2C_InitStructure.I2C_ClockSpeed = 200000;
 //	I2C_InitStructure.I2C_ClockSpeed = 400000;
 	/* Apply i2c->regs configuration after enabling it */
 	I2C_Init(i2c->regs, &I2C_InitStructure);
-	i2c->state = hardi2c_idle;
+	i2c->state = i2c_idle;
 
 #ifdef I2C_INTERRUPTS
  	NVIC_SetVectorTable(NVIC_VectTab_FLASH, PROGRAM_START - 0x08000000);

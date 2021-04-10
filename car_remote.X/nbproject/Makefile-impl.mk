@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=cam.X
+PROJECTNAME=car_remote.X
 
 # Active Configuration
 DEFAULTCONF=default
