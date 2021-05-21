@@ -73,7 +73,7 @@
 
 const uint8_t PACKET_KEY[] = 
 {
-    0xff, 0xe7, 0xa9, 0x38, 0x33, 0x30, 0x9e, 0x08
+    0x5b, 0xb1, 0x6e, 0x6b, 0x33, 0x30, 0x9e, 0x08
 };
 
 const uint8_t DATA_KEY[] =
@@ -137,6 +137,8 @@ const uint8_t DATA_KEY[] =
 #define MAX_FREQ 3839
 #define MIN_FREQ 160
 #define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
+
+
 // freq hopping
 uint16_t channels[] = 
 {
@@ -151,10 +153,10 @@ uint16_t channels[] =
     MIN_FREQ + FREQ_RANGE * 5 / 8, 
 };
 
-// single freq for testing
+// single freq
 // uint16_t channels[] = 
 // {
-//     MIN_FREQ + FREQ_RANGE * 1 / 2
+//     MIN_FREQ + FREQ_RANGE * 3 / 4
 // };
 
 
@@ -204,10 +206,11 @@ uint16_t channels[] =
 //#define RXCREG 0x9440     // BW 340KHz, LNA gain 0dB, RSSI -103dBm
 #define RXCREG 0x9420       // BW 400KHz, LNA gain 0dB, RSSI -103dBm
 
-//#define TXCREG 0x9850     // FSK shift: 90kHz
-#define TXCREG 0x98f0       // FSK shift: 165kHz TX power: 0db
-//#define TXCREG 0x98f7       // FSK shift: 165kHz TX power: -17.5db
-//#define TXCREG 0x98f4       // FSK shift: 165kHz TX power: -10db
+//#define TXCREG 0x9850     // FSK shift: 90kHz Full TX power
+//#define TXCREG 0x98f0       // FSK shift: 165kHz TX power: 0db
+#define TXCREG 0x98f2       // FSK shift: 165kHz TX power: -5db for RFX1010
+//#define TXCREG 0x98f4       // FSK shift: 165kHz TX power: -10db for RFX1010
+//#define TXCREG 0x98f7       // FSK shift: 165kHz TX power: -17.5db for RFX1010
 #define STSREG 0x0000
 #define RXFIFOREG 0xb000
 
@@ -328,7 +331,7 @@ uint16_t current_note = 0;
 uint16_t current_delay = 0;
 uint8_t increase_debounce = 0;
 uint8_t decrease_debounce = 0;
-#define DEBOUNCE_THRESHOLD (HZ / 10)
+#define DEBOUNCE_THRESHOLD (HZ / 10 + 1)
 
 
 // hall effect sensors
@@ -380,6 +383,12 @@ void radio_on()
     
     RADIO_SCK_LAT = 0;
     RADIO_SCK_TRIS = 0;
+
+    current_channel++;
+    if(current_channel >= TOTAL_CHANNELS)
+    {
+        current_channel = 0;
+    }
     
 // scan for synchronous code
     write_radio(FIFORSTREG);
@@ -397,20 +406,11 @@ void radio_on()
     write_radio(PMCREG | 0x0020);
 //    write_radio(PMCREG | 0x0038);
 
-    current_channel++;
-    if(current_channel >= TOTAL_CHANNELS)
-    {
-        current_channel = 0;
-    }
-
 // warm up.  1:4 prescaler for 32Mhz clock
 //    LED_LAT = 0;
     T1CON = 0b10100001;
     TMR1 = RADIO_DELAY;
     PIR1bits.TMR1IF = 0;
-
-
-
     while(!PIR1bits.TMR1IF)
     {
     }
@@ -758,10 +758,11 @@ void main()
             LED_LAT = !LED_LAT;
 
 // DEBUG
-#ifdef FAKE_GLITCHES
-glitch_counter++;
-if(glitch_counter >= 8) glitch_counter = 0;
-#endif
+// #define FAKE_GLITCHES
+// #ifdef FAKE_GLITCHES
+// glitch_counter++;
+// if(glitch_counter >= TOTAL_CHANNELS) glitch_counter = 0;
+// #endif
 
 // transmit packet
             flags.send_packet = 0;
@@ -770,7 +771,10 @@ if(glitch_counter >= 8) glitch_counter = 0;
             uint8_t throttle_value = throttle_accum2 / throttle_count2 / 4;
 
             radio_on();
-// delay for amplifier
+// delay for amplifier & framing errors
+            write_serial(0xff);
+            write_serial(0xff);
+            write_serial(0xff);
             write_serial(0xff);
 
             uint8_t i;
@@ -778,12 +782,12 @@ if(glitch_counter >= 8) glitch_counter = 0;
             {
                 write_serial(PACKET_KEY[i]);
 // DEBUG
-#ifdef FAKE_GLITCHES
-if(!glitch_counter && i == 4)
-{
-    write_serial(0x0);
-}
-#endif
+// #ifdef FAKE_GLITCHES
+// if(!glitch_counter && i == 4)
+// {
+//     write_serial(0x0);
+// }
+// #endif
             }
 
 
@@ -795,6 +799,13 @@ if(!glitch_counter && i == 4)
             write_serial(throttle_value ^ DATA_KEY[4]);
             write_serial(speed_offset2 ^ DATA_KEY[5]);
 
+// DEBUG
+// #ifdef FAKE_GLITCHES
+// if(glitch_counter < 2)
+// {
+//     write_serial(0x0);
+// }
+// #endif
             write_serial(steering_value ^ DATA_KEY[6]);
             write_serial(throttle_value ^ DATA_KEY[7]);
             write_serial(speed_offset2 ^ DATA_KEY[8]);
@@ -871,16 +882,18 @@ void __interrupt(high_priority) isr()
                 speed_offset2 = speed_offset;
             }
 
-// test buttons
-            DEBOUNCE(flags.increase_pressed, \
-                INCREASE_PORT, \
-                increase_debounce, \
-                handle_speed_increase())
-            DEBOUNCE(flags.decrease_pressed, \
-                DECREASE_PORT, \
-                decrease_debounce, \
-                handle_speed_decrease())
-
+// test buttons only when not transmitting
+//            if(!flags.disable_adc)
+//            {
+                DEBOUNCE(flags.increase_pressed, \
+                    INCREASE_PORT, \
+                    increase_debounce, \
+                    handle_speed_increase())
+                DEBOUNCE(flags.decrease_pressed, \
+                    DECREASE_PORT, \
+                    decrease_debounce, \
+                    handle_speed_decrease())
+//            }
 
 // advance song
             if(flags.playing_sound)

@@ -1636,42 +1636,42 @@ void do_auto_throttle()
 void do_manual_throttle()
 {
 // go into auto throttle if fully deflected
-//     if(truck.throttle >= truck.remote_throttle_max)
-//     {
-//         truck.auto_throttle = 1;
-//         truck.reverse = 0;
-//     }
-//     else
-//     if(truck.throttle <= truck.remote_throttle_min)
-//     {
-//         truck.auto_throttle = 1;
-//         truck.reverse = 1;
-//     }
-//     else
-// convert stick to power
+    if(truck.throttle >= truck.remote_throttle_max)
+    {
+        truck.auto_throttle = 1;
+        truck.reverse = 0;
+    }
+    else
+    if(truck.throttle <= truck.remote_throttle_min)
+    {
+        truck.auto_throttle = 1;
+        truck.reverse = 1;
+    }
+    else
+// manual control
     if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband)
     {
 // full power for 1 cycle
-        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
-//         truck.power = MOTOR_PWM_PERIOD * 
-//             truck.throttle_base100 *
-//             (truck.throttle - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
-//             (truck.remote_throttle_max - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
-//             100;
-        truck.auto_throttle = 1;
+//        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
+        truck.power = MOTOR_PWM_PERIOD * 
+            truck.throttle_base100 *
+            (truck.throttle - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
+            (truck.remote_throttle_max - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
+            100;
+//        truck.auto_throttle = 1;
         truck.reverse = 0;
     }
     else
     if(truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
     {
 // full power for 1 cycle
-        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
-//         truck.power = MOTOR_PWM_PERIOD * 
-//             truck.throttle_reverse_base100 *
-//             (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.throttle) /
-//             (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.remote_throttle_min) /
-//             100;
-        truck.auto_throttle = 1;
+//        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
+        truck.power = MOTOR_PWM_PERIOD * 
+            truck.throttle_reverse_base100 *
+            (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.throttle) /
+            (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.remote_throttle_min) /
+            100;
+//        truck.auto_throttle = 1;
         truck.reverse = 1;
     }
 }
@@ -2794,6 +2794,18 @@ void radio_get_data()
     }
 }
 
+void radio_get_debug()
+{
+    if(truck.radio.data == 0)
+    {
+        truck.radio.current_function = radio_get_code1;
+    }
+    else
+    {
+        send_uart(&truck.radio.data, 1);
+    }
+}
+
 void radio_get_code2()
 {
     if(truck.radio.data == 0xff)
@@ -2807,6 +2819,12 @@ void radio_get_code2()
         truck.radio.counter = 0;
     }
     else
+    if(truck.radio.data == 0x7e)
+    {
+        truck.radio.current_function = radio_get_debug;
+        truck.radio.counter = 0;
+    }
+    else
     {
         truck.radio.current_function = radio_get_code1;
     }
@@ -2817,6 +2835,11 @@ void radio_get_code1()
     if(truck.radio.data == 0xff)
     {
         truck.radio.current_function = radio_get_code2;
+    }
+    else
+// pass through debug text
+    {
+//        send_uart(&truck.radio.data, 1);
     }
 }
 

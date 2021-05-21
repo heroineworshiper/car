@@ -64,9 +64,11 @@ truck3.pcb: last layout for the tamiya board
 =============================================================================
 3D printed truck
 
-arm_truck2.c, arm_truck2.h: the firmware
+arm_truck2.c, arm_truck2.h: the 3D printed truck firmware
 
-hall.pcb: hall effect sensor board for 3D printed truck
+a1323.pcb: hall effect sensor board for motor sensor
+
+l6234.pcb: H bridge board for motor
 
 imu4.pcb: IMU for 3D printed truck
 
@@ -101,7 +103,7 @@ rear_tire.FCStd: most recent rear tire/wheel design
     TODO: 16 spokes
 
 
-truck_radio.pcb: remote control tx/rx for 3D printed truck
+truck_radio.pcb: remote control tx/rx for 3D printed truck & the camera
 
 truck4.pcb: mane board for 3D printed truck
 
@@ -251,7 +253,10 @@ car_remote.FCStd: remote control for vehicle
         no support
         with wide part facing bed
     TODO:
-        vertical gap between magnets & sensors
+        use single layer bridge instead of support for screw holes
+        holes for temporary screws
+
+
 
 
 
@@ -318,16 +323,6 @@ gopro.FCStd
     
     top needs "cam"
 
-gopro_rightangle.FCStd
-    right angle coupling between carbon fiber & handle
-    print with no support
-    print with laminations distributing plastic flex along curves
-
-    attachment + attachment mirror are required
-
-    cf collar: CF handle collar
-        100% infill
-
 =============================================================================
 
 Panning mount:
@@ -368,22 +363,18 @@ cam_remote.FCStd:
 TODO:
     transition layers still off
     vertical gap between magnets & sensors
-
-
+    reverse clamshell
+    make shafts part of clamshell instead of levers
+    use single layer bridge instead of support for screw holes
 
 
 
 
 gopro_bearing.FCStd:
     bearing for motorized panning
-
     print bearing inner
-     - requires support + brim but not on friction surfaces
-     TODO: make longer so horizontal section doesn't need to rub
-
     print bearing outer
      - doesn't require support
-
     must print with
         4 * "inner shroud slice"
          - TODO: make hole for tube & make base wider to compensate for lost material
@@ -391,12 +382,22 @@ gopro_bearing.FCStd:
         "outer shroud" + "bolt loop"
     
     print right angle coupling with right hole pattern to create a right angle
+    requires ironing
 
-    horizontal friction surfaces must be smooth
-     - print with ironing
+
+gopro_rightangle.FCStd
+    cf collar - print 2 for the bearing in place of the inner shroud slice & 2 for the handle
+        100% infill
+
+    old right angle coupling between carbon fiber & handle
+    print with no support
+    print with laminations distributing plastic flex along curves
+
+    attachment + attachment mirror are required
+
 
 gopro_motor.FCStd:
-    coupling to motor for panning
+    coupling to motor for panning without a gearbox
     must print with
         4 * "inner shroud slice"
          - TODO: make hole for motor shaft & make base wider to compensate for lost material
@@ -410,29 +411,24 @@ shroud.FCStd:
     205C filament 60C bed
 
 
-knob.FCStd:
-    remote control knob prototype
-    .4mm line width
-    no ironing
-    no support
-    skirt
+
+
+15mph/1185rpm on 12V with no load
+4248 traction motors with 108mm tires:
+20 turns 26 AWG
+
+
+272rpm on 10V with no load
+70 turns * 32 AWG
+
+Maximum windings: 25 turns * 26AWG
+75 turns * 32 AWG
+
+
+RPM = C constant * V voltage * A wire cross section
 
 
 
-
-
-traction motors:
-20 turns 26 AWG limited by KV
-
-
-
-
-
-
-
-
-TPU esteps: 121
-PLA esteps: 92
 
 
 

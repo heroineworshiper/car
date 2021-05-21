@@ -1,0 +1,255 @@
+# honeycomb tire with flat smooth tread & .4mm line width
+# partdesign loft is required to loft the slices
+
+import FreeCAD
+import Sketcher
+import Draft
+import math
+
+
+SKETCH_Z = 0.0
+
+doc = App.activeDocument()
+gui = Gui.activeDocument()
+
+def extruderDefaults(x):
+    x.DirMode = "Normal"
+    x.DirLink = None
+    x.LengthFwd = 0.0
+    x.LengthRev = 0.0
+    x.Solid = True
+    x.Reversed = False
+    x.Symmetric = False
+    x.TaperAngle = 0.000000000000000
+    x.TaperAngleRev = 0.000000000000000
+
+def toRad(angle):
+    return angle * math.pi * 2.0 / 360.0
+
+def toDeg(x):
+    return x * 360.0 / 2 / math.pi
+
+def polarToXYZ(angle, radius, z):
+    x = radius * math.cos(angle)
+    y = -radius * math.sin(angle)
+    return Draft.Vector(x, y, z)
+
+def polarToXYZ2(point):
+    angle = point.x
+    radius = point.y
+    z = point.z
+    return polarToXYZ(angle, radius, z)
+
+def XYZToPolar(xyz):
+    fraction = xyz.z / LENGTH
+    aspect = (TOP_ASPECT * fraction) + (1.0 - fraction)
+    xyz.x = xyz.x / aspect
+    angle = math.atan2(-xyz.y, xyz.x)
+    radius = math.hypot(xyz.x, xyz.y)
+    return Draft.Vector(angle, radius, xyz.z)
+
+
+# add vector with length & angle to start 
+def addLine(start, angle, length):
+    result = FreeCAD.Vector(start.x + length * math.cos(angle),
+        start.y + length * math.sin(angle),
+        start.z)
+    return result
+
+
+def angleChange(old_angle, new_angle):
+    result = new_angle - old_angle
+    if result > math.pi: 
+        result -= math.pi * 2
+    elif result < -math.pi:
+        result += math.pi * 2
+    return result
+
+
+# make a closed polygon
+def makePoly(sketch, coords):
+    for i in range(0, len(coords) - 1):
+        #print('makePoly ', coords[i], coords[i + 1])
+        sketch.addGeometry(Part.LineSegment(coords[i],
+            coords[i + 1]),
+            False)
+    sketch.addGeometry(Part.LineSegment(coords[len(coords) - 1],
+        coords[0]),
+        False)
+
+
+# create a border of a certain thickness for the closed polygon
+def border(sketch, coords, thickness, borderDirection):
+    total = len(coords)
+    prevStart = coords[total - 1]
+    prevEnd = coords[0]
+    start = coords[0]
+    end = coords[1]
+
+    borderLine = []
+
+    for i in range(0, total):
+        prevAngle = math.atan2(prevEnd.y - prevStart.y, prevEnd.x - prevStart.x)
+        nextAngle = math.atan2(end.y - start.y, end.x - start.x)
+        angle2 = prevAngle + angleChange(prevAngle, nextAngle) / 2.0 + borderDirection
+        mag = abs(1.0 / math.cos(angleChange(prevAngle, nextAngle) / 2.0))
+        borderLine.append(addLine(start, angle2, mag * thickness))
+
+        prevStart = start
+        prevEnd = end
+        start = end
+        if i == total - 2:
+            end = coords[0]
+        elif i == total - 1:
+            end = coords[1]
+        else:
+            end = coords[i + 2]
+    makePoly(sketch, borderLine)
+
+
+
+
+def makeTire(iRadius, 
+    oRadius, 
+    iThickness, 
+    oThickness,
+    layers, # layers of hexagons in a column
+    columns, # number of hexagon columns in a layer.  Each column is 2 hexagons side by side
+    wallThickness, # thickness of hexagon wall
+    w): # tire width (ignored)
+    iDiameter = iRadius * 2
+    oDiameter = oRadius * 2
+
+
+
+    z = 0.0
+
+    sketch = doc.addObject('Sketcher::SketchObject','tiresketch')
+    sketch.Placement = App.Placement(
+        App.Vector(0.0, 0.0, z),
+        App.Rotation(App.Vector(0, 0, 1), 0.0))
+#    gui.getObject(sketch.Label).Visibility = False
+
+# hexagon range of radii
+    iRadius = iDiameter / 2 + iThickness - wallThickness / 2
+    oRadius = oDiameter / 2 - oThickness + wallThickness / 2
+
+    for column in range(0, columns):
+# angle range of the column
+        angle0 = column * 2 * math.pi / columns
+        angle1 = (column + .5) * 2 * math.pi / columns
+        angle2 = (column + 1) * 2 * math.pi / columns
+# offset of the side points
+        angleOffset = 2.0 * math.pi / columns / 8
+        for layer in range(0, layers):
+# hexagon radius
+            r1 = iRadius + layer * (oRadius - iRadius) / layers
+            r2 = iRadius + (layer + .5) * (oRadius - iRadius) / layers
+            r3 = iRadius + (layer + 1) * (oRadius - iRadius) / layers
+            r4 = iRadius + (layer + 1.5) * (oRadius - iRadius) / layers
+
+#            print('angle0=', angle0, ' angle1=', angle1, ' r1=', r1, ' r2=', r2, ' angleOffset=', angleOffset)
+# full hexagon, even column
+            if layer == layers - 1:
+                subdivisions = 2
+                coords = []
+                angle3 = angle1 - angleOffset
+                angle4 = angle0 + angleOffset
+                for i in range(subdivisions + 1):
+                    coords.append(polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r1, 0.0))
+                coords.append(polarToXYZ(angle0 - angleOffset, r2, 0.0))
+                
+                angle3 = angle0 + angleOffset
+                angle4 = angle1 - angleOffset
+                for i in range(subdivisions + 1):
+                    coords.append(polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r3, 0.0))
+                coords.append(polarToXYZ(angle1 + angleOffset, r2, 0.0))
+                border(sketch, coords, wallThickness / 2, -math.pi / 2)
+            else:
+                coords = [
+                    polarToXYZ(angle0 + angleOffset, r1, 0.0),
+                    polarToXYZ(angle0 - angleOffset, r2, 0.0),
+                    polarToXYZ(angle0 + angleOffset, r3, 0.0),
+                    polarToXYZ(angle1 - angleOffset, r3, 0.0),
+                    polarToXYZ(angle1 + angleOffset, r2, 0.0),
+                    polarToXYZ(angle1 - angleOffset, r1, 0.0)
+                ]
+                border(sketch, coords, wallThickness / 2, -math.pi / 2)
+
+            if layer == 0:
+# inner hexagon, odd column
+                coords = []
+                angle3 = angle2 + angleOffset
+                angle4 = angle1 - angleOffset
+                subdivisions = 4
+                for i in range(subdivisions + 1):
+                    coords.append(polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r1, 0.0))
+                coords.append(polarToXYZ(angle1 + angleOffset, r2, 0.0))
+                coords.append(polarToXYZ(angle2 - angleOffset, r2, 0.0))
+                border(sketch, coords, wallThickness / 2, -math.pi / 2)
+            
+            if layer == layers - 1:
+# outer hexagon, odd column
+                coords = []
+                coords.append(polarToXYZ(angle1 + angleOffset, r2, 0.0))
+# subdivide outer curve
+                angle3 = angle1 - angleOffset
+                angle4 = angle2 + angleOffset
+                subdivisions = 4
+                for i in range(subdivisions + 1):
+                    coords.append(polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r3, 0.0))
+                
+                coords.append(polarToXYZ(angle2 - angleOffset, r2, 0.0))
+                border(sketch, coords, wallThickness / 2, -math.pi / 2)
+# middle hexagon, odd column
+            if layer < layers - 1:
+                coords = [
+                    polarToXYZ(angle1 + angleOffset, r2, 0.0),
+                    polarToXYZ(angle1 - angleOffset, r3, 0.0),
+                    polarToXYZ(angle1 + angleOffset, r4, 0.0),
+                    polarToXYZ(angle2 - angleOffset, r4, 0.0),
+                    polarToXYZ(angle2 + angleOffset, r3, 0.0),
+                    polarToXYZ(angle2 - angleOffset, r2, 0.0),
+                ]
+                border(sketch, coords, wallThickness / 2, -math.pi / 2)
+
+# inner shell
+    sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
+        Draft.Vector(0, 0, 1),
+        iDiameter / 2))
+
+# outer shell
+    sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
+        Draft.Vector(0, 0, 1),
+        oDiameter / 2))
+
+#    sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
+#        Draft.Vector(0, 0, 1),
+#        oDiameter / 2 - oThickness))
+
+
+
+#makeTire(22.0, 54.0 1.0, 1.0, 3, 12, .5, 31.4)
+
+# PLA core
+#makeTire(21.5, 42.7, 1.0, 1.0, 2, 12, .5, 31.4)
+
+# TPU center
+#makeTire( 21.5, 42.5, 1.0, 1.0, 2, 12, 1.0, .64)
+
+# 108mm TPU tire
+#makeTire(43.0, 54.0, .5, 1.0, 1, 18, .5, 30.4)
+
+
+# 74mm TPU tire
+makeTire(26.0, 37.0, .5, 1.0, 1, 12, .5, 30.4)
+
+# 74mm PLA core
+#makeTire(21.5, 25.5, .5, 1.0, 1, 18, .5, 31.4)
+
+
+
+
+
+
+

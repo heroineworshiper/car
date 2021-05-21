@@ -68,9 +68,9 @@
 
 
 
-
-// #pragma config statements should precede project file includes.
-// Use project enums instead of #define for ON and OFF.
+// print debug to the UART.  The ARM has to forward it.
+// Required for it to work at all, due to some timing anomaly.
+#define DEBUG
 
 // maximum speed for sounds
 #define CLOCKSPEED 32000000
@@ -88,7 +88,7 @@
 
 const uint8_t PACKET_KEY[] = 
 {
-    0xff, 0xe7, 0xa9, 0x38, 0x33, 0x30, 0x9e, 0x08
+    0x5b, 0xb1, 0x6e, 0x6b, 0x33, 0x30, 0x9e, 0x08
 };
 
 const uint8_t DATA_KEY[] =
@@ -96,6 +96,7 @@ const uint8_t DATA_KEY[] =
     0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xaa, 0xaa, 0xaa, 0x55, 0x55, 0x55
 };
 
+#define DATA_SIZE 12
 
 
 
@@ -216,26 +217,54 @@ typedef union
 } flags_t;
 
 
-flags_t flags;
-uint32_t tick = 0;
-uint8_t current_channel = 0;
-uint8_t missed_packets = 0;
+volatile flags_t flags;
+volatile uint32_t tick = 0;
+volatile uint8_t current_channel = 0;
+volatile uint8_t missed_packets = 0;
 #define MAX_MISSED_PACKETS HZ
 
-uint8_t serial_in;
-uint8_t key_offset;
-uint8_t data_offset;
-#define DATA_SIZE 12
-uint8_t serial_data[DATA_SIZE];
+volatile uint8_t serial_in;
+volatile uint8_t key_offset;
+volatile uint8_t data_offset;
+volatile uint8_t serial_data[DATA_SIZE];
 void (*receive_state)();
 // mane timer value when the last packet was received
-uint16_t start_time;
+volatile uint16_t start_time;
 
 
 
 
+#define UART_BUFSIZE 64
+uint8_t uart_buffer[UART_BUFSIZE];
+uint8_t uart_size = 0;
+uint8_t uart_position1 = 0;
+uint8_t uart_position2 = 0;
+
+uint16_t chars_received = 0;
 
 
+// send a UART char
+void handle_uart()
+{
+// clear the overflow bit
+    if(RCSTAbits.OERR)
+    {
+        RCSTAbits.OERR = 0;
+        RCSTAbits.CREN = 0;
+        RCSTAbits.CREN = 1;
+    }
+
+    if(uart_size > 0 && PIR1bits.TXIF)
+    {
+        PIR1bits.TXIF = 0;
+        TXREG = uart_buffer[uart_position2++];
+		uart_size--;
+		if(uart_position2 >= UART_BUFSIZE)
+		{
+			uart_position2 = 0;
+		}
+    }
+}
 
 void write_radio(uint16_t data)
 {
@@ -253,7 +282,7 @@ void write_radio(uint16_t data)
     RADIO_CS_LAT = 1;
 }
 
-void radio_on()
+void init_radio()
 {
 // enable outputs
     RADIO_CS_LAT = 1;
@@ -274,6 +303,10 @@ void radio_on()
         ClrWdt();
     }
     T1CON = 0b10000000;
+}
+
+void radio_on()
+{
 
 // scan for synchronous code
     write_radio(FIFORSTREG);
@@ -306,6 +339,65 @@ void radio_on()
     write_radio(PMCREG | 0x0080);
 }
 
+void print_byte(uint8_t c)
+{
+	if(uart_size < UART_BUFSIZE)
+	{
+		uart_buffer[uart_position1++] = c;
+		uart_size++;
+		if(uart_position1 >= UART_BUFSIZE)
+		{
+			uart_position1 = 0;
+		}
+	}
+}
+
+
+#ifdef DEBUG
+void print_text(const uint8_t *s)
+{
+	while(*s != 0)
+	{
+		print_byte(*s);
+		s++;
+	}
+}
+
+
+void print_number_nospace(uint16_t number)
+{
+	if(number >= 10000) print_byte('0' + (number / 10000));
+	if(number >= 1000) print_byte('0' + ((number / 1000) % 10));
+	if(number >= 100) print_byte('0' + ((number / 100) % 10));
+	if(number >= 10) print_byte('0' + ((number / 10) % 10));
+	print_byte('0' + (number % 10));
+}
+
+void print_number(uint16_t number)
+{
+    print_number_nospace(number);
+   	print_byte(' ');
+}
+
+void print_bin(uint8_t number)
+{
+	print_byte((number & 0x80) ? '1' : '0');
+	print_byte((number & 0x40) ? '1' : '0');
+	print_byte((number & 0x20) ? '1' : '0');
+	print_byte((number & 0x10) ? '1' : '0');
+	print_byte((number & 0x8) ? '1' : '0');
+	print_byte((number & 0x4) ? '1' : '0');
+	print_byte((number & 0x2) ? '1' : '0');
+	print_byte((number & 0x1) ? '1' : '0');
+}
+#else // DEBUG
+void print_text(const uint8_t *s) {}
+void print_number_nospace(uint16_t number) {}
+void print_number(uint16_t number) {}
+void print_bin(uint8_t number) {}
+
+#endif // !DEBUG
+
 
 void next_channel()
 {
@@ -314,7 +406,23 @@ void next_channel()
     {
         current_channel = 0;
     }
-    write_radio(CFSREG(channels[current_channel]));
+
+print_text("TUNE CHAN=");
+print_number(current_channel);
+//print_text("CHARS=");
+//print_number(chars_received);
+//print_text("RCSTA=");
+//print_bin(RCSTA);
+print_text("\n");
+chars_received = 0;
+    if(flags.scanning)
+    {
+        radio_on();
+    }
+    else
+    {
+        write_radio(CFSREG(channels[current_channel]));
+    }
 }
 
 void serial_on()
@@ -327,17 +435,6 @@ void serial_on()
     SPBRG = CLOCKSPEED / 4 / BAUD - 1;
     PIR1bits.RCIF = 0;
     PIE1bits.RCIE = 1;
-}
-
-void write_serial(uint8_t value)
-{
-    ClrWdt();
-
-    while(!PIR1bits.TXIF)
-    {
-    }
-
-    TXREG = value;    
 }
 
 void get_key();
@@ -362,8 +459,8 @@ void get_data()
 
         for(i = 3; i < DATA_SIZE; i += 3)
         {
-            if(serial_data[0] != serial_data[i] &&
-                serial_data[1] != serial_data[i + 1] &&
+            if(serial_data[0] != serial_data[i] ||
+                serial_data[1] != serial_data[i + 1] ||
                 serial_data[2] != serial_data[i + 2])
             {
 // reject packet if any value is different
@@ -380,6 +477,10 @@ void get_data()
             flags.got_packet = 1;
             flags.scanning = 0;
             missed_packets = 0;
+
+print_text("GOT CHAN=");
+print_number(current_channel);
+print_text("\n");
 // set the next hop to the start time of this packet + 1 tick - HOP_LAG
             uint16_t next_hop = start_time + TIMER0_PERIOD - HOP_LAG;
             uint16_t current_time = TMR0;
@@ -437,6 +538,7 @@ void main()
     key_offset = 0;
     receive_state = get_key;
 
+    init_radio();
     radio_on();
     serial_on();
 
@@ -449,18 +551,17 @@ void main()
 
     while(1)
     {
-        ClrWdt();
-
+        handle_uart();
 
 // guaranteed to fire before the radio gets the next packet
         if(flags.got_packet)
         {
             flags.got_packet = 0;
-            write_serial(0xff);
-            write_serial(0xe7);
-            write_serial(serial_data[0]);
-            write_serial(serial_data[1]);
-            write_serial(serial_data[2]);
+            print_byte(0xff);
+            print_byte(0xe7);
+            print_byte(serial_data[0]);
+            print_byte(serial_data[1]);
+            print_byte(serial_data[2]);
         }
     }
     
@@ -494,6 +595,7 @@ void interrupt isr()
 // too many hops without a packet.  Go to scanning mode
                 if(missed_packets > MAX_MISSED_PACKETS)
                 {
+print_text("SCANNING\n");
                     flags.scanning = 1;
                     tick = 0;
                 }
@@ -508,6 +610,7 @@ void interrupt isr()
 //            LED_LAT = !LED_LAT;
             serial_in = RCREG;
             PIR1bits.RCIF = 0;
+            chars_received++;
             receive_state();
         }
         

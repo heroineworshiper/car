@@ -1,6 +1,6 @@
 /*
  * STM32 CONTROLLER FOR CAMERA PANNER
- * Copyright (C) 2020 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2021 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,11 +90,118 @@
 #define ENABLE_GPIO GPIOA
 
 
+// frequency hopping rate
+#define HOP_HZ 25
+// rate when scanning
+#define SCAN_HZ 5
+// time before next packet we should hop (10ms)
+#define HOP_LAG (HZ / 100)
 
 const uint8_t PACKET_KEY[] = 
 {
-    0xff, 0xe7, 0x2f, 0x38, 0x73, 0xae, 0x5e, 0x90
+    0x5e, 0x1b, 0xdb, 0xc8, 0x98, 0xa1, 0x5e, 0x90
 };
+
+const uint8_t DATA_KEY[] =
+{
+    0xff, 0xff, 0x00, 0x00, 0xaa, 0xaa, 0x55, 0x55
+};
+
+#define PACKET_DATA 8
+
+// frequency hopping table.  64 frequency steps = 480khz 
+// Check temp_sensor.X & cam_remote.X for taken frequencies
+// 901-928Mhz
+#define MAX_FREQ 3839
+#define MIN_FREQ 160
+#define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
+// freq hopping.  Offset the traction controller frequencies.
+const uint16_t channels[] = 
+{
+    MIN_FREQ + FREQ_RANGE / 16, 
+    MAX_FREQ - FREQ_RANGE / 16, 
+    MIN_FREQ + FREQ_RANGE * 1 / 2 + FREQ_RANGE / 16,
+    MIN_FREQ + FREQ_RANGE * 1 / 4 + FREQ_RANGE / 16, 
+    MIN_FREQ + FREQ_RANGE * 3 / 4 - FREQ_RANGE / 16,
+    MIN_FREQ + FREQ_RANGE * 1 / 8 + FREQ_RANGE / 16, 
+    MIN_FREQ + FREQ_RANGE * 7 / 8 - FREQ_RANGE / 16, 
+    MIN_FREQ + FREQ_RANGE * 3 / 8 + FREQ_RANGE / 16,
+    MIN_FREQ + FREQ_RANGE * 5 / 8 - FREQ_RANGE / 16, 
+};
+
+#define TOTAL_CHANNELS (sizeof(channels) / sizeof(uint16_t))
+
+
+
+// RADIO_CHANNEL is from 96-3903 & set by the user
+// data rate must be slow enough to service FIFOs
+// kbps = 10000 / (29 * (DRVSREG<6:0> + 1) * (1 + DRPE * 7))
+// RADIO_BAUD_CODE = 10000 / (29 * kbps) / (1 + DRPE * 7) - 1
+// RADIO_DATA_SIZE is the amount of data to read before resetting the sync code
+
+//#define RADIO_CHANNEL 96
+
+// scan for synchronous code
+#define FIFORSTREG 0xCA81
+// read continuously
+//#define FIFORSTREG              (0xCA81 | 0x0004)
+// 915MHz
+#define FREQ_BAND 0x0030
+// Center Frequency: 915.000MHz
+//#define CFSREG (0xA000 | RADIO_CHANNEL)
+#define CFSREG(chan) (0xA000 | (chan))
+// crystal load 10pF
+#define XTAL_LD_CAP 0x0003
+// power management page 16
+#define PMCREG 0x8201
+#define GENCREG (0x8000 | XTAL_LD_CAP | FREQ_BAND)
+
+
+// +3/-4 Fres
+//#define AFCCREG 0xc4f7
+// +15/-16 Fres
+#define AFCCREG 0xc4d7
+
+// Data Rate
+// data rate must be slow enough to service FIFOs
+// kbps = 10000 / (29 * (DRVSREG<6:0> + 1) * (1 + DRPE * 7))
+// RADIO_BAUD_CODE = 10000 / (29 * kbps) - 1
+#define RADIO_BAUD_CODE 3
+
+// data rate prescaler.  Divides data rate by 8 if 1
+//#define DRPE (1 << 7)
+#define DRPE 0
+#define DRVSREG (0xC600 | DRPE | RADIO_BAUD_CODE)
+
+
+// Page 37 of the SI4421 datasheet gives optimum bandwidth values
+// but the lowest that works is 200khz
+//#define RXCREG 0x9481     // BW 200KHz, LNA gain 0dB, RSSI -97dBm
+//#define RXCREG 0x9440     // BW 340KHz, LNA gain 0dB, RSSI -103dBm
+#define RXCREG 0x9420       // BW 400KHz, LNA gain 0dB, RSSI -103dBm
+
+//#define TXCREG 0x9850     // FSK shift: 90kHz
+#define TXCREG 0x98f0       // FSK shift: 165kHz
+#define STSREG 0x0000
+#define RXFIFOREG 0xb000
+
+// analog filter for raw mode
+#define BBFCREG                 0xc23c
+
+volatile int current_channel = 0;
+volatile int missed_packets = 0;
+// start time of last received packet
+volatile int packet_tick = 0;
+// time of next hop
+volatile int next_hop = 0;
+volatile int need_hop = 0;
+volatile int scanning = 0;
+#define MAX_MISSED_PACKETS HOP_HZ
+
+
+
+
+
 
 
 const uint16_t sin_table[] = {
@@ -187,7 +294,6 @@ volatile int tick = 0;
 
 // radio parsing
 void (*radio_function)();
-#define PACKET_DATA 8
 #define RADIO_BUFSIZE (sizeof(PACKET_KEY) + PACKET_DATA)
 volatile unsigned char receive_buf[RADIO_BUFSIZE];
 volatile int radio_counter = 0;
@@ -224,45 +330,6 @@ void write_motor()
 
 
 
-// DEBUG uart
-void USART6_IRQHandler(void)
-{
-	unsigned char c = USART6->DR;
-	uart.input = c;
-	uart.got_input = 1;
-}
-
-// radio uart
-void USART3_IRQHandler(void)
-{
-	radio_data = USART3->DR;
-	radio_function();
-}
-
-// TIM10 wraps at HZ
-void TIM1_UP_TIM10_IRQHandler()
-{
-	if(TIM10->SR & TIM_FLAG_Update)
-	{
-		TIM10->SR = ~TIM_FLAG_Update;
-		
-//        TOGGLE_PIN(LED_GPIO, LED_PIN);
-
-		tick++;
-
-
-// reset the control code
-        if(timeout_counter >= RADIO_TIMEOUT)
-        {
-            control_valid = 0;
-        }
-        else
-        {
-            timeout_counter++;
-        }
-	}
-}
-
 void get_key();
 void get_packet()
 {
@@ -274,18 +341,29 @@ void get_packet()
         
         int i;
         int failed = 0;
+
+// XOR the data key
+        for(i = 0; i < PACKET_DATA; i++)
+        {
+            receive_buf[i] ^= DATA_KEY[i];
+        }
+
         for(i = 2; i < PACKET_DATA; i += 2)
         {
+// reject an invalid packet
             if(receive_buf[i] != receive_buf[0] ||
                 receive_buf[i + 1] != receive_buf[1])
             {
+                failed = 1;
                 break;
             }
         }
 
         if(!failed)
         {
-// print_text("tick=");
+//TRACE2
+//print_text("tick=");
+//print_number(tick);
 // print_number(receive_buf[0]);
 // print_text("blink_counter=");
 // print_number(receive_buf[1]);
@@ -293,9 +371,22 @@ void get_packet()
 
             TOGGLE_PIN(LED_GPIO, LED_PIN);
             timeout_counter = 0;
+//print_text("got chan=");
+//print_number(current_channel);
+//print_lf();
             timelapse_code = receive_buf[0];
             adc_raw = receive_buf[1];
             control_valid = 1;
+//TRACE2
+//print_text("timelapse_code=");
+//print_number(timelapse_code);
+//print_text("adc_raw=");
+//print_number(adc_raw);
+
+// schedule the next hop to the start time of this packet + HOP duration + HOP_LAG
+            scanning = 0;
+            missed_packets = 0;
+            next_hop = packet_tick + HZ / HOP_HZ - HOP_LAG;
         }
     }
 }
@@ -304,6 +395,11 @@ void get_key()
 {
     if(radio_data == PACKET_KEY[radio_counter])
     {
+        if(radio_counter == 0)
+        {
+            packet_tick = tick;
+        }
+    
         radio_counter++;
         if(radio_counter >= sizeof(PACKET_KEY))
         {
@@ -314,6 +410,7 @@ void get_key()
     else
     if(radio_data == PACKET_KEY[0])
     {
+        packet_tick = tick;
         radio_counter = 1;
     }
     else
@@ -342,9 +439,10 @@ void write_radio(uint16_t data)
             CLEAR_PIN(RADIO_SDO_GPIO, RADIO_SDO_PIN);
         }
         data <<= 1;
-        udelay(1);
+// need the delay if the system clock is over 16Mhz
+//        udelay(1);
         SET_PIN(RADIO_CLK_GPIO, RADIO_CLK_PIN);
-        udelay(1);
+//        udelay(1);
         CLEAR_PIN(RADIO_CLK_GPIO, RADIO_CLK_PIN);
     }
     
@@ -353,6 +451,7 @@ void write_radio(uint16_t data)
 
 void init_radio()
 {
+    TRACE
     GPIO_InitTypeDef GPIO_InitStructure;
 	radio_function = get_key;
 
@@ -412,62 +511,6 @@ void init_radio()
     
 
 
-// RADIO_CHANNEL is from 96-3903 & set by the user
-// data rate must be slow enough to service FIFOs
-// kbps = 10000 / (29 * (DRVSREG<6:0> + 1) * (1 + DRPE * 7))
-// RADIO_BAUD_CODE = 10000 / (29 * kbps) / (1 + DRPE * 7) - 1
-// RADIO_DATA_SIZE is the amount of data to read before resetting the sync code
-
-#define RADIO_CHANNEL 96
-
-// scan for synchronous code
-#define FIFORSTREG 0xCA81
-// read continuously
-//#define FIFORSTREG              (0xCA81 | 0x0004)
-// 915MHz
-#define FREQ_BAND 0x0030
-// Center Frequency: 915.000MHz
-#define CFSREG (0xA000 | RADIO_CHANNEL)
-// crystal load 10pF
-#define XTAL_LD_CAP 0x0003
-// power management page 16
-#define PMCREG 0x8201
-#define GENCREG (0x8000 | XTAL_LD_CAP | FREQ_BAND)
-
-
-// +3/-4 Fres
-//#define AFCCREG 0xc4f7
-// +15/-16 Fres
-#define AFCCREG 0xc4d7
-
-// Data Rate
-// data rate must be slow enough to service FIFOs
-// kbps = 10000 / (29 * (DRVSREG<6:0> + 1) * (1 + DRPE * 7))
-// RADIO_BAUD_CODE = 10000 / (29 * kbps) - 1
-#define RADIO_BAUD_CODE 3
-
-// data rate prescaler.  Divides data rate by 8 if 1
-//#define DRPE (1 << 7)
-#define DRPE 0
-#define DRVSREG (0xC600 | DRPE | RADIO_BAUD_CODE)
-
-
-// Page 37 of the SI4421 datasheet gives optimum bandwidth values
-// but the lowest that works is 200khz
-//#define RXCREG 0x9481     // BW 200KHz, LNA gain 0dB, RSSI -97dBm
-//#define RXCREG 0x9440     // BW 340KHz, LNA gain 0dB, RSSI -103dBm
-#define RXCREG 0x9420       // BW 400KHz, LNA gain 0dB, RSSI -103dBm
-
-//#define TXCREG 0x9850     // FSK shift: 90kHz
-#define TXCREG 0x98f0       // FSK shift: 165kHz
-#define STSREG 0x0000
-#define RXFIFOREG 0xb000
-
-// analog filter for raw mode
-#define BBFCREG                 0xc23c
-
-
-
 
 // scan for synchronous code
     write_radio(FIFORSTREG);
@@ -475,21 +518,21 @@ void init_radio()
     write_radio(FIFORSTREG | 0x0002);
     write_radio(GENCREG);
     write_radio(AFCCREG);
-    write_radio(CFSREG);
+    write_radio(CFSREG(channels[current_channel]));
     write_radio(DRVSREG);
     write_radio(PMCREG);
     write_radio(RXCREG);
     write_radio(TXCREG);
     write_radio(BBFCREG);
-// turn on the transmitter to tune
-    write_radio(PMCREG | 0x0020);
+// turn on the transmitter to tune.  Not necessary to receive.
+//    write_radio(PMCREG | 0x0020);
 
 // warm up
-    int tick1 = tick;
-    while(tick - tick1 < HZ / 100)
-    {
-        ;
-    }
+//     int tick1 = tick;
+//     while(tick - tick1 < HZ / 100)
+//     {
+//         ;
+//     }
 
 // receive mode
     write_radio(PMCREG | 0x0080);
@@ -498,12 +541,28 @@ void init_radio()
 
 
 
+void next_channel()
+{
+    current_channel++;
+    if(current_channel >= TOTAL_CHANNELS)
+    {
+        current_channel = 0;
+    }
+//print_text("tune chan=");
+//print_number(current_channel);
+//print_lf();
+    write_radio(CFSREG(channels[current_channel]));
+}
+
+
+
+
 
 
 
 void init_motor()
 {
-
+    TRACE
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
 
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_TIM5);
@@ -586,6 +645,53 @@ void init_watchdog()
 
 
 
+// DEBUG uart
+void USART6_IRQHandler(void)
+{
+	unsigned char c = USART6->DR;
+	uart.input = c;
+	uart.got_input = 1;
+}
+
+// radio uart
+void USART3_IRQHandler(void)
+{
+	radio_data = USART3->DR;
+	radio_function();
+}
+
+
+
+// TIM10 wraps at HZ
+void TIM1_UP_TIM10_IRQHandler()
+{
+	if(TIM10->SR & TIM_FLAG_Update)
+	{
+		TIM10->SR = ~TIM_FLAG_Update;
+		
+//        TOGGLE_PIN(LED_GPIO, LED_PIN);
+
+		tick++;
+
+
+// reset the control code
+        if(timeout_counter >= RADIO_TIMEOUT)
+        {
+            control_valid = 0;
+        }
+        else
+        {
+            timeout_counter++;
+        }
+
+
+        if(tick >= next_hop)
+        {
+            need_hop = 1;
+        }
+
+	}
+}
 
 int main(void)
 {
@@ -596,7 +702,7 @@ int main(void)
 // switch system clock to non PLL
     RCC_SYSCLKConfig(RCC_SYSCLKSource_HSI);
 // disable mane PLL
-    RCC_PLLCmd(DISABLE);
+//    RCC_PLLCmd(DISABLE);
 
 // clockspeed = 8Mhz / PLLM * PLLN / PLL_P
 // 168Mhz = 63mA
@@ -607,12 +713,12 @@ int main(void)
 #define PLL_N 32
 #define PLL_P 2
 #define PLL_Q 7
-    RCC->PLLCFGR = PLL_M | 
-		(PLL_N << 6) | 
-		(((PLL_P >> 1) -1) << 16) |
-        (RCC_PLLCFGR_PLLSRC_HSI) | 
-		(PLL_Q << 24);
-    RCC_PLLCmd(ENABLE);
+//     RCC->PLLCFGR = PLL_M | 
+// 		(PLL_N << 6) | 
+// 		(((PLL_P >> 1) -1) << 16) |
+//         (RCC_PLLCFGR_PLLSRC_HSI) | 
+// 		(PLL_Q << 24);
+//     RCC_PLLCmd(ENABLE);
 
 
 
@@ -660,12 +766,14 @@ int main(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM10, ENABLE);
 	TIM_DeInit(TIM10);
 	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-	TIM_TimeBaseStructure.TIM_Period = RCC_ClocksStatus.SYSCLK_Frequency / 100 / 1000 - 1;
+	TIM_TimeBaseStructure.TIM_Period = RCC_ClocksStatus.SYSCLK_Frequency / 100 / HZ - 1;
 	TIM_TimeBaseStructure.TIM_Prescaler = 100;
 	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInit(TIM10, &TIM_TimeBaseStructure);
 	TIM_Cmd(TIM10, ENABLE);
+
+
 
 
 
@@ -705,11 +813,13 @@ int main(void)
 	init_motor();
     init_radio();
 
+    TRACE
 // wait a while
     while(tick < HZ)
     {
         ;
     }
+    TRACE
 
     print_text("Enabling motor\n");
    	SET_PIN(ENABLE_GPIO, ENABLE_PIN);
@@ -832,18 +942,18 @@ int main(void)
                 
             }
 
-            if(debug_count == 0)
-            {
-                 print_text("adc=");
-                 print_number(adc_raw);
-                 print_text("timelapse_code=");
-                 print_hex(timelapse_code);
-                 print_text("phase_speed=");
-                 print_fixed(target_phase_speed);
-                 print_text("acceleration=");
-                 print_fixed(acceleration);
-                 print_lf();
-            }
+//             if(debug_count == 0)
+//             {
+//                  print_text("adc=");
+//                  print_number(adc_raw);
+//                  print_text("timelapse_code=");
+//                  print_hex(timelapse_code);
+//                  print_text("phase_speed=");
+//                  print_fixed(target_phase_speed);
+//                  print_text("acceleration=");
+//                  print_fixed(acceleration);
+//                  print_lf();
+//             }
 
 // add timelapse speed to phase speed.  Reverse direction for gearbox.
             const int timelapse_speeds[] = 
@@ -857,13 +967,16 @@ int main(void)
                 0,
                 0
             };
+            int total_timelapse_speeds = sizeof(timelapse_speeds) / sizeof(int);
             int timelapse_speed = 0;
-            if(control_valid)
+            if(control_valid && 
+                timelapse_code >= 0 && 
+                timelapse_code < total_timelapse_speeds)
             {
                 timelapse_speed = timelapse_speeds[timelapse_code];
             }
 
-           int new_phase = phase + (phase_speed + timelapse_speed) / FRAME_HZ;
+            int new_phase = phase + (phase_speed + timelapse_speed) / FRAME_HZ;
 // wrap angle
             while(new_phase < 0)
             {
@@ -888,6 +1001,46 @@ int main(void)
 //             print_number(seconds);
 //             print_lf();
         }
+
+
+// frequency hopping
+        if(need_hop)
+        {
+            need_hop = 0;
+            if(scanning)
+            {
+                next_hop = tick + HZ / SCAN_HZ;
+            }
+            else
+            {
+// always incremented, whether we got a packet or not
+                missed_packets++;
+// too many hops without a packet.  Go to scanning mode
+                if(missed_packets > MAX_MISSED_PACKETS)
+                {
+                    scanning = 1;
+                    next_hop = tick + HZ / SCAN_HZ;
+                }
+                else
+                {
+                    next_hop = tick + HZ / HOP_HZ;
+                }
+            }
+
+//             if(missed_packets > 1)
+//             {
+//                 print_text("missed chan=");
+//                 print_number(current_channel);
+//                 print_lf();
+//             }
+//TRACE2
+//print_text("scanning=");
+//print_number(scanning);
+//print_text("current_channel=");
+//print_number(current_channel);
+            next_channel();
+        }
+
         
         PET_WATCHDOG
 	}
