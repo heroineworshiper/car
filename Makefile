@@ -233,6 +233,7 @@ ARM_TRUCK_OBJS := \
         arm_xbee.o
 
 ARM_TRUCK2_OBJS := \
+        arm_fs.o \
         arm_motors.o \
 	arm_truck2.o \
 	arm_softi2c.o
@@ -346,7 +347,7 @@ cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS)
 		-T../copter/stm32f4/main.ld
 	$(OBJCOPY) -O binary cam.elf cam.bin
 
-$(ARM_OBJS) $(ARM_TRUCK_OBJS) arm_motors.o arm_truck2.o arm_softi2c.o $(ARM_CAR_OBJS) $(ARM_CAM_OBJS):
+$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_TRUCK2_OBJS) $(ARM_CAR_OBJS) $(ARM_CAM_OBJS):
 	`cat arm_gcc` -c $< -o $*.o
 
 car: car.hex car_remote.s
@@ -554,6 +555,7 @@ stm32f4xx_exti.o: stm32f4xx_exti.c
 ../copter/stm32f4/system_stm32f4xx.o: ../copter/stm32f4/system_stm32f4xx.c
 arm_cam.o: 			     arm_cam.c
 arm_car.o: 			     arm_car.c
+arm_fs.o:                            arm_fs.c
 arm_motors.o:                        arm_motors.c
 arm_nav.o:                           arm_nav.c
 arm_truck.o: 			     arm_truck.c

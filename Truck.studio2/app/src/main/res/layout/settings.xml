@@ -35,7 +35,20 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:onClick="onClick"
-                android:text="Reset gyro" />
+                android:text="Reset Gyro" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
+
+            <Button
+                android:id="@+id/test_motors"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Test Motors" />
         </TableRow>
 
         <TableRow

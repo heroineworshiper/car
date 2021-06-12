@@ -21,9 +21,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.DialogInterface;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
@@ -220,6 +222,41 @@ public class Truck extends Thread {
 		ostream = null;
 	}
 	
+    
+    static public void confirm(Activity activity, final int command)
+    {
+		AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
+	//	Log.i("Truck", "confirm command=" + command);
+        switch(command)
+        {
+            case RESET_COMMAND:
+                dialog.setMessage("Really reset gyro?");
+                break;
+
+            case TEST_MOTORS_COMMAND:
+                dialog.setMessage("Really test motors?");
+                break;
+        }
+    	
+    	dialog.setPositiveButton("Yes", new DialogInterface.OnClickListener()
+    	{
+            public void onClick(DialogInterface dialog, int which) 
+            {
+                switch(command)
+                {
+                    case RESET_COMMAND:
+                        Truck.needReset = true;
+                        break;
+
+                    case TEST_MOTORS_COMMAND:
+                        Truck.testMotors = true;
+                        break;
+                }
+            }
+        });
+    	dialog.setNegativeButton("No", null);
+    	dialog.show();
+    }
 	
     public void run() 
     {
@@ -264,6 +301,18 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) 0;
 		    			
 		    			needReset = false;
+	    			}
+	    			else
+	    			if(testMotors)
+	    			{
+	    				// reset gyro
+	    				// size
+		    			offset = Math2.write_int16(beacon, offset, 10);
+		    			// command
+		    			beacon[offset++] = (byte) TEST_MOTORS_COMMAND;
+		    			beacon[offset++] = (byte) 0;
+		    			
+		    			testMotors = false;
 	    			}
 	    			else
 	    			if(needConfig)
@@ -803,6 +852,7 @@ public class Truck extends Thread {
 	static final int GET_STATUS = 0;
 	static final int RESET_COMMAND = 1;
 	static final int NEW_CONFIG = 2;
+	static final int TEST_MOTORS_COMMAND = 3;
 
 // packets we get back from the vehicle
 	static final int STATUS_PACKET = 0;
@@ -825,6 +875,7 @@ public class Truck extends Thread {
 // 	static int vanish_x, vanish_y, bottom_x;
     
     static boolean needReset = false;
+    static boolean testMotors = false;
     static boolean needConfig = false;
 //    static boolean needSaveConfig = false;
 	static boolean needMag = false;

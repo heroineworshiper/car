@@ -8,19 +8,19 @@ importlib.reload(libisogrid)
 BORDER = 1.0
 
 # battery wall
-if False:
+if True:
     extrudeTris, extrudeSubs = libisogrid.makeGrid(37.5, \
-        54, \
+        38, \
         2, \
-        2, \
-        [ .6, .6 ], \
-        [ 1.2, 1.2 ], \
+        1.5, \
+        [ 1, 1 ], \
+        [ 1, 1 ], \
         0, \
         0, \
         2, \
-        1.2)
+        1)
     extrudeTris.Placement = App.Placement(
-        App.Vector(-55.8, -10.4, -27),
+        App.Vector(-43.2, -10.4, -7),
         App.Rotation(App.Vector(.58, .58, .58), 120))
 
 
@@ -113,7 +113,7 @@ if False:
 
 
 # front
-if True:
+if False:
     W = 72.8
     H = 119.0
     X_SLICES = 4

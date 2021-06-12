@@ -73,6 +73,11 @@
 #define HALL_OVERSAMPLE 2
 #define ANGLE_STEP 40
 
+// memory resident table creation
+#define LINES (360 * 7 / ANGLE_STEP)
+extern uint16_t motor_lines[LINES][4];
+
+
 #define PACKET_SIZE 8
 
 // timer for packet flashing

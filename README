@@ -154,29 +154,27 @@ radio_box.FCStd:
 traction.FCMacro: create objects for traction
 
 traction.FCStd: traction section
+    .8mm nozzle, .32mm layer height, no support
+    battery walls:
+        print fillet side up so the laminations are the right way.
     latch pivot
     back, front, door:
         fillet on top
         support to base only, 80 degrees
     bottom, electronicals:
-        .4mm top/bottom thickness
         no support
-    magnet holder, hall support
-        support to base
-        print motor support, encoder pieces with .8mm top/bottom thickness
+    right side:
+        side cutout
+        hinge
+        captive nuts
+
     union for both sides (motor support | side cutout) & side mask
     union for both sides (motor support & motor mask)
     union for both sides (motor support | side cutout) & bottom mask
      - boolean error causes it to not print mirrored side.  Use cura mirror instead.
     union for both sides (motor support | side cutout) & top mask
-    print 2 x hinge half
-    print latch
-     - note latch is not symmetric
-    
-    TODO:
-        use smaller rectangle for magnet support
-        captive nuts for motor farsteners
 
+    TODO: captive nuts for angle rod farsteners
 
 
 
@@ -217,14 +215,18 @@ rear_wheel.FCStd: motor wheel coupling
 
 
 motor.FCStd: motor mount
-    use 1mm nozzle, .32 layer height, support with 80deg overhang
-    support blocker, shroud, screw support
-    gasket out of TPU
+    The following use .8mm nozzle, .32 layer height, support with 80deg overhang
+    shroud
+    tpu out of TPU
     clamp * 4
     motor plate
+
+    The following use .4mm nozzle, .2mm layer
     sensor plate
-    
-    
+        .8mm top/bottom thickness
+    magnet holder
+        support to base
+        PETG
 
 
 car_remote.FCMacro:

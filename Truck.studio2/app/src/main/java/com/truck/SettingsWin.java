@@ -146,7 +146,12 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
 //        	Truck.needSaveConfig = true;
 //        	break;
         case R.id.reset:
-        	Truck.needReset = true;
+            Truck.confirm(this, Truck.RESET_COMMAND);
+//        	Truck.needReset = true;
+        	break;
+        case R.id.test_motors:
+            Truck.confirm(this, Truck.TEST_MOTORS_COMMAND);
+//        	Truck.testMotors = true;
         	break;
   		}
   	}

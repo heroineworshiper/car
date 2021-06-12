@@ -10,7 +10,7 @@
 
 #define ANGLE_STEP 40
 #define LINES (360 * 7 / ANGLE_STEP)
-int motor_lines[LINES][5];
+int motor_lines[LINES][4];
 
 
 // copy unique values in ascending order
@@ -112,7 +112,7 @@ void tabulate_sensors(int hall0, int hall1)
                 if(distance < nearest_distance ||
                     nearest_distance < 0)
                 {
-                    angle = motor_lines[k][0];
+                    angle = k * ANGLE_STEP;
                     nearest_distance = distance;
                 }
             }
@@ -160,11 +160,11 @@ void main()
             int angle, hall0, hall1, hall2, hall3;
             sscanf(ptr, "%d%d%d%d%d", &angle, &hall0, &hall1, &hall2, &hall3);
 //            printf("%d %d %d %d %d\n", angle, hall0, hall1, hall2, hall3);
-            motor_lines[current_line][0] = angle;
-            motor_lines[current_line][1] = hall0;
-            motor_lines[current_line][2] = hall1;
-            motor_lines[current_line][3] = hall2;
-            motor_lines[current_line][4] = hall3;
+//            motor_lines[current_line][0] = angle;
+            motor_lines[current_line][0] = hall0;
+            motor_lines[current_line][1] = hall1;
+            motor_lines[current_line][2] = hall2;
+            motor_lines[current_line][3] = hall3;
             current_line++;
         }
 //        printf("%s", string);
@@ -178,8 +178,8 @@ void main()
     }
 
     printf("// created by motor_table.c\n");
-    tabulate_sensors(1, 2);
-    tabulate_sensors(3, 4);
+    tabulate_sensors(0, 1);
+    tabulate_sensors(2, 3);
 
 
 
@@ -190,10 +190,10 @@ void main()
 //     for(i = 0; i < LINES; i++)
 //     {
 //         printf("\t%d, %d, %d, %d, \n",
+//             motor_lines[i][0],
 //             motor_lines[i][1],
 //             motor_lines[i][2],
-//             motor_lines[i][3],
-//             motor_lines[i][4]);
+//             motor_lines[i][3]);
 //     }
 //     printf("};\n");
     

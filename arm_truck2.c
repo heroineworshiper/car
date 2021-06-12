@@ -57,7 +57,7 @@
 
 
 
-
+#include "arm_fs.h"
 #include "arm_truck2.h"
 #include "linux.h"
 #include "uart.h"
@@ -77,10 +77,6 @@
 #define SYNC_CODE 0xe5
 
 
-// start of persistent settings
-#define SETTINGS_START 0x0800c000
-// end of settings
-#define SETTINGS_END 0x08010000
 // size of settings block
 #define SETTINGS_SIZE 256
 // Magic number for settings
@@ -98,6 +94,7 @@
 #define GET_STATUS 0
 #define RESET_COMMAND 1
 #define NEW_CONFIG 2
+#define TEST_MOTORS_COMMAND 3
 
 // packets we send to the phone
 #define STATUS_PACKET 0
@@ -149,7 +146,9 @@ int capture_i2c = 0;
 truck_t truck;
 
 int get_motor_angle(int motor, int hall);
-
+void init_motor_tables();
+void do_motor_table();
+void start_motor_test();
 
 // created by tables.c
 const uint8_t sin_table[] = 
@@ -623,156 +622,22 @@ int read_config_packet(const unsigned char *buffer)
 	return offset;
 }
 
-uint32_t next_config_address()
-{
-	uint32_t address = SETTINGS_START;
-	while(address < SETTINGS_END)
-	{
-		unsigned char *ptr = (unsigned char *)address;
-		if((ptr[0] == 0xff) &&
-			(ptr[1] == 0xff) &&
-			(ptr[2] == 0xff) &&
-			(ptr[3] == 0xff))
-		{
-			return address;
-		}
-		address += SETTINGS_SIZE;
-	}
-	return address;
-}
-
-void save_config(unsigned char *buffer, int bytes)
-{
-    int attempts = 0;
-    int max_attempts = 3;
-
-    TRACE2
-    for(attempts = 0; attempts < max_attempts; attempts++)
-    {
-// try writing it
-   	    USART_Cmd(UART5, DISABLE);
-   	    USART_Cmd(USART1, DISABLE);
-   	    USART_Cmd(USART6, DISABLE);
-
-	    FLASH_Unlock();
-	    FLASH_ClearFlag(FLASH_FLAG_EOP | 
-		    FLASH_FLAG_OPERR | 
-		    FLASH_FLAG_WRPERR | 
-    	    FLASH_FLAG_PGAERR | 
-		    FLASH_FLAG_PGPERR |
-		    FLASH_FLAG_PGSERR); 
-
-
-// get next address to write settings
-	    uint32_t address = next_config_address();
-	    if(address == SETTINGS_END)
-	    {
-		    address = SETTINGS_START;
-    	    if (FLASH_EraseSector(FLASH_Sector_3, VoltageRange_3) != FLASH_COMPLETE)
-		    {
-		    }
-	    }
-
-        uint32_t address2 = address;
-        const unsigned char *ptr = (unsigned char*)address;
-	    const unsigned char start_code[] = 
-	    {
-		    (SETTINGS_MAGIC >> 24) & 0xff,
-		    (SETTINGS_MAGIC >> 16) & 0xff,
-		    (SETTINGS_MAGIC >> 8) & 0xff,
-		    SETTINGS_MAGIC & 0xff,
-	    };
-
-
-	    /* Clear pending flags (if any) */  
-	    FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | 
-            FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR|FLASH_FLAG_PGSERR); 
-	    if(FLASH_ProgramWord(address, *(int*)(start_code)) != FLASH_COMPLETE)
-	    {
-	    }
-
-	    address += 4;
-
-
-    // Align on 4 bytes
-	    while(bytes % 4) buffer[bytes++] = 0;
-	    int i;
-	    for(i = 0; i < bytes; i += 4)
-	    {
-		    if (FLASH_ProgramWord(address + i, *(int*)(buffer + i)) != FLASH_COMPLETE)
-		    {
-		    }
-	    }
-
-
-	    FLASH_Lock(); 
-
-
-   	    USART_Cmd(USART6, ENABLE);
-   	    USART_Cmd(USART1, ENABLE);
-   	    USART_Cmd(UART5, ENABLE);
-
-// verify it
-        int pass = 1;
-        if(start_code[0] != ptr[0] ||
-            start_code[1] != ptr[1] ||
-            start_code[2] != ptr[2] ||
-            start_code[3] != ptr[3])
-        {
-            pass = 0;
-        }
-
-        for(i = 0; i < bytes && pass; i++)
-        {
-            if(ptr[4 + i] != buffer[i])
-            {
-                pass = 0;
-            }
-        }
-
-        if(pass)
-        {
-	        TRACE2
-            print_text("address=");
-            print_hex(address2);
-	        print_text("Saved flash config\n");
-            break;
-        }
-        else
-        if(attempts < max_attempts - 1)
-        {
-	        TRACE2
-            print_text("address=");
-            print_hex(address2);
-	        print_text("Flash verify failed.\n");
-        }
-        else
-        {
-	        TRACE2
-            print_text("address=");
-            print_hex(address2);
-	        print_text("All flash verifies failed.  Giving up & going to a movie.\n");
-        }
-    }
-}
-
 // called during bootup only
 void load_config()
 {
 // Load settings from flash
-	uint32_t address = next_config_address();
-	if(address > SETTINGS_START) address -= SETTINGS_SIZE;
-
-	const unsigned char *buffer = (unsigned char*)address;
-	if((buffer[0] == ((SETTINGS_MAGIC >> 24) & 0xff)) &&
-		(buffer[1] == ((SETTINGS_MAGIC >> 16) & 0xff)) &&
-		(buffer[2] == ((SETTINGS_MAGIC >> 8) & 0xff)) &&
-		(buffer[3] == (SETTINGS_MAGIC & 0xff)))
-	{
-		TRACE2
-		print_text("Loading flash config\n");
-		read_config_packet(buffer + 4);
+	uint32_t address = next_address(SETTINGS_MAGIC);
+	if(address != 0xffffffff)
+    {
+        address += 8;
+        const unsigned char *buffer = (unsigned char*)address;
+		read_config_packet(buffer);
 	}
+    else
+    {
+        TRACE2
+        print_text("config not found\n");
+    }
 }
 
 
@@ -905,6 +770,11 @@ static void handle_beacon()
 				ENABLE_INTERRUPTS
 				break;
 
+
+            case TEST_MOTORS_COMMAND:
+                start_motor_test();
+                break;
+
 // config file
 			case NEW_CONFIG:
 			{
@@ -918,8 +788,10 @@ static void handle_beacon()
 
 				if(need_save)
 				{
-					save_config(receive_buf + offset,
-						bytes);
+                    int bytes_rounded = bytes + (4 - (bytes % 4));
+					save_file(SETTINGS_MAGIC,
+                        receive_buf + offset,
+						bytes_rounded);
 
 					CLEAR_PIN(LED_GPIO, RED_LED);
 					int i;
@@ -2152,6 +2024,8 @@ void init_motors()
         truck.motors[i].prev_phase = -1;
     }
 
+    init_motor_tables();
+
 // PWM pins
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
@@ -2360,7 +2234,15 @@ void handle_halls()
     }
 }
 
-
+void start_motor_test()
+{
+    TRACE2
+    print_text("Starting motor test\n");
+    truck.testing_motors = 1;
+    truck.power = MOTOR_PWM_PERIOD / 4;
+    truck.test_tick = truck.tick + TIMER_HZ;
+    truck.test_state = START_TEST;
+}
 
 void handle_motors()
 {
@@ -2613,16 +2495,17 @@ void handle_motors()
                     break;
 
 
-    // capture waveforms
+// capture waveforms
                 case TEST_PASS2:
-                    truck.test_tick = truck.tick + TIMER_HZ;
+//                    truck.test_tick = truck.tick + TIMER_HZ;
+                    truck.test_tick = truck.tick + TIMER_HZ / 2;
                     if(truck.test_counter == 1)
                     {
                         truck.test_counter = 0;
 
                         if(truck.power > 0)
                         {
-    // print reading for last motor phase
+// print reading for last motor phase
                             TRACE2
                             print_text("MOTORS: ");
                             print_number(truck.test_phase);
@@ -2631,22 +2514,31 @@ void handle_motors()
                             print_number(truck.halls[RIGHT_HALL].value);
                             print_number(truck.halls[RIGHT_HALL + 1].value);
                             print_lf();
+                            
+                            int index = truck.test_phase / ANGLE_STEP;
+                            motor_lines[index][0] = truck.halls[LEFT_HALL].value;
+                            motor_lines[index][1] = truck.halls[LEFT_HALL + 1].value;
+                            motor_lines[index][2] = truck.halls[RIGHT_HALL].value;
+                            motor_lines[index][3] = truck.halls[RIGHT_HALL + 1].value;
                         }
 
                         truck.test_phase += ANGLE_STEP;
                         if(truck.test_phase >= 360 * 7)
                         {
-            // done testing
+// done testing
                             TRACE2
                             print_text("Test done\n");
                             truck.power = 0;
                             write_motors();
                             truck.test_state = TEST_DONE;
                             truck.testing_motors = 0;
+
+// create new RAM tables
+                            do_motor_table();
                         }
                         else
                         {
-            // advance motor phase
+// advance motor phase
                             truck.motors[LEFT_MOTOR].phase = truck.test_phase % 360;
                             truck.motors[RIGHT_MOTOR].phase = truck.test_phase % 360;
                             write_motors();
@@ -2655,7 +2547,7 @@ void handle_motors()
                     else
                     {
                         truck.test_counter = 1;
-            // begin reading halls
+// begin reading halls
                     }
                     break;
             }
@@ -3136,7 +3028,7 @@ void init_watchdog()
 // print the menu
 void print_menu()
 {
-    print_text("Truck menu:\n");
+    print_text("\n\nTruck menu:\n");
     print_text("1 - test motors\n");
 }
 
@@ -3145,12 +3037,7 @@ void handle_input()
 {
     if(uart.input == '1')
     {
-        TRACE2
-        print_text("Starting motor test\n");
-        truck.testing_motors = 1;
-        truck.power = MOTOR_PWM_PERIOD / 4;
-        truck.test_tick = truck.tick + TIMER_HZ;
-        truck.test_state = START_TEST;
+        start_motor_test();
     }
     else
     if(uart.input == '\n')
@@ -3241,6 +3128,7 @@ int main(void)
 	truck.rpm_dv_size = 10;
 	init_derivative(&truck.rpm_dv, truck.rpm_dv_size);
 
+    list_flash();
 
 // the real settings are loaded here
 	load_config();
