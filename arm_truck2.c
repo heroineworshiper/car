@@ -3082,12 +3082,12 @@ int main(void)
     truck.min_steering100 = 25;
 
     
-    truck.remote_steering_mid = 125;
+    truck.remote_steering_mid = 122;
     truck.remote_steering_deadband = 2;
     truck.remote_steering_max = 255;
     truck.remote_steering_min = 3;
     
-    truck.remote_throttle_mid = 124;
+    truck.remote_throttle_mid = 130;
     truck.remote_throttle_deadband = 5;
     truck.remote_throttle_max = 254;
     truck.remote_throttle_min = 4;

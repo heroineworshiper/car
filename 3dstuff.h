@@ -9,10 +9,19 @@
 
 
 typedef struct {
-	double x,y,z;
+	float x,y,z;
 } vector;
 
+typedef struct
+{
+    vector n;
+    vector coords[3];
+    uint16_t attr;
+} __attribute__((packed)) triangle_t;
+
 #define TEXTLEN 1024
+#define BUFSIZE 1024
+#define HEADER "MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH\n"
 FILE *out;
 int countOffset = 0;
 int triangleCount = 0;
@@ -27,6 +36,9 @@ double planeSlope = 0.0;
 double planeIntercept = 0.0;
 double cosPlane = 1.0;
 double sinPlane = 0.0;
+
+void writeTriangle(vector coord0, vector coord1, vector coord2);
+void writeTriangle2(vector coord0, vector coord1, vector coord2);
 
 void writeInt32(int x)
 {
@@ -66,7 +78,7 @@ int open_stl(char *path)
         exit(1);
     }
 
-    fprintf(out, "MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH-MESH\n");
+    fprintf(out, HEADER);
     countOffset = ftell(out);
     writeInt32(0);
 
@@ -77,6 +89,64 @@ int open_stl(char *path)
 
     return 0;
 }
+
+triangle_t* read_stl(char *path, int *count)
+{
+    FILE *in;
+    uint8_t buffer[BUFSIZE];
+    if(!(in = fopen(path, "r")))
+    {
+        printf("read_stl %d: Couldn't open %s\n", __LINE__, path);
+        return 0;
+    }
+    
+    int _ = fread(buffer, 1, strlen(HEADER), in);
+    _ = fread(count, 1, sizeof(int), in);
+    triangle_t *triangles = calloc(sizeof(triangle_t), *count);
+    _ = fread(triangles, sizeof(triangle_t), *count, in);
+    printf("read_stl %d: %d triangles\n", __LINE__, *count);
+    
+    fclose(in);
+    return triangles;
+}
+
+void write_stl(char *path, int count, triangle_t *triangles)
+{
+    if((out = fopen(path, "r")))
+    {
+        printf("Overwrite existing file %s? (y/n)\n", path);
+        char string[TEXTLEN];
+        char* _ = fgets(string, TEXTLEN, stdin);
+        if(strcmp(string, "y\n"))
+        {
+            printf("Giving up & going to a movie.\n");
+    		exit(1);
+        }
+        fclose(out);
+    }
+
+    if(!(out = fopen(path, "w")))
+    {
+        printf("open_stl %d: Couldn't open %s\n", __LINE__, path);
+        exit(1);
+    }
+
+    fprintf(out, HEADER);
+    writeInt32(count);
+    int i;
+    for(i = 0; i < count; i++)
+    {
+        triangle_t *triangle = &triangles[i];
+        writeTriangle(triangle->coords[0], 
+            triangle->coords[1], 
+            triangle->coords[2]);
+    }
+
+//    fwrite(triangles, sizeof(triangle_t), count, out);
+    fclose(out);
+}
+
+
 
 
 void close_stl()
@@ -95,15 +165,27 @@ vector polarToXYZ(vector point)
     double z = point.z;
     double x = radius * cos(angle);
     double y = -radius * sin(angle);
+// printf("polarToXYZ %d %f %f %f -> %f %f %f\n", 
+//     __LINE__, 
+//     point.x,
+//     point.y,
+//     point.z,
+//     x,
+//     y,
+//     z);
+// 
 
+    if(fabs(planeAngle) > 0.001)
+    {
 // x slope given x
 // rotate top X of cylinder
-    double topX = x * cosPlane;
+        double topX = x * cosPlane;
 // rotate top Z of cylinder
-    double topZ = planeIntercept + x * sinPlane;
-    double slope = (topX - x) / topZ;
+        double topZ = planeIntercept + x * sinPlane;
+        double slope = (topX - x) / topZ;
 // interpolate X
-    x += z * slope;
+        x += z * slope;
+    }
 
     return (vector){ x, y, z };
 }
@@ -111,8 +193,12 @@ vector polarToXYZ(vector point)
 
 vector XYZToPolar(vector xyz)
 {
-    double fraction = xyz.z / length;
-    double aspect = (topAspect * fraction) + (1.0 - fraction);
+    double aspect = 1.0;
+    if(fabs(topAspect - 1.0) > 0.001)
+    {
+        double fraction = xyz.z / length;
+        aspect = (topAspect * fraction) + (1.0 - fraction);
+    }
     xyz.x = xyz.x / aspect;
 
 // circularize XY
@@ -148,6 +234,15 @@ vector XYZToPolar(vector xyz)
 // convert XY to angle & radius
     double angle = atan2(-y, x);
     double radius = hypot(x, y);
+// printf("polarToXYZ %d %f %f %f -> %f %f %f\n", 
+//     __LINE__, 
+//     xyz.x,
+//     xyz.y,
+//     xyz.z,
+//     angle,
+//     radius,
+//     z);
+
     return (vector){ angle, radius, z };
 }
 

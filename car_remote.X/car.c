@@ -219,22 +219,39 @@ uint16_t channels[] =
 
 
 // audio
-// speaker goes from 500-3500
-#define MIN_NOTE -3000
-#define MAX_NOTE -1500
-#define NOTE_RANGE (MAX_NOTE - MIN_NOTE)
+// speaker as peaks at -1876 & -938
+// TODO: shift major scale to -1876 to -938
+#define MIN_NOTE -2500
+#define MAX_NOTE -1250
+#define OCTAVE0 (MIN_NOTE - MIN_NOTE * 2)
+#define OCTAVE1 (MAX_NOTE - MIN_NOTE)
+#define OCTAVE2 (MAX_NOTE / 2 - MAX_NOTE)
 
 // index to freq in CPU clocks
 const uint16_t freqs[] = 
 {
-    MIN_NOTE,  // C0
-    (uint16_t)(MIN_NOTE + NOTE_RANGE * 0.122465), // D0
-    (uint16_t)(MIN_NOTE + NOTE_RANGE * 0.259933), // E0
-    (uint16_t)(MIN_NOTE + NOTE_RANGE * 0.334849), // F0
-    (uint16_t)(MIN_NOTE + NOTE_RANGE * 0.498309), // G0
-    (uint16_t)(MIN_NOTE + NOTE_RANGE * 0.681796), // A0
-    (uint16_t)(MIN_NOTE + NOTE_RANGE * 0.887759), // B0
-    MAX_NOTE // C1
+    MIN_NOTE * 2, // C0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.122465), // D0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.259933), // E0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.334849), // F0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.498309), // G0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.681796), // A0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.887759), // B0
+    MIN_NOTE,  // C1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.122465), // D1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.259933), // E1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.334849), // F1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.498309), // G1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.681796), // A1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.887759), // B1
+    MAX_NOTE, // C2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.122465), // D2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.259933), // E2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.334849), // F2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.498309), // G2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.681796), // A2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.887759), // B2
+    MAX_NOTE / 2 // C3
 };
 
 // indexes for different notes
@@ -246,6 +263,20 @@ const uint16_t freqs[] =
 #define _A0 5
 #define _B0 6
 #define _C1 7
+#define _D1 8
+#define _E1 9
+#define _F1 10
+#define _G1 11
+#define _A1 12
+#define _B1 13
+#define _C2 14
+#define _D2 15
+#define _E2 16
+#define _F2 17
+#define _G2 18
+#define _A2 19
+#define _B2 20
+#define _C3 21
 #define SONG_REST 0xfe
 #define SONG_END 0xff
 
@@ -276,43 +307,44 @@ typedef union
 } flags_t;
 
 #define DURATION 1
+#define DURATION2 4
 const song_t increase_tone[] =
 {
-    { DURATION, _C0 },
-    { DURATION, _D0 },
-    { DURATION, _E0 },
-    { DURATION, _F0 },
-    { DURATION, _G0 },
-    { DURATION, _A0 },
-    { DURATION, _B0 },
-    { DURATION, _C1 },
+    { DURATION, _G1 },
+    { DURATION, _A1 },
+    { DURATION, _B1 },
+    { DURATION, _C2 },
+    { DURATION, _D2 },
+    { DURATION, _E2 },
+    { DURATION, _F2 },
+    { DURATION, _G2 },
     { 0, SONG_END },
 };
 
 
 const song_t decrease_tone[] =
 {
-    { DURATION, _C1 },
-    { DURATION, _B0 },
-    { DURATION, _A0 },
-    { DURATION, _G0 },
-    { DURATION, _F0 },
-    { DURATION, _E0 },
-    { DURATION, _D0 },
-    { DURATION, _C0 },
+    { DURATION, _G2 },
+    { DURATION, _F2 },
+    { DURATION, _E2 },
+    { DURATION, _D2 },
+    { DURATION, _C2 },
+    { DURATION, _B1 },
+    { DURATION, _A1 },
+    { DURATION, _G1 },
     { 0, SONG_END },
 };
 
 const song_t flat_tone[] =
 {
-    { DURATION, _C0 },
-    { DURATION, _C1 },
-    { DURATION, _C0 },
-    { DURATION, _C1 },
-    { DURATION, _C0 },
-    { DURATION, _C1 },
-    { DURATION, _C0 },
-    { DURATION, _C1 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
     { 0, SONG_END },
 };
 
@@ -556,7 +588,7 @@ void play_current_speed()
 //            song_buffer[i].freq_index = _C0;
             i++;
             song_buffer[i].delay = HZ * 1 / 5;
-            song_buffer[i].freq_index = _C1;
+            song_buffer[i].freq_index = _G2;
             i++;
         }
         song_buffer[i].delay = 0;
@@ -576,7 +608,7 @@ void play_current_speed()
 //            song_buffer[i].freq_index = _C1;
             i++;
             song_buffer[i].delay = HZ * 1 / 5;
-            song_buffer[i].freq_index = _C0;
+            song_buffer[i].freq_index = _G1;
             i++;
         }
 

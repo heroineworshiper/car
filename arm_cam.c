@@ -49,7 +49,13 @@
 
 // speed depends on the number of poles in the motor & the gear ratio
 #define POLES 8
-#define SCALE_FACTOR (4.5 * POLES * FRACTION)
+// 4.5 gear ratio hobby motor
+//#define SCALE_FACTOR (4.5 * POLES * FRACTION)
+// servo
+#define SCALE_FACTOR (40 * POLES * FRACTION)
+
+// time before shutting motor down
+#define MOTOR_TIMEOUT (HZ / 4)
 
 // Normally want to reach target speed in 1 second
 // degrees per second per second.  
@@ -77,7 +83,10 @@
 #define MAX_RIGHT 20
 
 // speed updates/second
-#define FRAME_HZ 100
+// hobby motor
+//#define FRAME_HZ 100
+// servo
+#define FRAME_HZ 1000
 
 
 //#define DEBUG_PIN GPIO_Pin_4
@@ -288,6 +297,7 @@ int phase_speed = 0;
 int target_phase_speed = 0;
 // last acceleration
 int acceleration = 0;
+int motor_timeout = 0;
 
 volatile int tick = 0;
 
@@ -821,8 +831,8 @@ int main(void)
     }
     TRACE
 
-    print_text("Enabling motor\n");
-   	SET_PIN(ENABLE_GPIO, ENABLE_PIN);
+//    print_text("Enabling motor\n");
+//   	SET_PIN(ENABLE_GPIO, ENABLE_PIN);
 
 
     int seconds = 0;
@@ -986,12 +996,37 @@ int main(void)
             
             if(new_phase != phase)
             {
+// reset motor timeout
+                motor_timeout = 0;
                 phase = new_phase;
+// enable motor
+                if(PIN_IS_CLEAR(ENABLE_GPIO, ENABLE_PIN))
+                {
+                    SET_PIN(ENABLE_GPIO, ENABLE_PIN);
+//TRACE2
+                }
 //print_fixed(phase);
 //print_lf();
                 write_motor();
             }
+            else
+            {
+                if(motor_timeout >= MOTOR_TIMEOUT)
+                {
+// disable motor
+                    if(PIN_IS_SET(ENABLE_GPIO, ENABLE_PIN))
+                    {
+                        CLEAR_PIN(ENABLE_GPIO, ENABLE_PIN);
+//TRACE2
+                    }
+                }
+                else
+                {
+                    motor_timeout += HZ / FRAME_HZ;
+                }
+            }
         }
+        
 
 // check clock
         if(tick / HZ != seconds)

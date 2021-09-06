@@ -116,7 +116,7 @@ def makeTire(iRadius,
     layers, # layers of hexagons in a column
     columns, # number of hexagon columns in a layer.  Each column is 2 hexagons side by side
     wallThickness, # thickness of hexagon wall
-    w): # tire width (ignored)
+    tread): # add tread if nonzero
     iDiameter = iRadius * 2
     oDiameter = oRadius * 2
 
@@ -141,7 +141,10 @@ def makeTire(iRadius,
         angle2 = (column + 1) * 2 * math.pi / columns
 # offset of the side points
         angleOffset = 2.0 * math.pi / columns / 8
-        for layer in range(0, layers):
+        layers_i = int(layers)
+        if layers > layers_i:
+            layers_i = layers_i + 1
+        for layer in range(0, layers_i):
 # hexagon radius
             r1 = iRadius + layer * (oRadius - iRadius) / layers
             r2 = iRadius + (layer + .5) * (oRadius - iRadius) / layers
@@ -165,7 +168,51 @@ def makeTire(iRadius,
                     coords.append(polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r3, 0.0))
                 coords.append(polarToXYZ(angle1 + angleOffset, r2, 0.0))
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
+
+
+# tread, even column
+                if tread > 0.01:
+                    wallAngle = (2 * math.pi) * oThickness / (oDiameter * math.pi)
+                    angle5 = angle3 - wallAngle
+                    angle6 = angle4 + wallAngle
+                    r5 = oDiameter / 2 + tread - oThickness
+                    r6 = oDiameter / 2 + tread
+                    r7 = oRadius + wallThickness / 2
+                    for i in range(subdivisions):
+                        sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle5 + i * (angle6 - angle5) / subdivisions, r6, 0.0),
+                            polarToXYZ(angle5 + (i + 1) * (angle6 - angle5) / subdivisions, r6, 0.0)),
+                            False)
+                        sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r5, 0.0),
+                            polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r5, 0.0)),
+                            False)
+                        sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r7, 0.0),
+                            polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r7, 0.0)),
+                            False)
+                    sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle3, r7, 0.0),
+                            polarToXYZ(angle3, r5, 0.0)),
+                            False)
+                    sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle4, r7, 0.0),
+                            polarToXYZ(angle4, r5, 0.0)),
+                            False)
+                    sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle5, oDiameter / 2, 0.0),
+                            polarToXYZ(angle5, r6, 0.0)),
+                            False)
+                    sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle6, oDiameter / 2, 0.0),
+                            polarToXYZ(angle6, r6, 0.0)),
+                            False)
+
             else:
+# inner full hexagon, even column
+# clamp radius in case of a fractional layer
+                if r3 > oRadius:
+                    r3 = oRadius
                 coords = [
                     polarToXYZ(angle0 + angleOffset, r1, 0.0),
                     polarToXYZ(angle0 - angleOffset, r2, 0.0),
@@ -201,6 +248,19 @@ def makeTire(iRadius,
                 
                 coords.append(polarToXYZ(angle2 - angleOffset, r2, 0.0))
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
+
+# tread, odd column
+                if tread > 0.01:
+                    wallAngle = (2 * math.pi) * oThickness / (oDiameter * math.pi)
+                    angle3 += wallAngle
+                    angle4 -= wallAngle
+                    for i in range(subdivisions):
+                        sketch.addGeometry(Part.LineSegment(
+                            polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, oDiameter / 2, 0.0),
+                            polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, oDiameter / 2, 0.0)),
+                            False)
+
+
 # middle hexagon, odd column
             if layer < layers - 1:
                 coords = [
@@ -219,35 +279,42 @@ def makeTire(iRadius,
         iDiameter / 2))
 
 # outer shell
-    sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
-        Draft.Vector(0, 0, 1),
-        oDiameter / 2))
-
-#    sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
-#        Draft.Vector(0, 0, 1),
-#        oDiameter / 2 - oThickness))
+    if tread < 0.01:
+        sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
+            Draft.Vector(0, 0, 1),
+            oDiameter / 2))
 
 
 
-#makeTire(22.0, 54.0 1.0, 1.0, 3, 12, .5, 31.4)
+
+#makeTire(22.0, 54.0 1.0, 1.0, 3, 12, .5, 0)
 
 # PLA core
-#makeTire(21.5, 42.7, 1.0, 1.0, 2, 12, .5, 31.4)
+#makeTire(21.5, 42.7, 1.0, 1.0, 2, 12, .5, 0)
 
 # TPU center
-#makeTire( 21.5, 42.5, 1.0, 1.0, 2, 12, 1.0, .64)
-
-# 108mm TPU tire
-#makeTire(43.0, 54.0, .5, 1.0, 1, 18, .5, 30.4)
+#makeTire( 21.5, 42.5, 1.0, 1.0, 2, 12, 1.0, 0)
 
 
 # 74mm TPU tire
-makeTire(26.0, 37.0, .5, 1.0, 1, 12, .5, 30.4)
+#makeTire(26.0, 37.0, .5, 1.0, 1, 12, .5, 0)
 
 # 74mm PLA core
-#makeTire(21.5, 25.5, .5, 1.0, 1, 18, .5, 31.4)
+#makeTire(21.5, 25.5, .5, 1.0, 1, 18, .5, 0)
 
+# 108mm TPU tire 11mm thick
+#makeTire(43.0, 54.0, .5, 1.0, 1, 18, .5, 0)
 
+# 108mm TPU tire 15mm thick
+#makeTire(39.0, 54.0, .5, 1.0, 1.5, 18, .5, 0)
+
+# 108mm 15mm thick PLA core
+#makeTire(21.5, 38.5, 0.5, 0.5, 1.5, 12, .5, 0)
+
+# 108mm 10mm thick hex + 5mm thick tread TPU
+# Freecad can't make it helical, so you have to extrude, export as STL &
+# rotate all Z over 30 in the STL file.
+makeTire(39.0, 49.0, .5, 1.0, 1.0, 18, .5, 5)
 
 
 

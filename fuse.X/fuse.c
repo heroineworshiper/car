@@ -258,7 +258,7 @@ void print_menu(uint8_t redraw)
     }
 //    print_text("***************************************\n");
 	print_text("never exceed current:    ");
-    inverse_style(); 
+    inverse_style();
 
     print_fixed(limit_current2);
     reset_style();
@@ -266,7 +266,7 @@ void print_menu(uint8_t redraw)
     
     print_text("A    i/m adjusts    \n");
 	print_text("limit current:    ");
-    inverse_style(); 
+    inverse_style();
 
     print_fixed(limit_current1);
     reset_style();

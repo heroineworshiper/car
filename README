@@ -75,7 +75,7 @@ imu4.pcb: IMU for 3D printed truck
 
 cring.FCStd: retaining ring for the motors
     .4mm nozzle
-    .2mm layer height out of PLA
+    .2mm layer height out of PETG
     no cooling fan
 
 tire2.FCMacro: generate procedural tire.  Not used anymore.
@@ -91,16 +91,27 @@ tire2.FCMacro: generate procedural tire.  Not used anymore.
     20mm print speed
     no retraction
 
-front_tire.FCStd: front tire
+tire6.FCMacro: latest honeycomb tire
+    must extrude by 1 layer height, then run helix.c to generate a helix by 
+    creating discrete layers
+    must enable timelapse mode with fixcura.py to fix stringing
+    tires must be mirror images or the truck will pull to 1 side
+
+front_tire3.FCStd: front tire
+    Import STL into blender
+    Run helix.py to make the struts a helix
+    Export new layers as an STL file
+    print with .8mm nozzle
+    TPU
+    .32mm layer height
     timelapse mode with fixcura.py has better stringing
 
-rear_tire.FCStd: most recent rear tire/wheel design
+
+rear_tire3.FCStd: most recent honecomb rear tire/wheel design
     print hub cap in PLA 
         .4mm nozzle
-        .4mm top & bottom
-    print tire in TPU 1.0mm nozzle
-    timelapse mode with fixcura.py has better stringing
-    TODO: 16 spokes
+    tire model is a mockup
+
 
 
 truck_radio.pcb: remote control tx/rx for 3D printed truck & the camera
@@ -120,6 +131,9 @@ bumper.FCStd:
 
 
 container.FCStd:
+    print masks have to be booleaned with panels in Blender
+    Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
+
     container budget:
     radio panel: 42, 32
     back left: 42, 23
@@ -135,7 +149,6 @@ container.FCStd:
     bottom left front: 38, 24
     bottom left rear: 40, 25
 
-    Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
     TODO: shift cable hole right.  Create tab for aligning handle.
 
 
@@ -150,6 +163,7 @@ radio_box.FCStd:
         hollow border
         shift cable hole left
 
+tool.FCStd: socket wrench for 6-32 locknuts
 
 traction.FCMacro: create objects for traction
 
@@ -204,7 +218,7 @@ steering.FCStd: steering section
 front_wheel.FCStd: front wheel
     modeled for a .4mm nozzle
 
-rear_wheel.FCStd: motor wheel coupling
+rear_wheel.FCStd: OBSOLETE motor wheel coupling
     print with 1mm nozzle
     .8mm line width
     .32mm layer height
@@ -214,7 +228,7 @@ rear_wheel.FCStd: motor wheel coupling
     no support
 
 
-motor.FCStd: motor mount
+motor3.FCStd: motor mount
     The following use .8mm nozzle, .32 layer height, support with 80deg overhang
     shroud
     tpu out of TPU
@@ -222,11 +236,14 @@ motor.FCStd: motor mount
     motor plate
 
     The following use .4mm nozzle, .2mm layer
-    sensor plate
+    SENSOR PLATE
         .8mm top/bottom thickness
-    magnet holder
+    MAGNET HOLDER
         support to base
         PETG
+    GASKET:
+        TPU .4mm nozzle .32mm layer
+
 
 
 car_remote.FCMacro:
@@ -240,7 +257,7 @@ car_remote.FCStd: remote control for vehicle
     .8mm top/bottom thickness
     1.2mm wall thickness
     skirt
-    bottom, top, bottomFat, topFat:
+    bottom, top:
         expand all clones
         select base of mirror
         select visible objects
@@ -331,7 +348,11 @@ Panning mount:
 
 cam_remote.pcb, cam.pcb: electronicals
 
-cam_gearbox.FCStd:
+cam_gearbox2.FCStd:
+    brushless servo as a stepper motor for panning
+
+cam_gearbox.FCStd: OBSOLETE
+    hobby motor as a stepper motor
     4.5:1 gear reduction for panning motor
     walls have to be printed with .4mm thick tops & bottoms
         to get smooth surfaces
