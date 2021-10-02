@@ -30,12 +30,12 @@
 
 #include "3dstuff.h"
 
-//#define TOTAL_H 31.0 // parallel tread
-#define TOTAL_H 60.0 // V tread
+#define TOTAL_H 31.04 // parallel tread
+//#define TOTAL_H 60.0 // V tread
 // rotation in degrees (360/columns)
 #define TOTAL_ANGLE (360.0 / 18)
 // make a V tread
-#define DO_V 1
+//#define DO_V 1
 
 // void selectiveRotate(vector *coord)
 // {

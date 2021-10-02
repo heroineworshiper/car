@@ -1,5 +1,5 @@
 # honeycomb tire with flat smooth tread & .4mm line width
-# partdesign loft is required to loft the slices
+# helix.c or helix.py is required to extrude the tread
 
 import FreeCAD
 import Sketcher

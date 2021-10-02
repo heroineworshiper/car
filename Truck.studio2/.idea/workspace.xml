@@ -11,28 +11,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a53a3e7e-1d41-4964-8f32-13993da15ef4" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/caches/gradle_models.ser" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Gradle__com_android_support_support_v4_19_1_0_jar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/runConfigurations.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../3dstuff.h" beforeDir="false" afterPath="$PROJECT_DIR$/../3dstuff.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../README" beforeDir="false" afterPath="$PROJECT_DIR$/../README" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/app.iml" beforeDir="false" afterPath="$PROJECT_DIR$/app/app.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/SettingsWin.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/SettingsWin.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_motors.c" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_motors.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_motors.h" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_motors.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../arm_truck2.c" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_truck2.h" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" afterDir="false" />
@@ -53,11 +38,19 @@
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-variables.mk" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-variables.mk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Package-default.bash" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Package-default.bash" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../car_receive.X/dist/default/production/car_receive.X.production.hex.orig" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../car_remote.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../car_remote.FCStd" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../clamp.stl" beforeDir="false" afterPath="$PROJECT_DIR$/../clamp.stl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../container.FCMacro" beforeDir="false" afterPath="$PROJECT_DIR$/../container.FCMacro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../container.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../container.FCStd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cring.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../cring.FCStd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../helix.c" beforeDir="false" afterPath="$PROJECT_DIR$/../helix.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../libisogrid.py" beforeDir="false" afterPath="$PROJECT_DIR$/../libisogrid.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../motor_data" beforeDir="false" afterPath="$PROJECT_DIR$/../motor_data" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../motor_table" beforeDir="false" afterPath="$PROJECT_DIR$/../motor_table" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../motor_table.c" beforeDir="false" afterPath="$PROJECT_DIR$/../motor_table.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../traction.FCMacro" beforeDir="false" afterPath="$PROJECT_DIR$/../traction.FCMacro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../rear_tire3.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../rear_tire3.FCStd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../settings.car" beforeDir="false" afterPath="$PROJECT_DIR$/../settings.car" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../settings.truck" beforeDir="false" afterPath="$PROJECT_DIR$/../settings.truck" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../tire6.FCMacro" beforeDir="false" afterPath="$PROJECT_DIR$/../tire6.FCMacro" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../traction.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../traction.FCStd" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -65,7 +58,7 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="LMX320IZHUV4RWBUQK" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="Pixel_XL_API_24" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -100,7 +93,7 @@
     <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1591475014952" />
     <property name="device.picker.selection" value="LGSP200PB6DJBKVNRS" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="memory.settings.postsync.last.time.stamp" value="1622512823285" />
+    <property name="memory.settings.postsync.last.time.stamp" value="1633149906467" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
     <property name="show.do.not.ask.upgrade.gradle.plugin" value="2.3.2" />
   </component>

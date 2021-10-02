@@ -99,13 +99,13 @@ triangle_t* read_stl(char *path, int *count)
         printf("read_stl %d: Couldn't open %s\n", __LINE__, path);
         return 0;
     }
-    
+
     int _ = fread(buffer, 1, strlen(HEADER), in);
     _ = fread(count, 1, sizeof(int), in);
     triangle_t *triangles = calloc(sizeof(triangle_t), *count);
     _ = fread(triangles, sizeof(triangle_t), *count, in);
     printf("read_stl %d: %d triangles\n", __LINE__, *count);
-    
+
     fclose(in);
     return triangles;
 }

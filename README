@@ -104,14 +104,17 @@ front_tire3.FCStd: front tire
     print with .8mm nozzle
     TPU
     .32mm layer height
+    left & right must be mirror images
     timelapse mode with fixcura.py has better stringing
 
 
 rear_tire3.FCStd: most recent honecomb rear tire/wheel design
     print hub cap in PLA 
-        .4mm nozzle
+        .4mm nozzle .32mm layer height
     tire model is a mockup
-
+    left & right must be mirror images
+    single .32mm layer of onroad tire must be exported as STL, then extruded with
+        helix.c 31mm total height, no V tread, 20 deg rotation
 
 
 truck_radio.pcb: remote control tx/rx for 3D printed truck & the camera
@@ -134,6 +137,11 @@ container.FCStd:
     print masks have to be booleaned with panels in Blender
     Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
 
+    top corner master:
+    bottom corner master:
+        require .32 layers 230C for adhesion
+        
+
     container budget:
     radio panel: 42, 32
     back left: 42, 23
@@ -151,6 +159,9 @@ container.FCStd:
 
     TODO: shift cable hole right.  Create tab for aligning handle.
 
+container.FCMacro:
+    scripts for creating the container
+    
 
 radio_box.FCStd:
     container for radio modules & switches.
@@ -234,13 +245,15 @@ motor3.FCStd: motor mount
     tpu out of TPU
     clamp * 4
     motor plate
+    TODO: 4-40 locknuts in motor plate
 
     The following use .4mm nozzle, .2mm layer
     SENSOR PLATE
         .8mm top/bottom thickness
     MAGNET HOLDER
-        support to base
         PETG
+        support to base
+        .4mm nozzle 
     GASKET:
         TPU .4mm nozzle .32mm layer
 

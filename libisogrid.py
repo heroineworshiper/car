@@ -56,13 +56,14 @@ def makePoly(sketch, coords, closeIt = True):
         sketch.addGeometry(Part.LineSegment(coords[i],
             coords[i + 1]),
             False)
+# constrain 2 lines. Crashes
 #        if i > 0:
 #            sketch.addConstraint(Sketcher.Constraint('Coincident', 
 #                i - 1,
 #                2,
 #                i, 
 #                1))
-    
+
     if closeIt:
         sketch.addGeometry(Part.LineSegment(coords[len(coords) - 1],
             coords[0]),
@@ -73,7 +74,7 @@ def makePoly(sketch, coords, closeIt = True):
 #            len(coords) - 1, 
 #            2))
 
-    
+
 
 # make an iso triangle
 def makeTri(sketch, 
@@ -321,18 +322,27 @@ def makeDivision(extrude, \
     yLines = closeLines(yLines, True)
     makePoly(yDst, yLines, False)
 
-#    total = int(len(yLines) / 2)
-#    for i in range(0, total):
-#        yDst.addGeometry(Part.LineSegment(yLines[i * 2],
-#            yLines[i * 2 + 1]),
-#            False)
-#    total = int(len(xLines) / 2)
-#    for i in range(0, total):
-#        xDst.addGeometry(Part.LineSegment(xLines[i * 2],
-#            xLines[i * 2 + 1]),
-#            False)
+# parallel copy for PLA tape
+    xDst2 = None
+    if len(xLines) > 1:
+        xLines2 = []
+        for i in xLines:
+            newPoint = App.Vector(i.x + 40.0, i.y, i.z)
+            xLines2.append(newPoint)
+        xDst2 = doc.addObject('Sketcher::SketchObject','xdivision')
+        makePoly(xDst2, xLines2, False)
 
-    return xDst, yDst
+    yDst2 = None
+    if len(yLines) > 1:
+        yLines2 = []
+        for i in yLines:
+            newPoint = App.Vector(i.x, i.y + 30.0, i.z)
+            yLines2.append(newPoint)
+        yDst2 = doc.addObject('Sketcher::SketchObject','ydivision')
+        makePoly(yDst2, yLines2, False)
+
+
+    return xDst, yDst, xDst2, yDst2
 
 
 

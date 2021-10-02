@@ -661,7 +661,7 @@ public class Truck extends Thread {
 		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
 
-
+// servo PWM
 		beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_STEERING")[0]);
@@ -673,6 +673,16 @@ public class Truck extends Thread {
 		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("ANGLE_TO_GYRO")[0]));
 		beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
 		beacon[offset++] = (byte)(Settings.getFileFloat("D_BANDWIDTH")[0]);
+
+// remote ADC
+        beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_CENTER")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_DEADBAND")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_MAX")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_MIN")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_CENTER")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_DEADBAND")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_MAX")[0]);
+        beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_MIN")[0]);
 
 
 

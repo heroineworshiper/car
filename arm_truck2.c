@@ -118,10 +118,6 @@
 
 // timer for LED flashing
 #define LED_DELAY (NAV_HZ / 2)
-// ADC for 0 current
-#define CURRENT_BASE 120.0f
-// scale factor for current
-#define CURRENT_SCALE 630.0f
 
 #define CLOCKSPEED 168000000
 #define SERVO_PWM_PERIOD (CLOCKSPEED / 2 / PWM_HZ)
@@ -508,6 +504,7 @@ void dump_config()
 	print_text("\nmin_throttle_reverse100=");
 	print_number(truck.min_throttle_reverse100);
 
+
 	print_text("\nrpm_dv_size=");
 	print_float(truck.rpm_dv_size);
 	print_text("\ngyro_center_max=");
@@ -520,6 +517,24 @@ void dump_config()
 	print_number((int)(truck.imu.gyro_bandwidth * 255));
 	print_text("\nd_bandwidth=");
 	print_number(truck.d_bandwidth);
+
+	print_text("\nremote_steering_mid=");
+	print_number(truck.remote_steering_mid);
+	print_text("\nremote_steering_deadband=");
+	print_number(truck.remote_steering_deadband);
+	print_text("\nremote_steering_max=");
+	print_number(truck.remote_steering_max);
+	print_text("\nremote_steering_min=");
+	print_number(truck.remote_steering_min);
+	print_text("\nremote_throttle_mid=");
+	print_number(truck.remote_throttle_mid);
+	print_text("\nremote_throttle_deadband=");
+	print_number(truck.remote_throttle_deadband);
+	print_text("\nremote_throttle_max=");
+	print_number(truck.remote_throttle_max);
+	print_text("\nremote_throttle_min=");
+	print_number(truck.remote_throttle_min);
+
 
 	print_text("\npid_downsample=");
 	print_number(truck.pid_downsample);
@@ -575,6 +590,16 @@ int read_config_packet(const unsigned char *buffer)
 	truck.imu.gyro_bandwidth = (float)buffer[offset++] / 0xff;
 	truck.d_bandwidth = (float)buffer[offset++];
 
+	truck.remote_steering_mid = buffer[offset++];
+	truck.remote_steering_deadband = buffer[offset++];
+	truck.remote_steering_max = buffer[offset++];
+	truck.remote_steering_min = buffer[offset++];
+	truck.remote_throttle_mid = buffer[offset++];
+	truck.remote_throttle_deadband = buffer[offset++];
+	truck.remote_throttle_max = buffer[offset++];
+	truck.remote_throttle_min = buffer[offset++];
+
+
 
 	truck.pid_downsample = READ_UINT16(buffer, offset);
 	
@@ -611,11 +636,9 @@ int read_config_packet(const unsigned char *buffer)
 			truck.max_steering100 / 
 			100;
 
-/*
- * TRACE2
- * print_text("size of config packet=");
- * print_number(offset);
- */
+TRACE2
+print_text("size of config packet=");
+print_number(offset);
 
 
 

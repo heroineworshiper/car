@@ -1,7 +1,7 @@
 # settings for car
 #            P     I      D    D2
-STEERING_PID 400   0.2    400  0
-RPM_PID      400    2.0   40     0
+STEERING_PID 350   0.2    100      20
+RPM_PID      500    1.0   100     0
 
 BLUETOOTH car
 
@@ -9,7 +9,7 @@ BLUETOOTH car
 DEBUG 0
 
 # wheel diameter in mm
-DIAMETER 107
+DIAMETER 108
 
 # fastest reverse pace in auto throttle
 TARGET_REVERSE_PACE 10.00
@@ -23,11 +23,11 @@ MIN_REVERSE_PACE 15.00
 
 
 # Center PWM position 0 - 100
-MID_STEERING 50
+MID_STEERING 60
 # maximum stick induced steering 0 - 100
 MAX_STEERING 100
 # minimum stick induced steering 0 - 100
-MIN_STEERING 30
+MIN_STEERING 20
 
 # lowest PWM in manual throttle 0-100
 MIN_THROTTLE_FWD 1
@@ -55,7 +55,15 @@ GYRO_BANDWIDTH 255
 # 0-100
 D_BANDWIDTH 90
 
-
+# remote ADC
+STEERING_ADC_CENTER 122
+STEERING_ADC_DEADBAND 2
+STEERING_ADC_MAX 255
+STEERING_ADC_MIN 3
+THROTTLE_ADC_CENTER 130
+THROTTLE_ADC_DEADBAND 5
+THROTTLE_ADC_MAX 254
+THROTTLE_ADC_MIN 4
 
 # PWM cycles between I steps
 PID_DOWNSAMPLE 1
