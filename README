@@ -91,12 +91,6 @@ tire2.FCMacro: generate procedural tire.  Not used anymore.
     20mm print speed
     no retraction
 
-tire6.FCMacro: latest honeycomb tire
-    must extrude by 1 layer height, then run helix.c to generate a helix by 
-    creating discrete layers
-    must enable timelapse mode with fixcura.py to fix stringing
-    tires must be mirror images or the truck will pull to 1 side
-
 front_tire3.FCStd: front tire
     Import STL into blender
     Run helix.py to make the struts a helix
@@ -108,7 +102,7 @@ front_tire3.FCStd: front tire
     timelapse mode with fixcura.py has better stringing
 
 
-rear_tire3.FCStd: most recent honecomb rear tire/wheel design
+rear_tire3.FCStd: most recent rear wheel design
     print hub cap in PLA 
         .4mm nozzle .32mm layer height
     tire model is a mockup
@@ -116,17 +110,29 @@ rear_tire3.FCStd: most recent honecomb rear tire/wheel design
     single .32mm layer of onroad tire must be exported as STL, then extruded with
         helix.c 31mm total height, no V tread, 20 deg rotation
 
+tire6.FCMacro: latest rear tire
+    must extrude by 1 layer height, then run helix.c to generate a helix by 
+    creating discrete layers
+    must enable timelapse mode with fixcura.py to fix stringing
+    tires must be mirror images or the truck will pull to 1 side
+
 
 truck_radio.pcb: remote control tx/rx for 3D printed truck & the camera
 
 truck4.pcb: mane board for 3D printed truck
 
 
-ball.FCStd: 
+ball_link.FCStd: 
     ball link
-    print with ball.3mf
-    
-    TODO: round edge for servo clearance
+    100% infill
+    80 deg support
+    220C nozzle
+    right wheel link spacing: 43.5mm
+    left wheel link spacing: 42mm
+    use pliers when threading to avoid delamination
+    grind a flat in the metal rod to aid the pliers
+
+
 
 bumper.FCStd:
     bumper for the front of the angle rods
@@ -221,7 +227,7 @@ steering.FCStd: steering section
     servo bathtub
     - support to bed only
 
-
+    TODO: make servo shield removable for accessing the ball links
 
 
 

@@ -30,7 +30,7 @@ if True:
 if False:
     W = 110.2
     H = 170.0
-    extrudeTris, extrudeSubs = libisogrid.makeGrid(H, \
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(104, \
         W, \
         9, \
         4, \

@@ -671,6 +671,43 @@ static void bluetooth_passthrough()
 }
 #endif // BLUETOOTH_PASSTHROUGH
 
+static void wiggle()
+{
+    int i;
+	int toggle = 0;
+	int prev_timer_h = truck.tick;
+	for(i = 0; i < 2; i++)
+	{
+		if(toggle == 0)
+		{
+			truck.steering_pwm = truck.mid_steering_pwm - truck.max_steering_magnitude;
+			write_pwm();
+		}
+		else
+		{
+			truck.steering_pwm = truck.mid_steering_pwm + truck.max_steering_magnitude;
+			write_pwm();
+		}
+		toggle ^= 1;
+
+		while(1)
+		{
+			DISABLE_INTERRUPTS
+			int time_difference = truck.tick - prev_timer_h;
+			ENABLE_INTERRUPTS
+// seems required because of a compiler error
+			flush_uart();
+			if(time_difference >= TIMER_HZ / 2) break;
+		}
+
+		DISABLE_INTERRUPTS
+		prev_timer_h = truck.tick;
+		ENABLE_INTERRUPTS
+
+		TOGGLE_PIN(LED_GPIO, RED_LED);
+	}
+}
+
 static void handle_beacon()
 {
 	unsigned char *receive_buf = truck.bluetooth.receive_buf;
@@ -817,9 +854,6 @@ static void handle_beacon()
 						bytes_rounded);
 
 					CLEAR_PIN(LED_GPIO, RED_LED);
-					int i;
-					int prev_timer_h = truck.tick;
-					int toggle = 0;
 // stop the feedback loop
 					truck.writing_settings = 1;
 
@@ -827,36 +861,7 @@ static void handle_beacon()
                     if(truck.throttle <= truck.remote_throttle_mid + truck.remote_throttle_deadband &&
                         truck.throttle >= truck.remote_throttle_mid - truck.remote_throttle_deadband)
                     {
-					    for(i = 0; i < 2; i++)
-					    {
-						    if(toggle == 0)
-						    {
-							    truck.steering_pwm = truck.mid_steering_pwm - truck.max_steering_magnitude;
-							    write_pwm();
-						    }
-						    else
-						    {
-							    truck.steering_pwm = truck.mid_steering_pwm + truck.max_steering_magnitude;
-							    write_pwm();
-						    }
-						    toggle ^= 1;
-
-						    while(1)
-						    {
-							    DISABLE_INTERRUPTS
-							    int time_difference = truck.tick - prev_timer_h;
-							    ENABLE_INTERRUPTS
-	    // seems required because of a compiler error
-							    flush_uart();
-							    if(time_difference >= TIMER_HZ / 2) break;
-						    }
-
-						    DISABLE_INTERRUPTS
-						    prev_timer_h = truck.tick;
-						    ENABLE_INTERRUPTS
-
-						    TOGGLE_PIN(LED_GPIO, RED_LED);
-					    }
+                        wiggle();
                     }
 
 					truck.writing_settings = 0;
@@ -2558,6 +2563,7 @@ void handle_motors()
 
 // create new RAM tables
                             do_motor_table();
+                            wiggle();
                         }
                         else
                         {

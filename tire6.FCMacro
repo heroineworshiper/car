@@ -32,7 +32,7 @@ def toDeg(x):
 def polarToXYZ(angle, radius, z):
     x = radius * math.cos(angle)
     y = -radius * math.sin(angle)
-    return Draft.Vector(x, y, z)
+    return App.Vector(x, y, z)
 
 def polarToXYZ2(point):
     angle = point.x
@@ -46,7 +46,7 @@ def XYZToPolar(xyz):
     xyz.x = xyz.x / aspect
     angle = math.atan2(-xyz.y, xyz.x)
     radius = math.hypot(xyz.x, xyz.y)
-    return Draft.Vector(angle, radius, xyz.z)
+    return App.Vector(angle, radius, xyz.z)
 
 
 # add vector with length & angle to start 
@@ -274,14 +274,14 @@ def makeTire(iRadius,
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
 
 # inner shell
-    sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
-        Draft.Vector(0, 0, 1),
+    sketch.addGeometry(Part.Circle(App.Vector(0, 0, 0),
+        App.Vector(0, 0, 1),
         iDiameter / 2))
 
 # outer shell
     if tread < 0.01:
-        sketch.addGeometry(Part.Circle(Draft.Vector(0, 0, 0),
-            Draft.Vector(0, 0, 1),
+        sketch.addGeometry(Part.Circle(App.Vector(0, 0, 0),
+            App.Vector(0, 0, 1),
             oDiameter / 2))
 
 
@@ -305,16 +305,19 @@ def makeTire(iRadius,
 # 108mm TPU tire 11mm thick
 #makeTire(43.0, 54.0, .5, 1.0, 1, 18, .5, 0)
 
-# 108mm TPU tire 15mm thick
-#makeTire(39.0, 54.0, .5, 1.0, 1.5, 18, .5, 0)
-
 # 108mm 15mm thick PLA core
 #makeTire(21.5, 38.5, 0.5, 0.5, 1.5, 12, .5, 0)
 
-# 108mm 10mm thick hex + 5mm thick tread TPU
+# 108mm diameter 15mm thick hex TPU
+#makeTire(39.0, 54.0, .5, 1.0, 1.5, 18, .5, 0)
+
+# 108mm diameter 15mm thick hex TPU
+makeTire(39.0, 54.0, .5, 1.2, 1.5, 18, .5, 0)
+
+# 108mm diameter 10mm thick hex + 5mm thick tread TPU
 # Freecad can't make it helical, so you have to extrude, export as STL &
 # rotate all Z over 30 in the STL file.
-makeTire(39.0, 49.0, .5, 1.0, 1.0, 18, .5, 5)
+#makeTire(39.0, 49.0, .5, 1.0, 1.0, 18, .5, 5)
 
 
 
