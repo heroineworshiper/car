@@ -22,7 +22,8 @@
 
 // make cam.bin;./uart_programmer cam.bin
 
-
+// The camera firmware takes commands from a face tracker over SPI or a remote.
+// If the remote is on, the face tracker is ignored.
 
 
 #include "linux.h"
