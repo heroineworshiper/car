@@ -127,8 +127,8 @@ ball_link.FCStd:
     100% infill
     80 deg support
     220C nozzle
-    right wheel link spacing: 43.5mm
-    left wheel link spacing: 42mm
+    right wheel link spacing: old: 43.5mm new: 39.5mm
+    left wheel link spacing: old: 42mm new: 38mm
     use pliers when threading to avoid delamination
     grind a flat in the metal rod to aid the pliers
 
@@ -291,9 +291,9 @@ car_remote.FCStd: remote control for vehicle
         no support
         with wide part facing bed
     TODO:
-        use single layer bridge instead of support for screw holes
+        use sacrificial layer instead of support for screw holes
         holes for temporary screws
-
+        clamp inductor in on the sides
 
 
 

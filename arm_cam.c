@@ -47,6 +47,9 @@
 // 0 - PWM_PERIOD
 #define POWER (PWM_PERIOD)
 
+// use A14 CLK & A13 DATA for external SPI commands
+#define USE_SPI
+
 // speed depends on the number of poles in the motor & the gear ratio
 #define POLES 8
 // 4.5 gear ratio hobby motor
@@ -98,6 +101,25 @@
 #define ENABLE_PIN GPIO_Pin_7
 #define ENABLE_GPIO GPIOA
 
+
+// SPI
+#define CLK_PIN GPIO_Pin_14
+#define DAT_PIN GPIO_Pin_13
+#define SPI_GPIO GPIOA
+
+// idle ticks before resetting SPI
+#define SPI_TICKS 10
+// ticks before timing out adc_spi
+#define SPI_TIMEOUT (HZ / 2)
+#ifdef USE_SPI
+volatile int last_spi_tick = 0;
+volatile uint8_t spi_byte = 0;
+volatile uint8_t spi_counter = 0;
+volatile uint8_t spi_len = 0;
+volatile uint8_t spi_data[8];
+volatile uint8_t adc_spi = 0xff;
+volatile int spi_valid = 0;
+#endif
 
 // frequency hopping rate
 #define HOP_HZ 25
@@ -703,6 +725,47 @@ void TIM1_UP_TIM10_IRQHandler()
 	}
 }
 
+#ifdef USE_SPI
+void EXTI15_10_IRQHandler()
+{
+    if((EXTI->PR & EXTI_Line14))
+    {
+// reset it
+        EXTI->PR = EXTI_Line14;
+        if(PIN_IS_SET(SPI_GPIO, CLK_PIN))
+        {
+// reset after inactivity
+            if(tick - last_spi_tick > SPI_TICKS)
+            {
+                spi_counter = 0;
+                spi_byte = 0;
+                spi_len = 0;
+            }
+
+            last_spi_tick = tick;
+            spi_byte <<= 1;
+            if(PIN_IS_SET(SPI_GPIO, DAT_PIN))
+            {
+                spi_byte |= 0x1;
+            }
+
+            spi_counter++;
+            if(spi_counter >= 8)
+            {
+                if(spi_len < sizeof(spi_data))
+                {
+                    spi_data[spi_len++] = spi_byte;
+                }
+
+                spi_counter = 0;
+                spi_byte = 0;
+            }
+        }
+    }
+}
+
+#endif
+
 int main(void)
 {
 	int i, j;
@@ -820,6 +883,28 @@ int main(void)
 	GPIO_Init(LED_GPIO, &GPIO_InitStructure);
 	SET_PIN(LED_GPIO, LED_PIN);
 
+
+#ifdef USE_SPI
+// SPI
+    GPIO_InitStructure.GPIO_Pin = CLK_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_Init(SPI_GPIO, &GPIO_InitStructure);
+    
+    EXTI_InitTypeDef EXTI_InitStructure;
+    EXTI_InitStructure.EXTI_Line = EXTI_Line14;
+    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;  
+    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+    EXTI_Init(&EXTI_InitStructure);
+
+ 	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
+ 	NVIC_Init(&NVIC_InitStructure);
+
+
+    
+#endif
+
 	init_motor();
     init_radio();
 
@@ -850,16 +935,28 @@ int main(void)
             prev_frame = tick;
             next_frame = prev_frame + HZ / FRAME_HZ;
             debug_count++;
-            debug_count = debug_count % 10;
+            debug_count = debug_count % 100;
 
 //             print_text("next_frame=");
 //             print_number(next_frame);
 //             print_lf();
 
 
-// update speed based on analog value
+// update speed based on remote value
             int adc = adc_raw;
-            if(control_valid && adc < MIN_RIGHT)
+// use face tracker
+#ifdef USE_SPI
+            if(!control_valid && 
+                tick - last_spi_tick < SPI_TIMEOUT)
+            {
+                adc = adc_spi;
+            }
+            else
+            {
+                spi_valid  = 0;
+            }
+#endif
+            if((control_valid || spi_valid) && adc < MIN_RIGHT)
             {
                 acceleration = ACCELERATION;
 //                 acceleration = SLOW_ACCELERATION +
@@ -894,7 +991,7 @@ int main(void)
                 }
             }
             else
-            if(control_valid && adc > MIN_LEFT)
+            if((control_valid || spi_valid) && adc > MIN_LEFT)
             {
                 acceleration = ACCELERATION;
 //                 acceleration = SLOW_ACCELERATION +
@@ -952,18 +1049,18 @@ int main(void)
                 
             }
 
-//             if(debug_count == 0)
-//             {
-//                  print_text("adc=");
-//                  print_number(adc_raw);
-//                  print_text("timelapse_code=");
-//                  print_hex(timelapse_code);
-//                  print_text("phase_speed=");
-//                  print_fixed(target_phase_speed);
-//                  print_text("acceleration=");
-//                  print_fixed(acceleration);
-//                  print_lf();
-//             }
+            if(debug_count == 0)
+            {
+                 print_text("adc=");
+                 print_number(adc);
+                 print_text("timelapse_code=");
+                 print_hex(timelapse_code);
+                 print_text("phase_speed=");
+                 print_fixed(target_phase_speed);
+                 print_text("acceleration=");
+                 print_fixed(acceleration);
+                 print_lf();
+            }
 
 // add timelapse speed to phase speed.  Reverse direction for gearbox.
             const int timelapse_speeds[] = 
@@ -1075,6 +1172,21 @@ int main(void)
 //print_number(current_channel);
             next_channel();
         }
+
+#ifdef USE_SPI
+        if(spi_len >= 1)
+        {
+            if(!control_valid)
+            {
+                TOGGLE_PIN(LED_GPIO, LED_PIN);
+            }
+            adc_spi = spi_data[0];
+            spi_valid = 1;
+            spi_len = 0;
+//            TRACE
+//            print_hex(adc_spi);
+        }
+#endif
 
         
         PET_WATCHDOG
