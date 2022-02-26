@@ -101,20 +101,26 @@ front_tire3.FCStd: front tire
     left & right must be mirror images
     timelapse mode with fixcura.py has better stringing
 
+rear_tire3.FCStd: OBSOLETE rear wheel
 
-rear_tire3.FCStd: most recent rear wheel design
+rear_wheel2.FCStd: most recent on-road rear wheel design
     print hub cap in PLA 
-        .4mm nozzle .32mm layer height
+        .4mm nozzle .32mm layer height for INNER HUB, INNER RING
+        .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
     tire model is a mockup
-    left & right must be mirror images
-    single .32mm layer of onroad tire must be exported as STL, then extruded with
-        helix.c 31mm total height, no V tread, 20 deg rotation
 
-tire6.FCMacro: latest rear tire
-    must extrude by 1 layer height, then run helix.c to generate a helix by 
-    creating discrete layers
-    must enable timelapse mode with fixcura.py to fix stringing
+
+
+tire6.FCMacro: creates a sketch of the latest rear tire
+    Extrude by a multiple of the layer height .32mm, then export tire.stl
+    Then run helix.c to generate a helix by 
+        creating discrete layers
     tires must be mirror images or the truck will pull to 1 side
+    1st layer is 220C to avoid sticking.  Next layer is 250C.
+
+    TODO: Make tire 36mm to fit in latest wheel
+
+
 
 
 truck_radio.pcb: remote control tx/rx for 3D printed truck & the camera
@@ -215,7 +221,7 @@ steering.FCMacro:
     create objects for steering
 
 steering.FCStd: steering section
-    print with 1mm nozzle 
+    print with 0.8mm nozzle 
     .2mm layer height
     ultimaker project: steering.3mf
     bottom cutout
@@ -223,6 +229,7 @@ steering.FCStd: steering section
      - print sideways
     wheel vertical mirror001
     wheel fork master
+     - TPU with 0.8mm nozzle
     fusion: fork bridge + wheel vertical003
     servo bathtub
     - support to bed only
@@ -236,7 +243,7 @@ front_wheel.FCStd: front wheel
     modeled for a .4mm nozzle
 
 rear_wheel.FCStd: OBSOLETE motor wheel coupling
-    print with 1mm nozzle
+    print with 0.8mm nozzle
     .8mm line width
     .32mm layer height
     ultimaker project: front_wheel.3mf, rear_wheel.3mf
@@ -367,8 +374,6 @@ Panning mount:
 
 cam_remote.pcb, cam.pcb: electronicals
 
-cam_gearbox2.FCStd:
-    brushless servo as a stepper motor for panning
 
 cam_gearbox.FCStd: OBSOLETE
     hobby motor as a stepper motor
@@ -412,26 +417,12 @@ TODO:
 
 
 
-gopro_bearing.FCStd:
-    bearing for motorized panning
-    print bearing inner
-    print bearing outer
-     - doesn't require support
-    must print with
-        4 * "inner shroud slice"
-         - TODO: make hole for tube & make base wider to compensate for lost material
-         - TODO remove alignment ring to make it easier to print
-        "outer shroud" + "bolt loop"
-    
-    print right angle coupling with right hole pattern to create a right angle
-    requires ironing
-
 
 gopro_rightangle.FCStd
     cf collar - print 2 for the bearing in place of the inner shroud slice & 2 for the handle
         100% infill
 
-    old right angle coupling between carbon fiber & handle
+    solid right angle coupling between 2 carbon fiber rods
     print with no support
     print with laminations distributing plastic flex along curves
 
@@ -439,14 +430,14 @@ gopro_rightangle.FCStd
 
 
 gopro_motor.FCStd:
-    coupling to motor for panning without a gearbox
+    direct coupling of CF to motor for panning without a gearbox
     must print with
         4 * "inner shroud slice"
          - TODO: make hole for motor shaft & make base wider to compensate for lost material
         "outer shroud" + "bolt loop"
 
 shroud.FCStd:
-    the shroud for a direct drive panner
+    the shroud for a direct drive panning motor
     tube segment was created with 
     ./tube shroud.stl 30 60 0 16
     print with .4mm line width
