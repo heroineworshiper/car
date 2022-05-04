@@ -23,15 +23,21 @@
 
 // create a helical extrusion by copying the entire model to discrete layers
 // the source model must be a single layer height
-// gcc -g -O2 -o helix helix.c -lm
+// gcc -O2 -o helix helix.c -lm
 // ./helix <input> <output>
 // ./helix tire.stl tire2.stl
 
 
 #include "3dstuff.h"
 
-#define TOTAL_H 6 // shim between 31.04 & 36mm tire
-#define TOTAL_ANGLE (360.0 / 18 * 6 / 31.04)
+//#define TOTAL_H 6 // shim between 31.04 & 36mm tire
+//#define TOTAL_H 36 // 32mm onroad tire
+//#define TOTAL_ANGLE (360.0 / 18)
+//#define TOTAL_ANGLE (360.0 / 18 * 6 / 31.04)
+
+// 40mm offroad tire
+#define TOTAL_H 40
+#define TOTAL_ANGLE (360.0 / 16)
 
 //#define TOTAL_H 31.04 // parallel tread
 //#define TOTAL_H 60.0 // V tread

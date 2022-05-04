@@ -106,7 +106,19 @@ def border(sketch, coords, thickness, borderDirection):
             end = coords[i + 2]
     makePoly(sketch, borderLine)
 
+def getAngles(column, columns):
+# angle range of the column
+    angle0 = column * 2 * math.pi / columns
+    angle1 = (column + .5) * 2 * math.pi / columns
+    angle2 = (column + 1) * 2 * math.pi / columns
 
+# angle of the zigzag points
+    angleOffset = 2.0 * math.pi / columns / 8
+
+# angle of outer zigzag points & tread is slightly tweeked to make the tread 50%
+# of the circumference
+    angleOffset2 = math.pi / columns / 8
+    return (angle0, angle1, angle2, angleOffset, angleOffset2)
 
 
 def makeTire(iRadius, 
@@ -117,10 +129,13 @@ def makeTire(iRadius,
     columns, # number of hexagon columns in a layer.  Each column is 2 hexagons side by side
     wallThickness, # thickness of hexagon wall
     tread): # add tread if nonzero
+
     iDiameter = iRadius * 2
     oDiameter = oRadius * 2
 
-
+    haveTread = False
+    if tread > 0.01:
+        haveTread = True
 
     z = 0.0
 
@@ -131,20 +146,20 @@ def makeTire(iRadius,
 #    gui.getObject(sketch.Label).Visibility = False
 
 # hexagon range of radii
-    iRadius = iDiameter / 2 + iThickness - wallThickness / 2
-    oRadius = oDiameter / 2 - oThickness + wallThickness / 2
+    iRadius = iRadius + iThickness - wallThickness / 2
+    oRadius = oRadius - oThickness + wallThickness / 2
 
     for column in range(0, columns):
-# angle range of the column
-        angle0 = column * 2 * math.pi / columns
-        angle1 = (column + .5) * 2 * math.pi / columns
-        angle2 = (column + 1) * 2 * math.pi / columns
-# offset of the side points
-        angleOffset = 2.0 * math.pi / columns / 8
+        angle0, angle1, angle2, angleOffset, angleOffset2 = getAngles(column, columns)
+
         layers_i = int(layers)
         if layers > layers_i:
             layers_i = layers_i + 1
         for layer in range(0, layers_i):
+            outerLayer = False
+            if layer == layers - 1:
+                outerLayer = True
+
 # hexagon radius
             r1 = iRadius + layer * (oRadius - iRadius) / layers
             r2 = iRadius + (layer + .5) * (oRadius - iRadius) / layers
@@ -153,7 +168,7 @@ def makeTire(iRadius,
 
 #            print('angle0=', angle0, ' angle1=', angle1, ' r1=', r1, ' r2=', r2, ' angleOffset=', angleOffset)
 # full hexagon, even column
-            if layer == layers - 1:
+            if outerLayer:
                 subdivisions = 2
                 coords = []
                 angle3 = angle1 - angleOffset
@@ -169,58 +184,28 @@ def makeTire(iRadius,
                 coords.append(polarToXYZ(angle1 + angleOffset, r2, 0.0))
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
 
-
-# tread, even column
-                if tread > 0.01:
-                    wallAngle = (2 * math.pi) * oThickness / (oDiameter * math.pi)
-                    angle5 = angle3 - wallAngle
-                    angle6 = angle4 + wallAngle
-                    r5 = oDiameter / 2 + tread - oThickness
-                    r6 = oDiameter / 2 + tread
-                    r7 = oRadius + wallThickness / 2
-                    for i in range(subdivisions):
-                        sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle5 + i * (angle6 - angle5) / subdivisions, r6, 0.0),
-                            polarToXYZ(angle5 + (i + 1) * (angle6 - angle5) / subdivisions, r6, 0.0)),
-                            False)
-                        sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r5, 0.0),
-                            polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r5, 0.0)),
-                            False)
-                        sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r7, 0.0),
-                            polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r7, 0.0)),
-                            False)
-                    sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle3, r7, 0.0),
-                            polarToXYZ(angle3, r5, 0.0)),
-                            False)
-                    sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle4, r7, 0.0),
-                            polarToXYZ(angle4, r5, 0.0)),
-                            False)
-                    sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle5, oDiameter / 2, 0.0),
-                            polarToXYZ(angle5, r6, 0.0)),
-                            False)
-                    sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle6, oDiameter / 2, 0.0),
-                            polarToXYZ(angle6, r6, 0.0)),
-                            False)
-
             else:
 # inner full hexagon, even column
 # clamp radius in case of a fractional layer
                 if r3 > oRadius:
                     r3 = oRadius
-                coords = [
-                    polarToXYZ(angle0 + angleOffset, r1, 0.0),
-                    polarToXYZ(angle0 - angleOffset, r2, 0.0),
-                    polarToXYZ(angle0 + angleOffset, r3, 0.0),
-                    polarToXYZ(angle1 - angleOffset, r3, 0.0),
-                    polarToXYZ(angle1 + angleOffset, r2, 0.0),
-                    polarToXYZ(angle1 - angleOffset, r1, 0.0)
-                ]
+                    coords = [
+                        polarToXYZ(angle0 + angleOffset, r1, 0.0),
+                        polarToXYZ(angle0 - angleOffset2, r2, 0.0),
+                        polarToXYZ(angle0 + angleOffset, r3, 0.0),
+                        polarToXYZ(angle1 - angleOffset, r3, 0.0),
+                        polarToXYZ(angle1 + angleOffset2, r2, 0.0),
+                        polarToXYZ(angle1 - angleOffset, r1, 0.0)
+                    ]
+                else:
+                    coords = [
+                        polarToXYZ(angle0 + angleOffset, r1, 0.0),
+                        polarToXYZ(angle0 - angleOffset, r2, 0.0),
+                        polarToXYZ(angle0 + angleOffset, r3, 0.0),
+                        polarToXYZ(angle1 - angleOffset, r3, 0.0),
+                        polarToXYZ(angle1 + angleOffset, r2, 0.0),
+                        polarToXYZ(angle1 - angleOffset, r1, 0.0)
+                    ]
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
 
             if layer == 0:
@@ -235,7 +220,7 @@ def makeTire(iRadius,
                 coords.append(polarToXYZ(angle2 - angleOffset, r2, 0.0))
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
             
-            if layer == layers - 1:
+            if outerLayer:
 # outer hexagon, odd column
                 coords = []
                 coords.append(polarToXYZ(angle1 + angleOffset, r2, 0.0))
@@ -249,16 +234,6 @@ def makeTire(iRadius,
                 coords.append(polarToXYZ(angle2 - angleOffset, r2, 0.0))
                 border(sketch, coords, wallThickness / 2, -math.pi / 2)
 
-# tread, odd column
-                if tread > 0.01:
-                    wallAngle = (2 * math.pi) * oThickness / (oDiameter * math.pi)
-                    angle3 += wallAngle
-                    angle4 -= wallAngle
-                    for i in range(subdivisions):
-                        sketch.addGeometry(Part.LineSegment(
-                            polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, oDiameter / 2, 0.0),
-                            polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, oDiameter / 2, 0.0)),
-                            False)
 
 
 # middle hexagon, odd column
@@ -266,8 +241,8 @@ def makeTire(iRadius,
                 coords = [
                     polarToXYZ(angle1 + angleOffset, r2, 0.0),
                     polarToXYZ(angle1 - angleOffset, r3, 0.0),
-                    polarToXYZ(angle1 + angleOffset, r4, 0.0),
-                    polarToXYZ(angle2 - angleOffset, r4, 0.0),
+                    polarToXYZ(angle1 + angleOffset2, r4, 0.0),
+                    polarToXYZ(angle2 - angleOffset2, r4, 0.0),
                     polarToXYZ(angle2 + angleOffset, r3, 0.0),
                     polarToXYZ(angle2 - angleOffset, r2, 0.0),
                 ]
@@ -279,11 +254,72 @@ def makeTire(iRadius,
         iDiameter / 2))
 
 # outer shell
-    if tread < 0.01:
+    if not haveTread:
         sketch.addGeometry(Part.Circle(App.Vector(0, 0, 0),
             App.Vector(0, 0, 1),
             oDiameter / 2))
+    else:
+# tread
+        wallAngle = (2 * math.pi) * oThickness / (oDiameter * math.pi)
+        for column in range(0, columns):
+            angle0, angle1, angle2, angleOffset, angleOffset2 = getAngles(column, columns)
 
+# rotate the tread if a fractional layer
+            if (layers % 1) > 0.1:
+                treadOffset = math.pi / columns
+                angle0 += treadOffset
+                angle1 += treadOffset
+                angle2 += treadOffset
+
+            angle3 = angle0 + angleOffset2
+            angle4 = angle1 - angleOffset2
+
+# even column
+            angle5 = angle3 - wallAngle
+            angle6 = angle4 + wallAngle
+            r5 = oDiameter / 2 + tread - oThickness
+            r6 = oDiameter / 2 + tread
+            r7 = oRadius + wallThickness / 2
+            for i in range(subdivisions):
+                sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle5 + i * (angle6 - angle5) / subdivisions, r6, 0.0),
+                    polarToXYZ(angle5 + (i + 1) * (angle6 - angle5) / subdivisions, r6, 0.0)),
+                    False)
+                sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r5, 0.0),
+                    polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r5, 0.0)),
+                    False)
+                sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r7, 0.0),
+                    polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r7, 0.0)),
+                    False)
+            sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle3, r7, 0.0),
+                    polarToXYZ(angle3, r5, 0.0)),
+                    False)
+            sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle4, r7, 0.0),
+                    polarToXYZ(angle4, r5, 0.0)),
+                    False)
+            sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle5, oDiameter / 2, 0.0),
+                    polarToXYZ(angle5, r6, 0.0)),
+                    False)
+            sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle6, oDiameter / 2, 0.0),
+                    polarToXYZ(angle6, r6, 0.0)),
+                    False)
+
+# odd column.  Section joining the treads
+            angle3 = angle1 - angleOffset2
+            angle4 = angle2 + angleOffset2
+            angle3 += wallAngle
+            angle4 -= wallAngle
+            for i in range(subdivisions):
+                sketch.addGeometry(Part.LineSegment(
+                    polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, oDiameter / 2, 0.0),
+                    polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, oDiameter / 2, 0.0)),
+                    False)
 
 
 
@@ -305,14 +341,8 @@ def makeTire(iRadius,
 # 108mm TPU tire 11mm thick
 #makeTire(43.0, 54.0, .5, 1.0, 1, 18, .5, 0)
 
-# 108mm 15mm thick PLA core
-#makeTire(21.5, 38.5, 0.5, 0.5, 1.5, 12, .5, 0)
-
 # 108mm diameter 15mm thick hex TPU
 #makeTire(39.0, 54.0, .5, 1.0, 1.5, 18, .5, 0)
-
-# 108mm diameter 15mm thick hex TPU
-makeTire(39.0, 54.0, .5, 1.2, 1.5, 18, .5, 0)
 
 # 108mm diameter 10mm thick hex + 5mm thick tread TPU
 # Freecad can't make it helical, so you have to extrude, export as STL &
@@ -321,5 +351,19 @@ makeTire(39.0, 54.0, .5, 1.2, 1.5, 18, .5, 0)
 
 
 
+
+
+
+# 108mm Onroad PLA core
+#makeTire(21.5, 38.5, 0.5, 0.5, 1.5, 12, .5, 0)
+
+# 108mm diameter 15mm thick hex TPU Onroad
+#makeTire(39.0, 54.0, .5, 1.2, 1.5, 18, .5, 0)
+
+# 108mm Offroad PLA core
+#makeTire(21.5, 34.5, 0.5, 0.5, 1.0, 12, .5, 0)
+
+# 108mm diameter 15mm thick hex + 4mm thick tread TPU Off road
+makeTire(35.0, 50.0, .5, 1.0, 1.5, 16, .5, 4)
 
 

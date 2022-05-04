@@ -70,6 +70,11 @@ a1323.pcb: hall effect sensor board for motor sensor
 
 l6234.pcb: H bridge board for motor
 
+l6234c.FCStd: bracket which presses the L6234 board against the aluminum
+heat sink/angle rod
+    print with .8mm nozzle .32mm layer
+    use pen spring & lock nut to press 1 side.  Use self tapper for the other side.
+
 imu4.pcb: IMU for 3D printed truck
 
 
@@ -160,13 +165,15 @@ bumper.FCStd:
     print in TPU
 
 
-container.FCStd:
+container2.FCStd:
     print masks have to be booleaned with panels in Blender
     Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
 
+    Use PLA 100% infill 220C
+
     top corner master:
     bottom corner master:
-        require .32 layers 230C for adhesion
+        require .32 layers 250C for adhesion
         
 
     container budget:
@@ -237,25 +244,21 @@ steering.FCMacro:
 
 steering.FCStd: steering section
     print with 0.8mm nozzle 
-    .2mm layer height
-    ultimaker project: steering.3mf
-    bottom cutout
-    wheel vertical
+    .32mm layer height
+    shield
+    wheel vertical, wheel vertical mirror001
      - print sideways
-    wheel vertical mirror001
-    wheel fork master
-     - TPU with 0.8mm nozzle
-    fusion: fork bridge + wheel vertical003
-    servo bathtub
-    - support to bed only
+    wheel fork, wheel stopper
+     - TPU with 0.8mm nozzle .32mm layer height
 
-    TODO: make servo shield removable for accessing the ball links
+    TODO: make shield removable for accessing the ball links
 
 
 
 
 front_wheel.FCStd: front wheel
     modeled for a .4mm nozzle
+    .32 layer height
 
 rear_wheel.FCStd: OBSOLETE motor wheel coupling
     print with 0.8mm nozzle
