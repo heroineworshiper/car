@@ -101,24 +101,39 @@ front_tire3.FCStd: front tire
     left & right must be mirror images
     timelapse mode with fixcura.py has better stringing
 
+offroad2.stl: offroad rear tire after the helix transformation
+    print with .4mm nozzle
+    TPU
+    .32mm layer height
+    250C
+    left & right must be mirror images
+
 rear_tire3.FCStd: OBSOLETE rear wheel
 
-rear_wheel2.FCStd: most recent on-road rear wheel design
+rear_wheel2.FCStd: most recent on-road rear wheel
     print hub cap in PLA 
         .4mm nozzle .32mm layer height for INNER HUB, INNER RING
         .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
     tire model is a mockup
 
+rear_wheel3.FCStd: most recent off-road rear wheel
+    .4mm nozzle .32mm layer height for INNER HUB, INNER RING
+    .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
 
+tire3.stl: front tire after the helix transformation
+    print with .8mm nozzle
+    TPU
+    .32mm layer height
+    250C
+    left & right must be mirror images
 
-tire6.FCMacro: creates a sketch of the latest rear tire
+tire6.FCMacro: creates sketches for the latest rear wheel & tire
     Extrude by a multiple of the layer height .32mm, then export tire.stl
     Then run helix.c to generate a helix by 
         creating discrete layers
     tires must be mirror images or the truck will pull to 1 side
     1st layer is 220C to avoid sticking.  Next layer is 250C.
 
-    TODO: Make tire 36mm to fit in latest wheel
 
 
 
@@ -252,13 +267,12 @@ rear_wheel.FCStd: OBSOLETE motor wheel coupling
     no support
 
 
-motor3.FCStd: motor mount
+motor4.FCStd: motor mount
     The following use .8mm nozzle, .32 layer height, support with 80deg overhang
     shroud
     tpu out of TPU
     clamp * 4
     motor plate
-    TODO: 4-40 locknuts in motor plate
 
     The following use .4mm nozzle, .2mm layer
     SENSOR PLATE

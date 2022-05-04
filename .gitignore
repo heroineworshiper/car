@@ -5,7 +5,6 @@
 /car_remote.X/build/default/
 /car_remote.X/dist/default/
 /car_remote_hex.X/nbproject/private/
-*.stl
 *.mov
 *.out
 *.elf
