@@ -197,6 +197,10 @@ container.FCMacro:
     scripts for creating the container
     
 
+phone4.FCStd:
+    phone holster to be printed in TPU & welded with heat
+
+
 radio_box.FCStd:
     container for radio modules & switches.
     use print mask to create wall & isogrid parts
