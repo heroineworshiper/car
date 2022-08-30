@@ -2,7 +2,7 @@
 3D printed truck
 
 
-Copyright (C) 2012-2021 Adam Williams <broadcast at earthling dot net>
+Copyright (C) 2012-2022 Adam Williams <broadcast at earthling dot net>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ heat sink/angle rod
 imu4.pcb: IMU for 3D printed truck
 
 
-cring.FCStd: retaining ring for the motors
+cring.FCStd: retaining ring for the motors.  Not used anymore.
     .4mm nozzle
     .2mm layer height out of PETG
     no cooling fan
@@ -105,6 +105,10 @@ front_tire3.FCStd: front tire
     .32mm layer height
     left & right must be mirror images
     timelapse mode with fixcura.py has better stringing
+
+front_wheel.FCStd: front wheel
+    modeled for a .4mm nozzle
+    .32 layer height
 
 offroad2.stl: offroad rear tire after the helix transformation
     print with .4mm nozzle
@@ -260,10 +264,6 @@ steering.FCStd: steering section
 
 
 
-front_wheel.FCStd: front wheel
-    modeled for a .4mm nozzle
-    .32 layer height
-
 rear_wheel.FCStd: OBSOLETE motor wheel coupling
     print with 0.8mm nozzle
     .8mm line width
@@ -289,7 +289,7 @@ motor4.FCStd: motor mount
         support to base
         .4mm nozzle 
     GASKET:
-        TPU .4mm nozzle .32mm layer
+        PLA to avoid static .4mm nozzle .2mm layer
 
 
 
