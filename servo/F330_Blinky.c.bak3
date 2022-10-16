@@ -1,0 +1,357 @@
+//-----------------------------------------------------------------------------
+// F330_Blinky.c
+//-----------------------------------------------------------------------------
+// Copyright (C) 2007 Silicon Laboratories, Inc.
+//
+// AUTH: HF
+// DATE: 04 FEB 2003
+//
+// This program flashes the green LED on the C8051F33x target board about
+// five times a second using the interrupt handler for Timer2.
+//
+// Target: C8051F330/1/2/3/4/5
+//
+// Tool chain: KEIL Eval 'c'
+//
+
+
+// Write a 0-0xfd phase offset to the UART or 
+// 0xff to float the MOSFETS
+// 0xfe to connect the MOSFETS to ground
+
+
+#include <c8051f330.h>                    // SFR declarations
+#include <stdint.h>
+
+#define GROUND_MOTOR 0xfe
+#define COAST_MOTOR 0xff
+#define NEUTRAL_STEP 0x80
+
+#define SYSTEMCLOCK       24500000         // SYSCLK frequency in Hz
+//#define BAUD 115200
+#define BAUD 115200
+#define MAX_PWM (SYSTEMCLOCK / 32000)
+#define PCA_RELOAD (-MAX_PWM)
+
+// mosfet pins
+sbit PFET0 = P1^5;
+sbit PFET1 = P1^4;
+sbit PFET2 = P1^6;
+sbit NFET0 = P1^1;
+sbit NFET1 = P1^0;
+sbit NFET2 = P1^2;
+// PWM = P0.7
+// UART RX = P0.5
+// UART TX = P0.4
+
+// debug
+sbit LED = P0^3;                          // LED='1' means ON
+
+// created by tables.c
+uint8_t code sin_table[] = {
+	0x80, 0x83, 0x86, 0x89, 0x8c, 0x8f, 0x93, 0x96, 
+	0x99, 0x9c, 0x9f, 0xa2, 0xa5, 0xa8, 0xab, 0xae, 
+	0xb1, 0xb4, 0xb7, 0xba, 0xbd, 0xc0, 0xc2, 0xc5, 
+	0xc8, 0xca, 0xcd, 0xcf, 0xd2, 0xd4, 0xd7, 0xd9, 
+	0xdb, 0xdd, 0xdf, 0xe2, 0xe4, 0xe6, 0xe7, 0xe9, 
+	0xeb, 0xed, 0xee, 0xf0, 0xf1, 0xf3, 0xf4, 0xf5, 
+	0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfc, 0xfd, 
+	0xfe, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xfe, 0xfd, 
+	0xfc, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf5, 
+	0xf4, 0xf3, 0xf1, 0xf0, 0xee, 0xed, 0xeb, 0xe9, 
+	0xe7, 0xe6, 0xe4, 0xe2, 0xdf, 0xdd, 0xdb, 0xd9, 
+	0xd7, 0xd4, 0xd2, 0xcf, 0xcd, 0xca, 0xc8, 0xc5, 
+	0xc2, 0xc0, 0xbd, 0xba, 0xb7, 0xb4, 0xb1, 0xae, 
+	0xab, 0xa8, 0xa5, 0xa2, 0x9f, 0x9c, 0x99, 0x96, 
+	0x93, 0x8f, 0x8c, 0x89, 0x86, 0x83, 0x80, 0x7c, 
+	0x79, 0x76, 0x73, 0x70, 0x6c, 0x69, 0x66, 0x63, 
+	0x60, 0x5d, 0x5a, 0x57, 0x54, 0x51, 0x4e, 0x4b, 
+	0x48, 0x45, 0x42, 0x40, 0x3d, 0x3a, 0x37, 0x35, 
+	0x32, 0x30, 0x2d, 0x2b, 0x28, 0x26, 0x24, 0x22, 
+	0x20, 0x1d, 0x1b, 0x19, 0x18, 0x16, 0x14, 0x12, 
+	0x11, 0x0f, 0x0e, 0x0c, 0x0b, 0x0a, 0x08, 0x07, 
+	0x06, 0x05, 0x04, 0x03, 0x03, 0x02, 0x01, 0x01, 
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x03, 0x03, 
+	0x04, 0x05, 0x06, 0x07, 0x08, 0x0a, 0x0b, 0x0c, 
+	0x0e, 0x0f, 0x11, 0x12, 0x14, 0x16, 0x18, 0x19, 
+	0x1b, 0x1d, 0x20, 0x22, 0x24, 0x26, 0x28, 0x2b, 
+	0x2d, 0x30, 0x32, 0x35, 0x37, 0x3a, 0x3d, 0x40, 
+	0x42, 0x45, 0x48, 0x4b, 0x4e, 0x51, 0x54, 0x57, 
+	0x5a, 0x5d, 0x60, 0x63, 0x66, 0x69, 0x6c, 0x70, 
+	0x73, 0x76, 0x79, 0x7c
+};
+
+#define SIN_TOTAL sizeof(sin_table)
+
+
+uint8_t uart_code = GROUND_MOTOR;
+int8_t step = 0;
+uint8_t need_pwm = 0;
+uint8_t need_update = 0;
+uint8_t phase0 = 0;
+uint8_t phase1 = SIN_TOTAL / 3;
+uint8_t phase2 = SIN_TOTAL * 2 / 3;
+// discard a few garbage bytes
+uint8_t uart_discard = 1;
+uint16_t duty0 = PCA_RELOAD + MAX_PWM / 2;
+uint16_t duty1 = PCA_RELOAD + MAX_PWM / 2;
+uint16_t duty2 = PCA_RELOAD + MAX_PWM / 2;
+
+void update_motor()
+{
+    if(uart_code == GROUND_MOTOR)
+    {
+        PFET0 = 0;
+        PFET1 = 0; 
+        PFET2 = 0; 
+        NFET0 = 1; 
+        NFET1 = 1; 
+        NFET2 = 1; 
+        duty0 = PCA_RELOAD + MAX_PWM / 2;
+        duty1 = PCA_RELOAD + MAX_PWM / 2;
+        duty2 = PCA_RELOAD + MAX_PWM / 2;
+        need_pwm = 0;
+        step = 0;
+    }
+    else
+    if(uart_code == COAST_MOTOR)
+    {
+// MOSFETs off
+        PFET0 = 0;
+        PFET1 = 0; 
+        PFET2 = 0; 
+        NFET0 = 0; 
+        NFET1 = 0; 
+        NFET2 = 0;
+        duty0 = PCA_RELOAD + MAX_PWM / 2;
+        duty1 = PCA_RELOAD + MAX_PWM / 2;
+        duty2 = PCA_RELOAD + MAX_PWM / 2;
+        need_pwm = 0;
+        step = 0;
+    }
+    else
+    {
+        step = uart_code - NEUTRAL_STEP;
+        need_pwm = 1;
+    }
+
+    need_update = 0;
+}
+
+void update_phase()
+{
+//     uint16_t c_temp;
+//     uint8_t c0;
+//     uint8_t c1;
+//     uint8_t c2;
+
+//     phase0 += 1;
+//     phase1 += 1;
+//     phase2 += 1;
+// 
+//     if(phase0 >= SIN_TOTAL)
+//         phase0 = 0;
+//     if(phase1 >= SIN_TOTAL)
+//         phase1 = 0;
+//     if(phase2 >= SIN_TOTAL)
+//         phase2 = 0;
+
+    duty0 = PCA_RELOAD + MAX_PWM * sin_table[phase0] / 0xff;
+    duty1 = PCA_RELOAD + MAX_PWM * sin_table[phase1] / 0xff;
+    duty2 = PCA_RELOAD + MAX_PWM * sin_table[phase2] / 0xff;
+
+// PWM compares have already fired by now
+
+    PCA0CPL0 = duty0 & 0xff;
+    PCA0CPH0 = duty0 >> 8;
+    PCA0CPL1 = duty1 & 0xff;
+    PCA0CPH1 = duty1 >> 8;
+    PCA0CPL2 = duty2 & 0xff;
+    PCA0CPH2 = duty2 >> 8;
+
+//     c_temp = phase % SIN_TOTAL;
+//     c0 = c_temp;
+//     c_temp += SIN_TOTAL / 3;
+//     c1 = c_temp % SIN_TOTAL;
+//     c_temp += SIN_TOTAL / 3;
+//     c2 = c_temp % SIN_TOTAL;
+// 
+//     duty0 = PCA_RELOAD + MAX_PWM * sin_table[c0] / 0xff;
+//     duty1 = PCA_RELOAD + MAX_PWM * sin_table[c1] / 0xff;
+//     duty2 = PCA_RELOAD + MAX_PWM * sin_table[c2] / 0xff;
+// 
+//     PCA0CPL0 = duty0 & 0xff;
+//     PCA0CPH0 = duty0 >> 8;
+//     PCA0CPL1 = duty1 & 0xff;
+//     PCA0CPH1 = duty1 >> 8;
+//     PCA0CPL2 = duty2 & 0xff;
+//     PCA0CPH2 = duty2 >> 8;
+LED = ~LED; // debug
+}
+
+void main (void) 
+{
+
+// disable watchdog timer
+    PCA0MD = 0;  // Disable watchdog timer
+
+
+// Initialize system clock to
+// 24.5MHz
+    OSCICN = 0x83;                     // Configure internal oscillator for
+                                       // its maximum frequency
+    RSTSRC = 0x04;                         // enable missing clock detector
+
+// crossbar page 128
+    XBR0     = 0x01; // enable UART pins
+// page 129
+    XBR1     = 0xc0; // Enable crossbar and disable pull-ups
+
+// UART page 158
+    SCON0 = 0x10; // SCON0: 8-bit variable bit rate
+                  //        level of STOP bit is ignored
+                  //        RX enabled
+                  //        ninth bits are zeros
+                  //        clear RI0 and TI0 bits
+
+// baud rate is created by timer 1 in 8 bit mode.  page 154
+// baud = SYSTEMCLOCK / TH1 / 2
+    TH1 = -(SYSTEMCLOCK/BAUD/2);
+    TL1 = TH1; // init Timer1
+// page 183
+    CKCON = 0x0c; // No prescaling for timers
+// page 182
+// Timer0 in 16-bit mode
+// Timer1 in 8-bit autoreload
+    TMOD = 0x21; 
+    TR1 = 1; // Timer1 on
+
+    IP |= 0x10; // Make UART high priority
+    ES0 = 1; // enable UART0 interrupt page 89
+
+    LED = 0;
+
+// Timer 0
+//    TH0 = MAX_PWM >> 8;    // Init Timer0 High register
+//    TL0 = MAX_PWM & 0xff ; // Init Timer0 Low register
+//    ET0 = 1;               // Timer0 interrupt enabled
+//    TR0 = 1; // Timer0 ON
+
+
+// PCA page 205
+    PCA0CN = 0x00; // Stop counter; clear all flags
+    PCA0MD = 0x09; // Use SYSCLK as time base.  Enable overflow interrupt.
+    PCA0CPM0 = 0xC9; // Module 0 = 16 bit Match and Interrupt
+    PCA0CPM1 = 0xC9; // Module 1 = 16 bit Match and Interrupt
+    PCA0CPM2 = 0xC9; // Module 2 = 16 bit Match and Interrupt
+// set the period
+    PCA0L = PCA_RELOAD & 0xff;
+    PCA0H = PCA_RELOAD >> 8;
+
+    update_motor();
+    PCA0CPL0 = duty0 & 0xff;
+    PCA0CPH0 = duty0 >> 8;
+    PCA0CPL1 = duty1 & 0xff;
+    PCA0CPH1 = duty1 >> 8;
+    PCA0CPL2 = duty2 & 0xff;
+    PCA0CPH2 = duty2 >> 8;
+    EIE1 |= 0x10; // enable PCA interrupts
+    CR = 1; // start PCA counter
+
+
+    P1MDOUT |= 0x77; // enable MOSFET pins as a push-pull outputs
+    P0MDOUT |= 0x08; // enable LED as a push-pull output
+    EA = 1; // enable global interrupts
+
+    while (1) { // spin forever
+        if(need_update)
+            update_motor();
+    }
+}
+
+void UART0_Interrupt (void) interrupt 4
+{
+    if (RI0 == 1)
+    {
+        RI0 = 0; // Clear interrupt flag
+        
+        if(uart_discard == 0)
+        {
+            uart_code = SBUF0; // Read a character from UART
+        }
+        else
+        {
+            uart_discard--;
+        }
+
+        need_update = 1;
+    }
+}
+
+void PCA0_ISR (void) interrupt 11
+{
+// overflow
+    if(CF)
+    {
+        CF = 0;
+        PCA0L = PCA_RELOAD & 0xff;
+        PCA0H = PCA_RELOAD >> 8;
+        if(need_pwm)
+        {
+            NFET0 = 0;
+            NFET1 = 0;
+            NFET2 = 0;
+            PFET0 = 1;
+            PFET1 = 1;
+            PFET2 = 1;
+            update_phase();
+        }
+    }
+
+    if(CCF0)
+    {
+        CCF0 = 0;                           // Clear module 0 interrupt flag.
+//LED = 0; // debug
+        if(need_pwm)
+        {
+            PFET0 = 0;
+            NFET0 = 1;
+        }
+    }
+
+    if(CCF1)
+    {
+        CCF1 = 0;                           // Clear module 1 interrupt flag.
+        if(need_pwm)
+        {
+            PFET1 = 0;
+            NFET1 = 1;
+        }
+    }
+
+    if(CCF2)
+    {
+        CCF2 = 0;                           // Clear module 2 interrupt flag.
+        if(need_pwm)
+        {
+            PFET2 = 0;
+            NFET2 = 1;
+        }
+    }
+}
+
+
+
+// void Timer0_ISR (void) interrupt 1
+// {
+//    TH0 = MAX_PWM >> 8;           // Reinit Timer0 High register
+//    TL0 = MAX_PWM & 0xff;            // Reinit Timer0 Low register
+//    LED = ~LED;  // Toggle the LED
+// }
+
+
+
+
+

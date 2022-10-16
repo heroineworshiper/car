@@ -1,0 +1,179 @@
+//-----------------------------------------------------------------------------
+// F330_Blinky.c
+//-----------------------------------------------------------------------------
+// Copyright (C) 2007 Silicon Laboratories, Inc.
+//
+// AUTH: HF
+// DATE: 04 FEB 2003
+//
+// This program flashes the green LED on the C8051F33x target board about
+// five times a second using the interrupt handler for Timer2.
+//
+// Target: C8051F330/1/2/3/4/5
+//
+// Tool chain: KEIL Eval 'c'
+//
+
+
+// Write a single byte code to the UART
+// bits 0:3 -> enable mosfets
+// bits 4:6 -> mosfet directions
+
+
+#include <c8051f330.h>                    // SFR declarations
+
+
+
+#define SYSTEMCLOCK       24500000         // SYSCLK frequency in Hz
+#define BAUD 115200
+
+// mosfet pins
+sbit PFET0 = P1^5;
+sbit PFET1 = P1^4;
+sbit PFET2 = P1^6;
+sbit NFET0 = P1^1;
+sbit NFET1 = P1^0;
+sbit NFET2 = P1^2;
+// PWM = P0.7
+// UART RX = P0.5
+// UART TX = P0.4
+
+// debug
+sbit LED = P0^3;                          // LED='1' means ON
+
+
+void main (void) 
+{
+
+   // disable watchdog timer
+   PCA0MD &= ~0x40;                       // WDTE = 0 (clear watchdog timer
+                                          // enable)
+
+// Initialize system clock to
+// 24.5MHz
+//   OSCICN = 0x80;                         // configure internal oscillator for
+//                                          // its lowest frequency
+   OSCICN |= 0x03;                     // Configure internal oscillator for
+                                       // its maximum frequency
+   RSTSRC = 0x04;                         // enable missing clock detector
+
+// crossbar page 128
+   XBR0     = 0x01; // enable UART pins
+// page 129
+   XBR1     = 0xc0; // Enable crossbar and disable pull-ups
+
+// UART page 158
+   SCON0 = 0x10; // SCON0: 8-bit variable bit rate
+                 //        level of STOP bit is ignored
+                 //        RX enabled
+                 //        ninth bits are zeros
+                 //        clear RI0 and TI0 bits
+
+// baud rate is created by timer 1 in 8 bit mode.  page 154
+// baud = SYSTEMCLOCK / TH1 / 2
+   TH1 = -(SYSTEMCLOCK/BAUD/2);
+   CKCON &= ~0x0b;
+   CKCON |= 0x08;
+   TL1 = TH1; // init Timer1
+   TMOD &= ~0xf0; // TMOD: timer 1 in 8-bit autoreload
+   TMOD |=  0x20;
+   TR1 = 1; // START Timer1
+   IP |= 0x10; // Make UART high priority
+   ES0 = 1; // enable UART0 interrupt page 89
+
+// MOSFETs off
+   PFET0 = 0;
+   PFET1 = 0; 
+   PFET2 = 0; 
+   NFET0 = 0; 
+   NFET1 = 0; 
+   NFET2 = 0; 
+
+   P1MDOUT |= 0x77; // enable MOSFET pins as a push-pull outputs
+   P0MDOUT |= 0x08; // enable LED as a push-pull output
+   LED = 0;
+   EA = 1; // enable global interrupts
+
+   while (1) { // spin forever
+   }
+}
+
+void UART0_Interrupt (void) interrupt 4
+{
+   if (RI0 == 1)
+   {
+      unsigned char c;
+      RI0 = 0; // Clear interrupt flag
+      c = SBUF0; // Read a character from UART
+
+
+      LED = ~LED; // debug
+// MOSFET0 enabled
+      if((c & 0x01))
+      {
+            if((c & 0x08))
+            {
+                PFET0 = 1;
+                NFET0 = 0;
+            }
+            else
+            {
+                PFET0 = 0;
+                NFET0 = 1;
+            }
+      }
+      else
+      {
+// MOSFET0 disabled
+          PFET0 = 0;
+          NFET0 = 0;
+      }
+
+// MOSFET1 enabled
+      if((c & 0x02))
+      {
+            if((c & 0x10))
+            {
+                PFET1 = 1;
+                NFET1 = 0;
+            }
+            else
+            {
+                PFET1 = 0;
+                NFET1 = 1;
+            }
+      }
+      else
+      {
+// MOSFET1 disabled
+          PFET1 = 0;
+          NFET1 = 0;
+      }
+
+// MOSFET2 enabled
+      if((c & 0x04))
+      {
+            if((c & 0x20))
+            {
+                PFET2 = 1;
+                NFET2 = 0;
+            }
+            else
+            {
+                PFET2 = 0;
+                NFET2 = 1;
+            }
+      }
+      else
+      {
+// MOSFET2 disabled
+          PFET2 = 0;
+          NFET2 = 0;
+      }
+
+
+
+   }
+}
+
+

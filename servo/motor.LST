@@ -1,0 +1,383 @@
+C51 COMPILER V9.59.0.0   MOTOR                                                             10/15/2022 16:22:29 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MOTOR
+OBJECT MODULE PLACED IN motor.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.exe motor.c DB OE INCDIR(C:\SiLabs\MCU\Inc)
+
+line level    source
+
+   1          /*
+   2           * SIN WAVE CONTROL FOR BRUSHLESS SERVO
+   3           * Copyright (C) 2022 Adam Williams <broadcast at earthling dot net>
+   4           * 
+   5           * This program is free software; you can redistribute it and/or modify
+   6           * it under the terms of the GNU General Public License as published by
+   7           * the Free Software Foundation; either version 2 of the License, or
+   8           * (at your option) any later version.
+   9           * 
+  10           * This program is distributed in the hope that it will be useful,
+  11           * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12           * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  13           * GNU General Public License for more details.
+  14           * 
+  15           * You should have received a copy of the GNU General Public License
+  16           * along with this program; if not, write to the Free Software
+  17           * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  18           * 
+  19           */
+  20          
+  21          // The PWM input must be soldered to the UART pin P0.5.  Then, the
+  22          // PWM lowpass filtering capacitor must be removed.
+  23          
+  24          // Write a 4 byte packet to control the MOSFETs.
+  25          // byte 0: 0xff
+  26          // byte 1: 0x88
+  27          // byte 2: power 0 - somewhat less than 255
+  28          //      Can't be full scale because time is needed for the interrupt handlers
+  29          //      If the motor shorts for certain phases, POWER needs to be smaller.
+  30          // byte 3: phase code
+  31          //      0 - SIN_TOTAL or 
+  32          //      COAST_MOTOR to float the MOSFETS
+  33          //      GROUND_MOTOR to connect the MOSFETS to ground
+  34          
+  35          
+  36          #include <c8051f330.h>                    // SFR declarations
+  37          #include <stdint.h>
+  38          
+  39          #include "motor.h"
+  40          
+  41          #define BAUD 115200
+  42          
+  43          // mosfet pins
+  44          sbit PFET0 = P1^5;
+  45          sbit PFET1 = P1^4;
+  46          sbit PFET2 = P1^6;
+  47          sbit NFET0 = P1^1;
+  48          sbit NFET1 = P1^0;
+  49          sbit NFET2 = P1^2;
+  50          // PWM = P0.7
+  51          // UART RX = P0.5
+  52          // UART TX = P0.4
+  53          
+  54          // debug
+  55          sbit LED = P0^3;                          // LED='1' means ON
+C51 COMPILER V9.59.0.0   MOTOR                                                             10/15/2022 16:22:29 PAGE 2   
+
+  56          
+  57          // from BLHeli/blob/master/SiLabs/Turnigy_Plush_6A.inc
+  58          #define NFETON_DELAY 1  // Wait delay from pfets off to nfets on
+  59          
+  60          
+  61          #include "sin_table.h"
+  62          
+  63          int8_t *sin_table_start = sin_table;
+  64          int8_t *sin_table_end = sin_table + SIN_TOTAL;
+  65          uint8_t counter;
+  66          
+  67          #define UART_SYNC1 0
+  68          #define UART_SYNC2 1
+  69          #define UART_POWER 2 
+  70          #define UART_PHASE 3
+  71          uint8_t uart_state = UART_SYNC1;
+  72          uint8_t uart_power;
+  73          uint8_t uart_phase;
+  74          uint8_t need_pwm = 0;
+  75          uint8_t need_update = 0;
+  76          uint16_t duty0 = PCA_RELOAD + MAX_PWM / 2;
+  77          uint16_t duty1 = PCA_RELOAD + MAX_PWM / 2;
+  78          uint16_t duty2 = PCA_RELOAD + MAX_PWM / 2;
+  79          
+  80          void update_motor()
+  81          {
+  82   1          if(uart_phase == GROUND_MOTOR)
+  83   1          {
+  84   2              need_pwm = 0;
+  85   2      // turn on all N
+  86   2      // turn off all P
+  87   2              P1 = 0x07;
+  88   2      //         PFET0 = 0;
+  89   2      //         PFET1 = 0; 
+  90   2      //         PFET2 = 0; 
+  91   2      //         NFET0 = 1; 
+  92   2      //         NFET1 = 1; 
+  93   2      //         NFET2 = 1; 
+  94   2              duty0 = PCA_RELOAD + MAX_PWM / 2;
+  95   2              duty1 = PCA_RELOAD + MAX_PWM / 2;
+  96   2              duty2 = PCA_RELOAD + MAX_PWM / 2;
+  97   2          }
+  98   1          else
+  99   1          if(uart_phase >= SIN_TOTAL)
+ 100   1          {
+ 101   2      // MOSFETs off
+ 102   2              need_pwm = 0;
+ 103   2              P1 = 0x00;
+ 104   2      //         PFET0 = 0;
+ 105   2      //         PFET1 = 0; 
+ 106   2      //         PFET2 = 0; 
+ 107   2      //         NFET0 = 0; 
+ 108   2      //         NFET1 = 0; 
+ 109   2      //         NFET2 = 0;
+ 110   2              duty0 = PCA_RELOAD + MAX_PWM / 2;
+ 111   2              duty1 = PCA_RELOAD + MAX_PWM / 2;
+ 112   2              duty2 = PCA_RELOAD + MAX_PWM / 2;
+ 113   2          }
+ 114   1          else
+ 115   1          {
+ 116   2      // compute phases
+ 117   2              int8_t *ptr;
+C51 COMPILER V9.59.0.0   MOTOR                                                             10/15/2022 16:22:29 PAGE 3   
+
+ 118   2              uint16_t duty0_;
+ 119   2              uint16_t duty1_;
+ 120   2              uint16_t duty2_;
+ 121   2              ptr = sin_table_start + uart_phase;
+ 122   2      #define COMPUTE_PHASE \
+ 123   2          ((int32_t)PCA_RELOAD + MAX_PWM / 2 + MAX_PWM * *ptr / 0xff * uart_power / 0xff)
+ 124   2      
+ 125   2              duty0_ = COMPUTE_PHASE;
+ 126   2              ptr += SIN_TOTAL / 3;
+ 127   2              if(ptr >= sin_table_end) ptr -= SIN_TOTAL;
+ 128   2              duty1_ = COMPUTE_PHASE;
+ 129   2              ptr += SIN_TOTAL / 3;
+ 130   2              if(ptr >= sin_table_end) ptr -= SIN_TOTAL;
+ 131   2              duty2_ = COMPUTE_PHASE;
+ 132   2      
+ 133   2      
+ 134   2              EA = 0;
+ 135   2              duty0 = duty0_;
+ 136   2              duty1 = duty1_;
+ 137   2              duty2 = duty2_;
+ 138   2              EA = 1;
+ 139   2      
+ 140   2              need_pwm = 1;
+ 141   2          }
+ 142   1      
+ 143   1      
+ 144   1          need_update = 0;
+ 145   1      }
+ 146          
+ 147          void main (void) 
+ 148          {
+ 149   1      
+ 150   1      // disable watchdog timer
+ 151   1          PCA0MD = 0;  // Disable watchdog timer
+ 152   1      
+ 153   1      
+ 154   1      // Initialize system clock to
+ 155   1      // 24.5MHz
+ 156   1          OSCICN = 0x83;                     // Configure internal oscillator for
+ 157   1                                             // its maximum frequency
+ 158   1          RSTSRC = 0x04;                         // enable missing clock detector
+ 159   1      
+ 160   1      // crossbar page 128
+ 161   1          XBR0     = 0x01; // enable UART pins
+ 162   1      // page 129
+ 163   1          XBR1     = 0xc0; // Enable crossbar and disable pull-ups
+ 164   1      
+ 165   1      // UART page 158
+ 166   1          SCON0 = 0x10; // SCON0: 8-bit variable bit rate
+ 167   1                        //        level of STOP bit is ignored
+ 168   1                        //        RX enabled
+ 169   1                        //        ninth bits are zeros
+ 170   1                        //        clear RI0 and TI0 bits
+ 171   1      
+ 172   1      // baud rate is created by timer 1 in 8 bit mode.  page 154
+ 173   1      // baud = SYSTEMCLOCK / TH1 / 2
+ 174   1          TH1 = -(SYSTEMCLOCK/BAUD/2);
+ 175   1          TL1 = TH1; // init Timer1
+ 176   1      // page 183
+ 177   1          CKCON = 0x0c; // No prescaling for timers
+ 178   1      // page 182
+ 179   1      // Timer0 in 16-bit mode
+C51 COMPILER V9.59.0.0   MOTOR                                                             10/15/2022 16:22:29 PAGE 4   
+
+ 180   1      // Timer1 in 8-bit autoreload
+ 181   1          TMOD = 0x21; 
+ 182   1          TR1 = 1; // Timer1 on
+ 183   1      
+ 184   1          IP |= 0x10; // Make UART high priority
+ 185   1          ES0 = 1; // enable UART0 interrupt page 89
+ 186   1      
+ 187   1          LED = 0;
+ 188   1      
+ 189   1      // Timer 0
+ 190   1      //    TH0 = MAX_PWM >> 8;    // Init Timer0 High register
+ 191   1      //    TL0 = MAX_PWM & 0xff ; // Init Timer0 Low register
+ 192   1      //    ET0 = 1;               // Timer0 interrupt enabled
+ 193   1      //    TR0 = 1; // Timer0 ON
+ 194   1      
+ 195   1      
+ 196   1      // PCA page 205
+ 197   1          PCA0CN = 0x00; // Stop counter; clear all flags
+ 198   1          PCA0MD = 0x09; // Use SYSCLK as time base.  Enable overflow interrupt.
+ 199   1          PCA0CPM0 = 0xC9; // Module 0 = 16 bit Match and Interrupt
+ 200   1          PCA0CPM1 = 0xC9; // Module 1 = 16 bit Match and Interrupt
+ 201   1          PCA0CPM2 = 0xC9; // Module 2 = 16 bit Match and Interrupt
+ 202   1      // set the period
+ 203   1          PCA0L = PCA_RELOAD & 0xff;
+ 204   1          PCA0H = PCA_RELOAD >> 8;
+ 205   1      
+ 206   1          update_motor();
+ 207   1          EIE1 |= 0x10; // enable PCA interrupts
+ 208   1          CR = 1; // start PCA counter
+ 209   1      
+ 210   1      
+ 211   1          P1MDOUT |= 0x77; // enable MOSFET pins as a push-pull outputs
+ 212   1          P0MDOUT |= 0x08; // enable LED as a push-pull output
+ 213   1          EA = 1; // enable global interrupts
+ 214   1      
+ 215   1          while (1) { // spin forever
+ 216   2              if(need_update)
+ 217   2                  update_motor();
+ 218   2          }
+ 219   1      }
+ 220          
+ 221          void UART0_Interrupt (void) interrupt 4
+ 222          {
+ 223   1          if (RI0 == 1)
+ 224   1          {
+ 225   2              unsigned char c;
+ 226   2              c = SBUF0; // Read a character from UART
+ 227   2              RI0 = 0; // Clear interrupt flag
+ 228   2              
+ 229   2              switch(uart_state)
+ 230   2              {
+ 231   3                  case UART_SYNC1:
+ 232   3                      if(c == 0xff)
+ 233   3                          uart_state = UART_SYNC2;
+ 234   3                      break;
+ 235   3                  case UART_SYNC2:
+ 236   3                      if(c == 0x88)
+ 237   3                          uart_state = UART_POWER;
+ 238   3                      else
+ 239   3                          uart_state = UART_SYNC1;
+ 240   3                      break;
+ 241   3                  case UART_POWER:
+C51 COMPILER V9.59.0.0   MOTOR                                                             10/15/2022 16:22:29 PAGE 5   
+
+ 242   3                      uart_power = c;
+ 243   3                      uart_state = UART_PHASE;
+ 244   3                      break;
+ 245   3                  case UART_PHASE:
+ 246   3                      uart_phase = c;
+ 247   3                      uart_state = UART_SYNC1;
+ 248   3                      need_update = 1;
+ 249   3                      break;
+ 250   3              }
+ 251   2      
+ 252   2      //LED = ~LED; // debug
+ 253   2          }
+ 254   1      }
+ 255          
+ 256          void PCA0_ISR (void) interrupt 11
+ 257          {
+ 258   1      // overflow
+ 259   1          if(CF)
+ 260   1          {
+ 261   2      // turn on all the P's
+ 262   2              if(need_pwm)
+ 263   2              {
+ 264   3      //            P1 = 0x70;
+ 265   3                  NFET0 = 0;
+ 266   3                  NFET1 = 0;
+ 267   3                  NFET2 = 0;
+ 268   3      
+ 269   3      // copy in the precalculated duty cycles & delay before PFETs
+ 270   3                  PCA0L = PCA_RELOAD & 0xff;
+ 271   3                  PCA0H = PCA_RELOAD >> 8;
+ 272   3                  PCA0CPL0 = duty0 & 0xff;
+ 273   3                  PCA0CPH0 = duty0 >> 8;
+ 274   3                  PCA0CPL1 = duty1 & 0xff;
+ 275   3                  PCA0CPH1 = duty1 >> 8;
+ 276   3                  PCA0CPL2 = duty2 & 0xff;
+ 277   3                  PCA0CPH2 = duty2 >> 8;
+ 278   3      
+ 279   3                  PFET0 = 1;
+ 280   3                  PFET1 = 1;
+ 281   3                  PFET2 = 1;
+ 282   3              }
+ 283   2              else
+ 284   2              {
+ 285   3      // copy in the precalculated duty cycles
+ 286   3                  PCA0L = PCA_RELOAD & 0xff;
+ 287   3                  PCA0H = PCA_RELOAD >> 8;
+ 288   3                  PCA0CPL0 = duty0 & 0xff;
+ 289   3                  PCA0CPH0 = duty0 >> 8;
+ 290   3                  PCA0CPL1 = duty1 & 0xff;
+ 291   3                  PCA0CPH1 = duty1 >> 8;
+ 292   3                  PCA0CPL2 = duty2 & 0xff;
+ 293   3                  PCA0CPH2 = duty2 >> 8;
+ 294   3              }
+ 295   2      
+ 296   2              CF = 0;
+ 297   2      
+ 298   2          }
+ 299   1      
+ 300   1          if(CCF0)
+ 301   1          {
+ 302   2              if(need_pwm)
+ 303   2              {
+C51 COMPILER V9.59.0.0   MOTOR                                                             10/15/2022 16:22:29 PAGE 6   
+
+ 304   3                  PFET0 = 0;
+ 305   3                  for(counter = NFETON_DELAY; counter > 0; counter--)
+ 306   3                      ;
+ 307   3                  NFET0 = 1;
+ 308   3              }
+ 309   2              CCF0 = 0;                           // Clear module 0 interrupt flag.
+ 310   2      //LED = 0; // debug
+ 311   2          }
+ 312   1      
+ 313   1          if(CCF1)
+ 314   1          {
+ 315   2              if(need_pwm)
+ 316   2              {
+ 317   3                  PFET1 = 0;
+ 318   3                  for(counter = NFETON_DELAY; counter > 0; counter--)
+ 319   3                      ;
+ 320   3                  NFET1 = 1;
+ 321   3              }
+ 322   2              CCF1 = 0;                           // Clear module 1 interrupt flag.
+ 323   2          }
+ 324   1      
+ 325   1          if(CCF2)
+ 326   1          {
+ 327   2              if(need_pwm)
+ 328   2              {
+ 329   3                  PFET2 = 0;
+ 330   3                  for(counter = NFETON_DELAY; counter > 0; counter--)
+ 331   3                      ;
+ 332   3                  NFET2 = 1;
+ 333   3              }
+ 334   2              CCF2 = 0;                           // Clear module 2 interrupt flag.
+ 335   2          }
+ 336   1      }
+ 337          
+ 338          
+ 339          
+ 340          // void Timer0_ISR (void) interrupt 1
+ 341          // {
+ 342          //    TH0 = MAX_PWM >> 8;           // Reinit Timer0 High register
+ 343          //    TL0 = MAX_PWM & 0xff;            // Reinit Timer0 Low register
+ 344          //    LED = ~LED;  // Toggle the LED
+ 345          // }
+ 346          
+ 347          
+ 348          
+ 349          
+ 350          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    731    ----
+   CONSTANT SIZE    =    252    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

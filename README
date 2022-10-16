@@ -28,8 +28,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 What you'll find here:
 
 
-arm_cam.c: camera motor receiver
-
 arm_car.c: 2 wheel robot driven by direct drive, sensored brushless motors
 
 arm_cc1101.c: 433Mhz radio library for the ARM
@@ -37,8 +35,6 @@ arm_cc1101.c: 433Mhz radio library for the ARM
 arm_truck.c, arm_truck.h: the lunchbox firmware
 
 arm_xbee.c: xbee library for the ARM
-
-cam_remote.X: camera remote control
 
 car.s: vehicle firmware for the G buggy
 
@@ -114,7 +110,7 @@ offroad2.stl: offroad rear tire after the helix transformation
     print with .4mm nozzle
     TPU
     .32mm layer height
-    250C
+    260C
     left & right must be mirror images
 
 rear_tire3.FCStd: OBSOLETE rear wheel
@@ -393,8 +389,18 @@ gopro.FCStd
 
 Panning mount:
 
+arm_cam.c: camera motor receiver using STM32.
+    Build with make cam.bin
+    Uses a brushless servo hacked into a stepper motor.
+    
+    
+arm_cam.c.l6234: camera motor receiver using an L6234 
+    to drive a stepper motor.
+
 cam_remote.pcb, cam.pcb: electronicals
 
+cam_remote.X: camera remote control firmware
+    Build with mplab_ide
 
 cam_gearbox.FCStd: OBSOLETE
     hobby motor as a stepper motor
@@ -456,6 +462,14 @@ gopro_motor.FCStd:
         4 * "inner shroud slice"
          - TODO: make hole for motor shaft & make base wider to compensate for lost material
         "outer shroud" + "bolt loop"
+
+
+servo/:
+    Firmware for turning a brushless TS-940-HG servo into a stepper motor.
+    The project file is servo/motor.wsp.  The output hex file is servo/motor.hex.
+    Must be built with the silabs IDE & flashed with the blheli tool.
+    https://www.silabs.com/developers/8-bit-8051-microcontroller-software-studio
+    http://www.olliw.eu/2012/owsilprog/#firmware
 
 shroud.FCStd:
     the shroud for a direct drive panning motor

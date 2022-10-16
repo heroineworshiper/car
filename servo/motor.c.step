@@ -1,0 +1,235 @@
+/*
+ * STEPPER CONTROL FOR BRUSHLESS SERVO
+ * Copyright (C) 2022 Adam Williams <broadcast at earthling dot net>
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+
+// The PWM input must be soldered to the UART pin P0.5.  Then, the
+// PWM lowpass filtering capacitor must be removed.
+
+// Write a 4 byte packet to control the MOSFETs.
+// byte 0: 0xff
+// byte 1: 0x88
+// byte 2: duty cycle 0-0xff.  
+//      0 is always on.  0xff is always off.  1 is minimum
+// byte 3: MOSFET code
+//      bits 0:2 -> enable mosfets
+//      bits 4:6 -> mosfet directions
+
+
+#include <c8051f330.h>                    // SFR declarations
+#include <stdint.h>
+
+#include "motor.h"
+
+
+
+#define SYSTEMCLOCK       24500000         // SYSCLK frequency in Hz
+#define BAUD 115200
+
+// mosfet pins
+#define PFET0 (1 << 5)
+#define PFET1 (1 << 4)
+#define PFET2 (1 << 6)
+#define NFET0 (1 << 1)
+#define NFET1 (1 << 0)
+#define NFET2 (1 << 2)
+
+// sbit PFET0 = P1^5;
+// sbit PFET1 = P1^4;
+// sbit PFET2 = P1^6;
+// sbit NFET0 = P1^1;
+// sbit NFET1 = P1^0;
+// sbit NFET2 = P1^2;
+// PWM = P0.7
+// UART RX = P0.5
+// UART TX = P0.4
+
+// debug
+sbit LED = P0^3;                          // LED='1' means ON
+
+#define UART_SYNC1 0
+#define UART_SYNC2 1
+#define UART_DUTY 2 
+#define UART_CODE 3
+uint8_t uart_state = UART_SYNC1;
+uint8_t uart_data;
+uint16_t pwm_duty = 0;
+uint8_t on_value = 0;
+uint8_t off_value = 0;
+
+void main (void) 
+{
+
+   // disable watchdog timer
+   PCA0MD &= ~0x40;                       // WDTE = 0 (clear watchdog timer
+                                          // enable)
+
+// Initialize system clock to
+// 24.5MHz
+    OSCICN = 0x83;                     // Configure internal oscillator for
+                                       // its maximum frequency
+    RSTSRC = 0x04;                         // enable missing clock detector
+
+// crossbar page 128
+    XBR0     = 0x01; // enable UART pins
+// page 129
+    XBR1     = 0xc0; // Enable crossbar and disable pull-ups
+
+// UART page 158
+    SCON0 = 0x10; // SCON0: 8-bit variable bit rate
+                 //        level of STOP bit is ignored
+                 //        RX enabled
+                 //        ninth bits are zeros
+                 //        clear RI0 and TI0 bits
+
+// baud rate is created by timer 1 in 8 bit mode.  page 154
+// baud = SYSTEMCLOCK / TH1 / 2
+    TH1 = -(SYSTEMCLOCK/BAUD/2);
+// page 183
+    CKCON = 0x0c; // No prescaling for timers
+    TL1 = TH1; // init Timer1
+// page 182
+// Timer0 in 16-bit mode
+// Timer1 in 8-bit autoreload
+    TMOD = 0x21; 
+    TR1 = 1; // START Timer1
+    IP |= 0x10; // Make UART high priority
+    ES0 = 1; // enable UART0 interrupt page 89
+
+
+// PCA page 205
+    PCA0CN = 0x00; // Stop counter; clear all flags
+    PCA0MD = 0x09; // Use SYSCLK as time base.  Enable overflow interrupt.
+    PCA0CPM0 = 0xC9; // Module 0 = 16 bit Match and Interrupt
+// set the period
+    PCA0L = PCA_RELOAD & 0xff;
+    PCA0H = PCA_RELOAD >> 8;
+    EIE1 |= 0x10; // enable PCA interrupts
+    CR = 1; // start PCA counter
+
+
+
+// MOSFETs off
+    P1 = 0;
+
+    P1MDOUT |= 0x77; // enable MOSFET pins as a push-pull outputs
+    P0MDOUT |= 0x08; // enable LED as a push-pull output
+    LED = 0;
+    EA = 1; // enable global interrupts
+
+    while (1) { // spin forever
+    }
+}
+
+void UART0_Interrupt (void) interrupt 4
+{
+   if (RI0 == 1)
+   {
+        unsigned char c;
+        RI0 = 0; // Clear interrupt flag
+        c = SBUF0; // Read a character from UART
+
+        switch(uart_state)
+        {
+            case UART_SYNC1:
+                if(c == 0xff)
+                    uart_state = UART_SYNC2;
+                break;
+            case UART_SYNC2:
+                if(c == 0x88)
+                    uart_state = UART_DUTY;
+                else
+                    uart_state = UART_SYNC1;
+                break;
+            case UART_DUTY:
+                uart_data = c;
+                uart_state = UART_CODE;
+                break;
+            case UART_CODE:
+                uart_state = UART_SYNC1;
+// update the interrupt variables
+                EA = 0;
+                pwm_duty = PCA_RELOAD + (uint16_t)uart_data * MAX_PWM / 0xff;
+                on_value = 0;
+
+// MOSFET0 enabled
+                if((c & 0x01))
+                {
+                    if((c & 0x10))
+                        on_value |= PFET0;
+                    else
+                        on_value |= NFET0;
+                }
+
+// MOSFET1 enabled
+                if((c & 0x02))
+                {
+                    if((c & 0x20))
+                        on_value |= PFET1;
+                    else
+                        on_value |= NFET1;
+                }
+
+// MOSFET2 enabled
+                if((c & 0x04))
+                {
+                    if((c & 0x40))
+                        on_value |= PFET2;
+                    else
+                        on_value |= NFET2;
+                }
+
+// turn off the N fets only
+                off_value = on_value & (PFET0 | PFET1 | PFET2);
+                EA = 1;
+                break;
+        }
+
+//      LED = ~LED; // debug
+
+
+
+   }
+}
+
+
+
+void PCA0_ISR (void) interrupt 11
+{
+// overflow
+    if(CF)
+    {
+        P1 = on_value;
+        CF = 0;
+
+        PCA0L = PCA_RELOAD & 0xff;
+        PCA0H = PCA_RELOAD >> 8;
+        PCA0CPL0 = pwm_duty & 0xff;
+        PCA0CPH0 = pwm_duty >> 8;
+    }
+    
+// module 0 matched
+    if(CCF0)
+    {
+        P1 = off_value;
+        CCF0 = 0;
+    }
+}
+
+
+

@@ -1,0 +1,359 @@
+C51 COMPILER V9.59.0.0   F330_BLINKY                                                       10/13/2022 11:03:50 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE F330_BLINKY
+OBJECT MODULE PLACED IN F330_Blinky.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.exe F330_Blinky.c DB OE INCDIR(C:\SiLabs\MCU\Inc)
+
+line level    source
+
+   1          //-----------------------------------------------------------------------------
+   2          // F330_Blinky.c
+   3          //-----------------------------------------------------------------------------
+   4          // Copyright (C) 2007 Silicon Laboratories, Inc.
+   5          //
+   6          // AUTH: HF
+   7          // DATE: 04 FEB 2003
+   8          //
+   9          // This program flashes the green LED on the C8051F33x target board about
+  10          // five times a second using the interrupt handler for Timer2.
+  11          //
+  12          // Target: C8051F330/1/2/3/4/5
+  13          //
+  14          // Tool chain: KEIL Eval 'c'
+  15          //
+  16          
+  17          
+  18          // Write a 0-0xfd phase offset to the UART or 
+  19          // 0xff to float the MOSFETS
+  20          // 0xfe to connect the MOSFETS to ground
+  21          
+  22          
+  23          #include <c8051f330.h>                    // SFR declarations
+  24          #include <stdint.h>
+  25          
+  26          #include "motor.h"
+  27          
+  28          //#define BAUD 115200
+  29          #define BAUD 115200
+  30          
+  31          // mosfet pins
+  32          sbit PFET0 = P1^5;
+  33          sbit PFET1 = P1^4;
+  34          sbit PFET2 = P1^6;
+  35          sbit NFET0 = P1^1;
+  36          sbit NFET1 = P1^0;
+  37          sbit NFET2 = P1^2;
+  38          // PWM = P0.7
+  39          // UART RX = P0.5
+  40          // UART TX = P0.4
+  41          
+  42          // debug
+  43          sbit LED = P0^3;                          // LED='1' means ON
+  44          
+  45          // created by tables.c
+  46          uint16_t code sin_table[] = {
+  47                  0xfe81, 0xfe8b, 0xfe95, 0xfe9e, 0xfea8, 0xfeb1, 0xfebb, 0xfec4, 
+  48                  0xfecd, 0xfed7, 0xfee0, 0xfee9, 0xfef2, 0xfefb, 0xff04, 0xff0d, 
+  49                  0xff16, 0xff1f, 0xff27, 0xff30, 0xff38, 0xff41, 0xff49, 0xff51, 
+  50                  0xff59, 0xff61, 0xff68, 0xff70, 0xff77, 0xff7f, 0xff86, 0xff8d, 
+  51                  0xff93, 0xff9a, 0xffa0, 0xffa7, 0xffad, 0xffb2, 0xffb8, 0xffbe, 
+  52                  0xffc3, 0xffc8, 0xffcd, 0xffd1, 0xffd6, 0xffda, 0xffde, 0xffe2, 
+  53                  0xffe6, 0xffe9, 0xffec, 0xffef, 0xfff2, 0xfff4, 0xfff6, 0xfff8, 
+  54                  0xfffa, 0xfffc, 0xfffd, 0xfffe, 0xffff, 0x0000, 0x0000, 0x0000, 
+  55                  0x0000, 0x0000, 0xffff, 0xfffe, 0xfffd, 0xfffc, 0xfffa, 0xfff8, 
+C51 COMPILER V9.59.0.0   F330_BLINKY                                                       10/13/2022 11:03:50 PAGE 2   
+
+  56                  0xfff6, 0xfff4, 0xfff2, 0xffef, 0xffec, 0xffe9, 0xffe6, 0xffe2, 
+  57                  0xffde, 0xffda, 0xffd6, 0xffd1, 0xffcd, 0xffc8, 0xffc3, 0xffbe, 
+  58                  0xffb8, 0xffb2, 0xffad, 0xffa7, 0xffa0, 0xff9a, 0xff93, 0xff8d, 
+  59                  0xff86, 0xff7f, 0xff77, 0xff70, 0xff68, 0xff61, 0xff59, 0xff51, 
+  60                  0xff49, 0xff41, 0xff38, 0xff30, 0xff27, 0xff1f, 0xff16, 0xff0d, 
+  61                  0xff04, 0xfefb, 0xfef2, 0xfee9, 0xfee0, 0xfed7, 0xfecd, 0xfec4, 
+  62                  0xfebb, 0xfeb1, 0xfea8, 0xfe9e, 0xfe95, 0xfe8b, 0xfe81, 0xfe78, 
+  63                  0xfe6e, 0xfe65, 0xfe5b, 0xfe52, 0xfe48, 0xfe3f, 0xfe36, 0xfe2c, 
+  64                  0xfe23, 0xfe1a, 0xfe11, 0xfe08, 0xfdff, 0xfdf6, 0xfded, 0xfde4, 
+  65                  0xfddc, 0xfdd3, 0xfdcb, 0xfdc2, 0xfdba, 0xfdb2, 0xfdaa, 0xfda2, 
+  66                  0xfd9b, 0xfd93, 0xfd8c, 0xfd84, 0xfd7d, 0xfd76, 0xfd70, 0xfd69, 
+  67                  0xfd63, 0xfd5c, 0xfd56, 0xfd51, 0xfd4b, 0xfd45, 0xfd40, 0xfd3b, 
+  68                  0xfd36, 0xfd32, 0xfd2d, 0xfd29, 0xfd25, 0xfd21, 0xfd1d, 0xfd1a, 
+  69                  0xfd17, 0xfd14, 0xfd11, 0xfd0f, 0xfd0d, 0xfd0b, 0xfd09, 0xfd07, 
+  70                  0xfd06, 0xfd05, 0xfd04, 0xfd03, 0xfd03, 0xfd03, 0xfd03, 0xfd03, 
+  71                  0xfd04, 0xfd05, 0xfd06, 0xfd07, 0xfd09, 0xfd0b, 0xfd0d, 0xfd0f, 
+  72                  0xfd11, 0xfd14, 0xfd17, 0xfd1a, 0xfd1d, 0xfd21, 0xfd25, 0xfd29, 
+  73                  0xfd2d, 0xfd32, 0xfd36, 0xfd3b, 0xfd40, 0xfd45, 0xfd4b, 0xfd51, 
+  74                  0xfd56, 0xfd5c, 0xfd63, 0xfd69, 0xfd70, 0xfd76, 0xfd7d, 0xfd84, 
+  75                  0xfd8c, 0xfd93, 0xfd9b, 0xfda2, 0xfdaa, 0xfdb2, 0xfdba, 0xfdc2, 
+  76                  0xfdcb, 0xfdd3, 0xfddc, 0xfde4, 0xfded, 0xfdf6, 0xfdff, 0xfe08, 
+  77                  0xfe11, 0xfe1a, 0xfe23, 0xfe2c, 0xfe36, 0xfe3f, 0xfe48, 0xfe52, 
+  78                  0xfe5b, 0xfe65, 0xfe6e, 0xfe78
+  79          };
+  80          
+  81          
+  82          
+  83          uint8_t uart_code = GROUND_MOTOR;
+  84          uint8_t need_pwm = 0;
+  85          uint8_t need_update = 0;
+  86          // discard a few garbage bytes
+  87          uint8_t uart_discard = 1;
+  88          uint16_t duty0 = PCA_RELOAD + MAX_PWM / 2;
+  89          uint16_t duty1 = PCA_RELOAD + MAX_PWM / 2;
+  90          uint16_t duty2 = PCA_RELOAD + MAX_PWM / 2;
+  91          
+  92          void update_motor()
+  93          {
+  94   1          if(uart_code == GROUND_MOTOR)
+  95   1          {
+  96   2              PFET0 = 0;
+  97   2              PFET1 = 0; 
+  98   2              PFET2 = 0; 
+  99   2              NFET0 = 1; 
+ 100   2              NFET1 = 1; 
+ 101   2              NFET2 = 1; 
+ 102   2              duty0 = PCA_RELOAD + MAX_PWM / 2;
+ 103   2              duty1 = PCA_RELOAD + MAX_PWM / 2;
+ 104   2              duty2 = PCA_RELOAD + MAX_PWM / 2;
+ 105   2              need_pwm = 0;
+ 106   2          }
+ 107   1          else
+ 108   1          if(uart_code == COAST_MOTOR || uart_code >= SIN_TOTAL)
+ 109   1          {
+ 110   2      // MOSFETs off
+ 111   2              PFET0 = 0;
+ 112   2              PFET1 = 0; 
+ 113   2              PFET2 = 0; 
+ 114   2              NFET0 = 0; 
+ 115   2              NFET1 = 0; 
+ 116   2              NFET2 = 0;
+ 117   2              duty0 = PCA_RELOAD + MAX_PWM / 2;
+C51 COMPILER V9.59.0.0   F330_BLINKY                                                       10/13/2022 11:03:50 PAGE 3   
+
+ 118   2              duty1 = PCA_RELOAD + MAX_PWM / 2;
+ 119   2              duty2 = PCA_RELOAD + MAX_PWM / 2;
+ 120   2              need_pwm = 0;
+ 121   2          }
+ 122   1          else
+ 123   1          {
+ 124   2      // test auto incrementer
+ 125   2      //         static uint8_t countdown = 3;
+ 126   2      //         static uint16_t phase = 0;
+ 127   2      //         uint16_t phase2;
+ 128   2      // 
+ 129   2      //         countdown--;
+ 130   2      //         if(countdown == 0)
+ 131   2      //         {
+ 132   2      //             countdown = 3;
+ 133   2      //             phase++;
+ 134   2      //             if(phase >= SIN_TOTAL) phase -= SIN_TOTAL;
+ 135   2      //         }
+ 136   2      // 
+ 137   2      //         phase2 = phase;
+ 138   2      //         duty0 = sin_table[phase2];
+ 139   2      //         phase2 += SIN_TOTAL / 3;
+ 140   2      //         if(phase2 >= SIN_TOTAL) phase2 -= SIN_TOTAL;
+ 141   2      //         duty1 = sin_table[phase2];
+ 142   2      //         phase2 += SIN_TOTAL / 3;
+ 143   2      //         if(phase2 >= SIN_TOTAL) phase2 -= SIN_TOTAL;
+ 144   2      //         duty2 = sin_table[phase2];
+ 145   2      
+ 146   2              uint16_t phase = uart_code;
+ 147   2              duty0 = sin_table[phase];
+ 148   2              phase += SIN_TOTAL / 3;
+ 149   2              if(phase >= SIN_TOTAL) phase -= SIN_TOTAL;
+ 150   2              duty1 = sin_table[phase];
+ 151   2              phase += SIN_TOTAL / 3;
+ 152   2              if(phase >= SIN_TOTAL) phase -= SIN_TOTAL;
+ 153   2              duty2 = sin_table[phase];
+ 154   2      
+ 155   2      
+ 156   2              need_pwm = 1;
+ 157   2          }
+ 158   1      
+ 159   1          PCA0CPL0 = duty0 & 0xff;
+ 160   1          PCA0CPH0 = duty0 >> 8;
+ 161   1          PCA0CPL1 = duty1 & 0xff;
+ 162   1          PCA0CPH1 = duty1 >> 8;
+ 163   1          PCA0CPL2 = duty2 & 0xff;
+ 164   1          PCA0CPH2 = duty2 >> 8;
+ 165   1      
+ 166   1          need_update = 0;
+ 167   1      }
+ 168          
+ 169          void main (void) 
+ 170          {
+ 171   1      
+ 172   1      // disable watchdog timer
+ 173   1          PCA0MD = 0;  // Disable watchdog timer
+ 174   1      
+ 175   1      
+ 176   1      // Initialize system clock to
+ 177   1      // 24.5MHz
+ 178   1          OSCICN = 0x83;                     // Configure internal oscillator for
+ 179   1                                             // its maximum frequency
+C51 COMPILER V9.59.0.0   F330_BLINKY                                                       10/13/2022 11:03:50 PAGE 4   
+
+ 180   1          RSTSRC = 0x04;                         // enable missing clock detector
+ 181   1      
+ 182   1      // crossbar page 128
+ 183   1          XBR0     = 0x01; // enable UART pins
+ 184   1      // page 129
+ 185   1          XBR1     = 0xc0; // Enable crossbar and disable pull-ups
+ 186   1      
+ 187   1      // UART page 158
+ 188   1          SCON0 = 0x10; // SCON0: 8-bit variable bit rate
+ 189   1                        //        level of STOP bit is ignored
+ 190   1                        //        RX enabled
+ 191   1                        //        ninth bits are zeros
+ 192   1                        //        clear RI0 and TI0 bits
+ 193   1      
+ 194   1      // baud rate is created by timer 1 in 8 bit mode.  page 154
+ 195   1      // baud = SYSTEMCLOCK / TH1 / 2
+ 196   1          TH1 = -(SYSTEMCLOCK/BAUD/2);
+ 197   1          TL1 = TH1; // init Timer1
+ 198   1      // page 183
+ 199   1          CKCON = 0x0c; // No prescaling for timers
+ 200   1      // page 182
+ 201   1      // Timer0 in 16-bit mode
+ 202   1      // Timer1 in 8-bit autoreload
+ 203   1          TMOD = 0x21; 
+ 204   1          TR1 = 1; // Timer1 on
+ 205   1      
+ 206   1          IP |= 0x10; // Make UART high priority
+ 207   1          ES0 = 1; // enable UART0 interrupt page 89
+ 208   1      
+ 209   1          LED = 0;
+ 210   1      
+ 211   1      // Timer 0
+ 212   1      //    TH0 = MAX_PWM >> 8;    // Init Timer0 High register
+ 213   1      //    TL0 = MAX_PWM & 0xff ; // Init Timer0 Low register
+ 214   1      //    ET0 = 1;               // Timer0 interrupt enabled
+ 215   1      //    TR0 = 1; // Timer0 ON
+ 216   1      
+ 217   1      
+ 218   1      // PCA page 205
+ 219   1          PCA0CN = 0x00; // Stop counter; clear all flags
+ 220   1          PCA0MD = 0x09; // Use SYSCLK as time base.  Enable overflow interrupt.
+ 221   1          PCA0CPM0 = 0xC9; // Module 0 = 16 bit Match and Interrupt
+ 222   1          PCA0CPM1 = 0xC9; // Module 1 = 16 bit Match and Interrupt
+ 223   1          PCA0CPM2 = 0xC9; // Module 2 = 16 bit Match and Interrupt
+ 224   1      // set the period
+ 225   1          PCA0L = PCA_RELOAD & 0xff;
+ 226   1          PCA0H = PCA_RELOAD >> 8;
+ 227   1      
+ 228   1          update_motor();
+ 229   1          EIE1 |= 0x10; // enable PCA interrupts
+ 230   1          CR = 1; // start PCA counter
+ 231   1      
+ 232   1      
+ 233   1          P1MDOUT |= 0x77; // enable MOSFET pins as a push-pull outputs
+ 234   1          P0MDOUT |= 0x08; // enable LED as a push-pull output
+ 235   1          EA = 1; // enable global interrupts
+ 236   1      
+ 237   1          while (1) { // spin forever
+ 238   2          }
+ 239   1      }
+ 240          
+ 241          void UART0_Interrupt (void) interrupt 4
+C51 COMPILER V9.59.0.0   F330_BLINKY                                                       10/13/2022 11:03:50 PAGE 5   
+
+ 242          {
+ 243   1          if (RI0 == 1)
+ 244   1          {
+ 245   2              RI0 = 0; // Clear interrupt flag
+ 246   2              
+ 247   2              if(uart_discard == 0)
+ 248   2              {
+ 249   3                  uart_code = SBUF0; // Read a character from UART
+ 250   3              }
+ 251   2              else
+ 252   2              {
+ 253   3                  uart_discard--;
+ 254   3              }
+ 255   2      
+ 256   2              need_update = 1;
+ 257   2      LED = ~LED; // debug
+ 258   2          }
+ 259   1      }
+ 260          
+ 261          void PCA0_ISR (void) interrupt 11
+ 262          {
+ 263   1      // overflow
+ 264   1          if(CF)
+ 265   1          {
+ 266   2              CF = 0;
+ 267   2              PCA0L = PCA_RELOAD & 0xff;
+ 268   2              PCA0H = PCA_RELOAD >> 8;
+ 269   2              if(need_update)
+ 270   2                  update_motor();
+ 271   2              if(need_pwm)
+ 272   2              {
+ 273   3                  NFET0 = 0;
+ 274   3                  NFET1 = 0;
+ 275   3                  NFET2 = 0;
+ 276   3                  PFET0 = 1;
+ 277   3                  PFET1 = 1;
+ 278   3                  PFET2 = 1;
+ 279   3              }
+ 280   2          }
+ 281   1      
+ 282   1          if(CCF0)
+ 283   1          {
+ 284   2              CCF0 = 0;                           // Clear module 0 interrupt flag.
+ 285   2      //LED = 0; // debug
+ 286   2              if(need_pwm)
+ 287   2              {
+ 288   3                  PFET0 = 0;
+ 289   3                  NFET0 = 1;
+ 290   3              }
+ 291   2          }
+ 292   1      
+ 293   1          if(CCF1)
+ 294   1          {
+ 295   2              CCF1 = 0;                           // Clear module 1 interrupt flag.
+ 296   2              if(need_pwm)
+ 297   2              {
+ 298   3                  PFET1 = 0;
+ 299   3                  NFET1 = 1;
+ 300   3              }
+ 301   2          }
+ 302   1      
+ 303   1          if(CCF2)
+C51 COMPILER V9.59.0.0   F330_BLINKY                                                       10/13/2022 11:03:50 PAGE 6   
+
+ 304   1          {
+ 305   2              CCF2 = 0;                           // Clear module 2 interrupt flag.
+ 306   2              if(need_pwm)
+ 307   2              {
+ 308   3                  PFET2 = 0;
+ 309   3                  NFET2 = 1;
+ 310   3              }
+ 311   2          }
+ 312   1      }
+ 313          
+ 314          
+ 315          
+ 316          // void Timer0_ISR (void) interrupt 1
+ 317          // {
+ 318          //    TH0 = MAX_PWM >> 8;           // Reinit Timer0 High register
+ 319          //    TL0 = MAX_PWM & 0xff;            // Reinit Timer0 Low register
+ 320          //    LED = ~LED;  // Toggle the LED
+ 321          // }
+ 322          
+ 323          
+ 324          
+ 325          
+ 326          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    489    ----
+   CONSTANT SIZE    =    504    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     10       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

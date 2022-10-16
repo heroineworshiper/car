@@ -1,0 +1,1 @@
+"Z:\servo\motor.obj"  TO "Z:\servo\motor" RS(256) PL(68) PW(78) 

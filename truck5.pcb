@@ -1612,6 +1612,7 @@ Layer(5 "power")
 	Line[34.8400mm 47.7600mm 34.2700mm 47.7600mm 0.2500mm 20.00mil "clearline"]
 	Line[34.2700mm 47.7600mm 32.8300mm 49.2000mm 0.2500mm 20.00mil "clearline"]
 	Line[32.8300mm 49.2000mm 32.8300mm 53.0400mm 0.2500mm 20.00mil "clearline"]
+	Line[53.1600mm 41.3600mm 53.1600mm 42.8600mm 0.2500mm 20.00mil "clearline"]
 	Text[53.0000mm 51.8500mm 0 144 "HEROINE" ""]
 	Text[55.4400mm 54.2400mm 0 144 "TRUCK" ""]
 )
