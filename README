@@ -62,6 +62,12 @@ truck3.pcb: last layout for the tamiya board
 
 arm_truck2.c, arm_truck2.h: the 3D printed truck firmware
 
+antler2.FCStd: antlers  
+    Print with .8mm nozzle .32 layer height, 20% infill
+    Print in halves.  Glue a half to a tab to make a right angle.
+    Then glue the other half to the right angle.
+    
+
 a1323.pcb: hall effect sensor board for motor sensor
 
 l6234.pcb: H bridge board for motor
