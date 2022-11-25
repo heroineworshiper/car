@@ -2,9 +2,12 @@
 AVR_DIR := /root/arduino-1.8.5/hardware/tools/avr/bin/
 AVR_GCC := $(AVR_DIR)avr-gcc
 AVR_CFLAGS := -O2 -mmcu=atmega8
+AVR_CFLAGS2 := -O2 -mmcu=atmega328p
 AVR_LFLAGS := -O2 -mmcu=atmega8 -Wl,--section-start=.text=0x0000 -nostdlib
+AVR_LFLAGS2 := -O2 -mmcu=atmega328p -Wl,--section-start=.text=0x0000 -nostdlib
 AVR_OBJCOPY := $(AVR_DIR)avr-objcopy -j .text -j .data -O ihex
 AVR_DUDE := avrdude -v -patmega8 -cstk500v1 -P/dev/ttyACM0 -b19200
+AVR_DUDE2 := avrdude -v -patmega328p -cstk500v1 -P/dev/ttyACM0 -b19200
 
 
 
@@ -251,6 +254,18 @@ PI_OBJS := \
 
 all: truck.bin car_remote.hex
 
+# program atmega328 fuse.  page 283
+leash_fuse:
+	$(AVR_DUDE2) -e -Ulock:w:0x3F:m -Uefuse:w:0x05:m -Uhfuse:w:0xD3:m -Ulfuse:w:0xE2:m 
+
+# elbow 1 board
+leash.hex: leash.c
+	$(AVR_GCC) $(AVR_CFLAGS2) -o leash.o leash.c
+	$(AVR_GCC) $(AVR_LFLAGS2) -o leash.elf leash.o
+	$(AVR_OBJCOPY) leash.elf leash.hex
+
+leash_isp: leash.hex
+	$(AVR_DUDE2) -Uflash:w:leash.hex:i -Ulock:w:0x0F:m
 
 motor: motor.c avr_debug.c motor.h
 	$(AVR_GCC) $(AVR_CFLAGS) -o motor.o motor.c

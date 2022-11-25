@@ -77,6 +77,10 @@
 #define SYNC_CODE 0xe5
 
 
+// motor signs
+#define LEFT_SIGN 1
+#define RIGHT_SIGN -1
+
 // size of settings block
 #define SETTINGS_SIZE 256
 // Magic number for settings
@@ -1888,9 +1892,10 @@ void init_steering()
 // write motor phases & power to hardware
 void write_motors()
 {
-    int lphase = truck.motors[LEFT_MOTOR].phase;
-    int rphase = truck.motors[RIGHT_MOTOR].phase;
-
+    int lphase = LEFT_SIGN * truck.motors[LEFT_MOTOR].phase;
+    int rphase = RIGHT_SIGN * truck.motors[RIGHT_MOTOR].phase;
+    if(lphase < 0) lphase += 360;
+    if(rphase < 0) rphase += 360;
 
 
 // drive 2 phases
