@@ -41,8 +41,8 @@
 //#define BLUETOOTH9600 
 
 
-// binary steering when driving
-#define BINARY_STEERING
+// smart leash
+#define USE_LEASH
 
 #define HALLS 4
 #define MOTORS 2
@@ -223,6 +223,37 @@ typedef struct
     int v_temp;
 } motor_t;
 
+#ifdef USE_LEASH
+typedef struct
+{
+    uint8_t buffer[8];
+    int offset;
+// leash angle in rads
+    float angle;
+// latest distance
+    int distance;
+// previous distance
+    int distance2;
+    int timeout;
+    int active;
+
+// encoder count to start moving at
+    int distance0;
+// starting speed in RPM
+    float rpm0;
+// minutes per mile per encoder count
+    float speed_to_distance;
+// center leash angle in rads
+// adjust to have rover on left or right of animal
+    float center;
+// maximum pot deflection in rads
+    float max_angle;
+} leash_t;
+#define LEASH_TIMEOUT TIMER_HZ
+#endif // USE_LEASH
+
+
+
 typedef struct
 {
 // the mane timer which increments at TIMER_HZ
@@ -236,9 +267,7 @@ typedef struct
 // current remote value
 	int throttle;
 	int steering;
-#ifdef BINARY_STEERING
     int binary_steering;
-#endif
     int speed_offset;
 // last throttle value when the motor moved
 	int throttle2;
@@ -302,14 +331,10 @@ typedef struct
 	int ref_count;
 
 
-// the top speed from config file
-	int max_rpm;
-// the bottom speed from config file // NEW
-    int min_rpm;
+// the target forward speed from config file
+    int target_rpm;
 // maximum reverse RPM from config file
-	int max_reverse_rpm;
-// minimum reverse RPM from config file // NEW
-    int min_reverse_rpm;
+	int target_reverse_rpm;
 // wheel diameter in mm
     int diameter;
 // result of PID controller
@@ -377,7 +402,6 @@ typedef struct
     int reverse;
 // enable RPM feedback
     int auto_throttle;
-    int target_rpm;
 
 
 
@@ -427,6 +451,9 @@ typedef struct
     int current_hall;
     motor_t motors[MOTORS];
     radio_t radio;
+#ifdef USE_LEASH
+    leash_t leash;
+#endif
 } truck_t;
 
 extern truck_t truck;

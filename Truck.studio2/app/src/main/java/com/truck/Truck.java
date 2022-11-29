@@ -486,7 +486,12 @@ public class Truck extends Thread {
                                                     {
                                                         remote_throttle += 256;
                                                     }
-                               }
+                                                    
+                                                    leash_angle = Math2.read_float32(receive_buf, offset2);
+                                                    offset2 += 4;
+                                                    leash_distance = Math2.read_int16(receive_buf, offset2);
+												    offset2 += 2;
+                                                }
 		    								    break;
                                             }
 		    							}
@@ -538,7 +543,7 @@ public class Truck extends Thread {
 	    }
     }
 
-// Tamiya truck
+// Obsolete Tamiya truck
     private int sendTruckConfig(int offset)
     {
         // wheel diameter in mm
@@ -674,7 +679,7 @@ public class Truck extends Thread {
 		beacon[offset++] = (byte) (Settings.getFileFloat("GYRO_BANDWIDTH")[0]);
 		beacon[offset++] = (byte)(Settings.getFileFloat("D_BANDWIDTH")[0]);
 
-// remote ADC
+// remote control ADC
         beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_CENTER")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_DEADBAND")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_MAX")[0]);
@@ -699,13 +704,6 @@ public class Truck extends Thread {
 // meters per minute/wheel circumference in meters
 		offset = Math2.write_int16(beacon, offset, paceToRPM(targetReversePace, diameter));
 
-		float minReversePace = Settings.getFileFloat("MIN_REVERSE_PACE")[0];
-// meters per minute/wheel circumference in meters
-		offset = Math2.write_int16(beacon, offset, paceToRPM(minReversePace, diameter));
-
-		float minPace = Settings.getFileFloat("MIN_PACE")[0];
-// meters per minute/wheel circumference in meters
-		offset = Math2.write_int16(beacon, offset, paceToRPM(minPace, diameter));
 
 // wheel diameter
         beacon[offset++] = (byte)diameter;
@@ -721,6 +719,15 @@ public class Truck extends Thread {
 
 		pid = Settings.getFileFloat("RPM_PID");
 		offset = writePid(offset, pid);
+
+
+// leash
+        beacon[offset++] = (byte)(Settings.getFileFloat("LEASH_DISTANCE0")[0]);;
+		offset = Math2.write_float32(beacon, offset, paceToRPM(Settings.getFileFloat("LEASH_SPEED0")[0], diameter));
+		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_SPEED_TO_DISTANCE")[0]);
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_CENTER")[0]));
+		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_MAX_ANGLE")[0]));
+
         return offset;
     }
 
@@ -875,6 +882,10 @@ public class Truck extends Thread {
     static int remote_steering;
     static int remote_throttle;
     static float current_heading;
+    
+    static float leash_angle;
+    static int leash_distance;
+    
 //	static float heading_feedback;
 //	static float power;
 	static int rpm;

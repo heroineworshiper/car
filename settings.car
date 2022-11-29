@@ -1,8 +1,11 @@
-# settings for car
-#            P     I      D    D2
-STEERING_PID 350   0.2    100      20
-RPM_PID      500   2.0    100     0
+# settings for 3D printed truck
 
+
+#            P     I      D        D2
+STEERING_PID 350   0.2    100      20
+RPM_PID      1000  2.0    100      0
+
+# bluetooth ID the app connects to
 BLUETOOTH car
 
 # dump PWM to a file.  Restart to apply change
@@ -14,16 +17,10 @@ DIAMETER 108
 # reverse pace in auto throttle
 TARGET_REVERSE_PACE 15.00
 
-# slowest fwd pace in auto throttle
-MIN_PACE 20.00
-# slowest reverse pace in auto throttle
-MIN_REVERSE_PACE 20.00
-
-
 
 
 # Center PWM position 0 - 100
-MID_STEERING 60
+MID_STEERING 50
 # maximum stick induced steering 0 - 100
 MAX_STEERING 100
 # minimum stick induced steering 0 - 100
@@ -55,7 +52,7 @@ GYRO_BANDWIDTH 255
 # 0-100
 D_BANDWIDTH 90
 
-# remote ADC
+# remote control ADC
 STEERING_ADC_CENTER 121
 STEERING_ADC_DEADBAND 5
 STEERING_ADC_MAX 255
@@ -73,3 +70,21 @@ MAX_STEERING_STEP 90.0
 STEERING_OVERSHOOT 30
 BATTERY_ANALOG 980
 BATTERY_V0 8.67
+
+
+# leash
+# starting encoder count
+LEASH_DISTANCE0 30
+# starting minutes/mile
+LEASH_SPEED0 40.0
+# minutes/mile per encoder count
+LEASH_SPEED_TO_DISTANCE 1.0
+# center leash angle in deg
+LEASH_CENTER 5
+# maximum pot deflection in deg
+LEASH_MAX_ANGLE 45
+
+
+
+
+

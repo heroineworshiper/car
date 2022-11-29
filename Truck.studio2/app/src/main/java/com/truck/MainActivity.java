@@ -134,16 +134,16 @@ public class MainActivity extends WindowBase implements OnTouchListener
 
 				readouts.add(batteryAnalog = new SmallReadout(x, y, 1));
 				batteryAnalog.setPositions(positions);
-				batteryAnalog.setTitle("Analog:");
+				batteryAnalog.setTitle("BATTERY ADC:");
 				y += batteryAnalog.getH(paint);
 				
 
 				SmallReadout gyroTitle = null;
 				readouts.add(gyroTitle = new SmallReadout(x, y, 2));
 				gyroTitle.setPositions(positions);
-				gyroTitle.setTitle("Gyro");
-				gyroTitle.update(0, "Center");
-				gyroTitle.update(1, "Range");
+				gyroTitle.setTitle("GYRO:");
+				gyroTitle.update(0, "CENTER");
+				gyroTitle.update(1, "RANGE");
 				y += gyroTitle.getH(paint);
 				
 				readouts.add(gyro = new SmallReadout(x, y, 2));
@@ -161,9 +161,9 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				SmallReadout radioTitle = null;
 				readouts.add(radioTitle = new SmallReadout(x, y, 2));
 				radioTitle.setPositions(positions);
-				radioTitle.setTitle("Radios");
-				radioTitle.update(0, "Stick");
-				radioTitle.update(1, "Bluetooth");
+				radioTitle.setTitle("RADIOS:");
+				radioTitle.update(0, "STICK");
+				radioTitle.update(1, "BLUETOOTH");
 				y += radioTitle.getH(paint);
 				
 				readouts.add(radios = new SmallReadout(x, y, 2));
@@ -174,13 +174,13 @@ public class MainActivity extends WindowBase implements OnTouchListener
 
 
 				readouts.add(heading = new SmallReadout(x, y, 2));
-				heading.setTitle("Heading");
+				heading.setTitle("HEADING:");
 				heading.setPositions(positions);
 				heading.update(0, "0.0");
 				y += heading.getH(paint);
 
 				readouts.add(throttle = new SmallReadout(x, y, 1));
-				throttle.setTitle("Throttle:");
+				throttle.setTitle("THROTTLE:");
 				throttle.setPositions(positions);
 				throttle.update(0, "0");
 				y += throttle.getH(paint);
@@ -197,10 +197,30 @@ public class MainActivity extends WindowBase implements OnTouchListener
 //				y += path_x.getH(paint);
 
 				readouts.add(rpm = new SmallReadout(x, y, 2));
-				rpm.setTitle("RPM");
+				rpm.setTitle("RPM:");
 				rpm.setPositions(positions);
 				rpm.update(0, "0.0");
 				y += rpm.getH(paint);
+
+
+// leash
+                SmallReadout leashTitle;
+                readouts.add(leashTitle = new SmallReadout(x, y, 2));
+                leashTitle.setPositions(positions);
+				leashTitle.setTitle("LEASH:");
+				leashTitle.update(0, "DISTANCE");
+				leashTitle.update(1, "ANGLE");
+				y += leashTitle.getH(paint);
+
+                readouts.add(leash = new SmallReadout(x, y, 2));
+				leash.setPositions(positions);
+				leash.update(0, "0");
+				leash.update(1, "0");
+				y += leash.getH(paint);
+
+
+
+
 
 				readouts.add(remote_steering = new SmallReadout(x, y, 2));
 				remote_steering.setTitle("REMOTE STEERING:");
@@ -262,6 +282,11 @@ public class MainActivity extends WindowBase implements OnTouchListener
             remote_steering.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_steering).toString());
             remote_throttle.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_throttle).toString());
 
+			leash.update(0, Integer.toString(Truck.leash_distance));
+			leash.update(1, new Formatter(
+					new StringBuilder())
+						.format("%.02f", Math2.fromRad(Truck.leash_angle))
+						.toString());
 
 			
 			synchronized(Truck.truck)
@@ -288,6 +313,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 	SmallReadout radios, throttle;
 	SmallReadout remote_throttle, remote_steering;
 	SmallReadout rpm;
+	SmallReadout leash;
 	SmallReadout batteryAnalog;
 	SmallReadout messages;
     boolean initialized = false;

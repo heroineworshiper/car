@@ -1,6 +1,6 @@
 /*
  * STM32 Controller for direct drive truck
- * Copyright (C) 2012-2021 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2012-2022 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,6 +80,10 @@
 // motor signs
 #define LEFT_SIGN 1
 #define RIGHT_SIGN -1
+
+#define M_TO_MI 1609.0
+#define PI 3.14159
+
 
 // size of settings block
 #define SETTINGS_SIZE 256
@@ -364,9 +368,21 @@ float do_lowpass(filter_t *ptr, float value)
 	return result;
 }
 
+// convert RPM to minutes per mile
+float rpm_to_pace(float rpm)
+{
+// convert RPM to miles per minute
+    float pace = rpm * truck.diameter * PI / 1000 / M_TO_MI;
+    pace = 1.0f / pace;
+    return pace;
+}
 
-
-
+float pace_to_rpm(float pace)
+{
+    return M_TO_MI / 
+        pace / 
+        (PI * truck.diameter / 1000);
+}
 
 
 
@@ -403,6 +419,7 @@ uint16_t get_chksum(uint8_t *buffer, uint8_t size)
 
 
 
+
 void handle_radio_packet(unsigned char *ptr)
 {
     truck.stick_packets++;
@@ -423,7 +440,6 @@ void handle_radio_packet(unsigned char *ptr)
         truck.speed_offset = truck.speed_offset - 0x100;
     }
 
-#ifdef BINARY_STEERING
 // convert to a binary steering value
     truck.binary_steering = STEERING_MID;
     if(truck.steering > truck.remote_steering_mid + truck.remote_steering_deadband)
@@ -454,7 +470,6 @@ void handle_radio_packet(unsigned char *ptr)
 //print_number(truck.binary_steering);
 
 
-#endif // BINARY_STEERING
 
 // TRACE2
 // print_number(truck.throttle);
@@ -542,14 +557,10 @@ void dump_config()
 
 	print_text("\npid_downsample=");
 	print_number(truck.pid_downsample);
-	print_text("\nmax_rpm=");
-	print_float(truck.max_rpm);
-	print_text("\nmin_rpm=");
-	print_float(truck.min_rpm);
-	print_text("\nmax_reverse_rpm=");
-	print_float(truck.max_reverse_rpm);
-	print_text("\nmin_reverse_rpm=");
-	print_float(truck.min_reverse_rpm);
+	print_text("\ntarget pace=");
+	print_float(rpm_to_pace(truck.target_rpm));
+	print_text("\ntarget reverse pace=");
+	print_float(rpm_to_pace(truck.target_reverse_rpm));
 	print_text("\ndiameter=");
 	print_number(truck.diameter);
 
@@ -570,8 +581,25 @@ void dump_config()
 	print_text("\nSTEERING PID=");
 	dump_pid(&truck.heading_pid);
 
-	print_text("RPM PID=");
+	print_text("\nRPM PID=");
 	dump_pid(&truck.rpm_pid);
+
+
+#ifdef USE_LEASH
+    flush_uart();
+	print_text("\nleash.distance0=");
+	print_number(truck.leash.distance0);
+	print_text("\nleash.starting pace=");
+	print_float(rpm_to_pace(truck.leash.rpm0));
+	print_text("\nleash.pace to distance=");
+	print_float(truck.leash.speed_to_distance);
+	print_text("\nleash.center=");
+	print_float(TO_DEG(truck.leash.center));
+	print_text("\nleash.max_angle=");
+	print_float(TO_DEG(truck.leash.max_angle));
+#endif // USE_LEASH
+
+    print_lf();
 }
 
 int read_config_packet(const unsigned char *buffer)
@@ -610,10 +638,8 @@ int read_config_packet(const unsigned char *buffer)
 	
 	truck.battery_analog = READ_UINT16(buffer, offset);
 
-	truck.max_rpm = READ_UINT16(buffer, offset);
-	truck.max_reverse_rpm = READ_UINT16(buffer, offset);
-	truck.min_reverse_rpm = READ_UINT16(buffer, offset);
-	truck.min_rpm = READ_UINT16(buffer, offset);
+	truck.target_rpm = READ_UINT16(buffer, offset);
+	truck.target_reverse_rpm = READ_UINT16(buffer, offset);
 	truck.diameter = buffer[offset++];
 	
 	truck.battery_v0 = READ_FLOAT32(buffer, offset);
@@ -639,6 +665,23 @@ int read_config_packet(const unsigned char *buffer)
 	truck.max_steering_magnitude = (MAX_PWM - MIN_PWM) / 2 * 
 			truck.max_steering100 / 
 			100;
+
+
+
+
+#ifdef USE_LEASH
+
+
+    truck.leash.distance0 = buffer[offset++];
+    truck.leash.rpm0 = READ_FLOAT32(buffer, offset);
+    truck.leash.speed_to_distance = READ_FLOAT32(buffer, offset);
+    truck.leash.center = READ_FLOAT32(buffer, offset);
+    truck.leash.max_angle = READ_FLOAT32(buffer, offset);
+
+
+
+
+#endif // USE_LEASH
 
 TRACE2
 print_text("size of config packet=");
@@ -795,6 +838,10 @@ static void handle_beacon()
                 buf[offset++] = truck.steering;
                 buf[offset++] = truck.throttle;
 
+#ifdef USE_LEASH
+                WRITE_FLOAT32(buf, offset, truck.leash.angle);
+                WRITE_INT16(buf, offset, truck.leash.distance);
+#endif
 
 // write the correct size
 				WRITE_INT16(buf, offset2, offset + 2);
@@ -1001,6 +1048,17 @@ void TIM1_UP_TIM10_IRQHandler()
 		{
 			truck.radio_timeout--;
 		}
+
+#ifdef USE_LEASH
+        if(truck.leash.timeout < LEASH_TIMEOUT)
+        {
+            truck.leash.timeout++;
+        }
+        else
+        {
+            truck.leash.active = 0;
+        }
+#endif
 
 // update statistics
         if(truck.tick - truck.stat_time >= TIMER_HZ)
@@ -1225,6 +1283,40 @@ void init_analog()
 //     }
 // }
 
+
+#ifdef USE_LEASH
+// return 1 if leash was used
+int leash_steering()
+{
+    leash_t *leash = &truck.leash;
+    
+    if(leash->active && leash->angle > leash->center)
+    {
+        truck.steering_pwm = truck.mid_steering_pwm +
+            (leash->angle - leash->center) *
+            truck.max_steering_magnitude /
+            leash->max_angle;
+		truck.auto_steering = 0;
+		truck.need_steering_feedback = 0;
+        truck.steering_timeout = 0;
+        return 1;
+    }
+    else
+    if(leash->active && leash->angle < leash->center)
+    {
+        truck.steering_pwm = truck.mid_steering_pwm -
+            (leash->center - leash->angle) *
+            truck.max_steering_magnitude /
+            leash->max_angle;
+		truck.auto_steering = 0;
+		truck.need_steering_feedback = 0;
+        truck.steering_timeout = 0;
+        return 1;
+    }
+    return 0;
+}
+#endif // USE_LEASH
+
 void handle_steering()
 {
     int throttle_active = 0;
@@ -1236,26 +1328,18 @@ void handle_steering()
         throttle_active = 1;
     }
 
+#ifdef USE_LEASH
+    leash_t *leash = &truck.leash;
+    if(leash->active && leash->distance >= leash->distance0)
+        throttle_active = 1;
+#endif
+
 // manual steering
-#ifdef BINARY_STEERING
     if(!throttle_active || !truck.auto_steering)
     {
-#endif
-// steering inactive
-        if(truck.steering <= truck.remote_steering_mid + truck.remote_steering_deadband &&
-            truck.steering >= truck.remote_steering_mid - truck.remote_steering_deadband)
-        {
-		    truck.steering_pwm = truck.mid_steering_pwm;
-		    truck.auto_steering = 1;
-            if(throttle_active)
-            {
-    		    truck.need_steering_feedback = 1;
-            }
-        }
-        else
         if(truck.steering > truck.remote_steering_mid + truck.remote_steering_deadband)
         {
-// left
+// manual stick left
             if(truck.steering >= truck.remote_steering_max)
             {
                 truck.steering_pwm = truck.mid_steering_pwm + truck.max_steering_magnitude;
@@ -1276,7 +1360,7 @@ void handle_steering()
         else
         if(truck.steering < truck.remote_steering_mid - truck.remote_steering_deadband)
         {
-// right
+// manual stick right
             if(truck.steering <= truck.remote_steering_min)
             {
                 truck.steering_pwm = truck.mid_steering_pwm - truck.max_steering_magnitude;
@@ -1294,10 +1378,26 @@ void handle_steering()
 		    truck.need_steering_feedback = 0;
             truck.steering_timeout = 0;
         }
-#ifdef BINARY_STEERING
+        else
+// stick has priority over leash
+#ifdef USE_LEASH
+        if(leash_steering())
+        {
+        }
+        else
+#endif // USE_LEASH
+// no steering input
+        {
+		    truck.steering_pwm = truck.mid_steering_pwm;
+		    truck.auto_steering = 1;
+            if(throttle_active)
+            {
+    		    truck.need_steering_feedback = 1;
+            }
+        }
     }
     else
-// binary steering
+// auto steering
     {
         switch(truck.binary_steering)
         {
@@ -1355,11 +1455,19 @@ void handle_steering()
                 break;
             
             default:
-                truck.need_steering_feedback = 1;
+#ifdef USE_LEASH
+// leash to PWM
+                if(leash_steering())
+                {
+                }
+                else
+#endif // USE_LEASH
+                {
+                    truck.need_steering_feedback = 1;
+                }
                 break;
         }
     }
-#endif // BINARY_STEERING
 
 // auto steering
     if(truck.need_steering_feedback)
@@ -1441,72 +1549,8 @@ void handle_steering()
 }
 
 
-
-
-void do_auto_throttle()
+void rpm_to_power(float target_rpm)
 {
-// convert stick to RPM
-    truck.target_rpm = 0;
-    if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband)
-    {
-// forward RPM
-            truck.target_rpm = truck.max_rpm;
-//         if(truck.throttle >= truck.remote_throttle_max)
-//         {
-//             truck.target_rpm = truck.max_rpm;
-//         }
-//         else
-//         {
-//             truck.target_rpm = truck.min_rpm;
-//         }
-
-//         truck.target_rpm = truck.min_rpm +
-//             (truck.throttle - truck.remote_throttle_mid - truck.remote_throttle_deadband) *
-//             (truck.max_rpm - truck.min_rpm) /
-//             (truck.remote_throttle_max - truck.remote_throttle_mid - truck.remote_throttle_deadband);
-        truck.reverse = 0;
-        CLAMP(truck.target_rpm, truck.min_rpm, truck.max_rpm);
-
-// adjust based on speed paddles
-        if(truck.speed_offset != 0)
-        {
-            float M_TO_MI = 1609.0;
-            float PI = 3.14159;
-// convert RPM to miles per minute
-            float pace = truck.target_rpm * truck.diameter * PI / 1000 / M_TO_MI;
-// convert RPM to minutes per mile
-            pace = 1.0f / pace;
-// .5 minutes per mile per speed offset
-            pace += .5 * -truck.speed_offset;
-
-            truck.target_rpm = M_TO_MI / 
-                pace / 
-                (PI * truck.diameter / 1000);
-        }
-    }
-    else
-    if(truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
-    {
-// reverse RPM
-        truck.target_rpm = truck.max_reverse_rpm;
-//         if(truck.throttle <= truck.remote_throttle_min)
-//         {
-//             truck.target_rpm = truck.max_reverse_rpm;
-//         }
-//         else
-//         {
-//             truck.target_rpm = truck.min_reverse_rpm;
-//         }
-
-//         truck.target_rpm = truck.min_reverse_rpm +
-//             (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.throttle) *
-//             (truck.max_reverse_rpm - truck.min_reverse_rpm) /
-//             (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.remote_throttle_min);
-        truck.reverse = 1;
-        CLAMP(truck.target_rpm, truck.min_reverse_rpm, truck.max_rpm);
-    }
-
-
     int throttle_base;
     if(!truck.reverse)
     {
@@ -1517,16 +1561,8 @@ void do_auto_throttle()
         throttle_base = truck.throttle_reverse_base100;
     }
 
-// static int debug_counter = 0;
-// debug_counter++;
-// if(!(debug_counter % 10))
-// {
-// TRACE2
-// print_number(truck.target_rpm);
-// }
-
 	truck.throttle_feedback = do_pid(&truck.rpm_pid,
-		(float)(truck.target_rpm - truck.rpm) / 1000,
+		(float)(target_rpm - truck.rpm) / 1000,
 		-get_derivative(&truck.rpm_dv) / 1000,
 		0);
 // convert percent to PWM
@@ -1535,6 +1571,46 @@ void do_auto_throttle()
         100;
 // don't go into braking mode or it'll oscillate
     CLAMP(truck.power, 1, MOTOR_PWM_PERIOD);
+}
+
+void do_auto_throttle()
+{
+// convert stick to RPM
+    float target_rpm = 0;
+    if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband)
+    {
+// forward RPM
+        target_rpm = truck.target_rpm;
+        truck.reverse = 0;
+
+// adjust based on speed paddles
+        if(truck.speed_offset != 0)
+        {
+            float pace = rpm_to_pace(target_rpm);
+// .5 minutes per mile per speed offset
+            pace += .5 * -truck.speed_offset;
+
+            target_rpm = pace_to_rpm(pace);
+        }
+    }
+    else
+    if(truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
+    {
+// reverse RPM
+        target_rpm = truck.target_reverse_rpm;
+        truck.reverse = 1;
+    }
+
+
+// static int debug_counter = 0;
+// debug_counter++;
+// if(!(debug_counter % 10))
+// {
+// TRACE2
+// print_number(truck.target_rpm);
+// }
+
+    rpm_to_power(target_rpm);
 }
 
 void do_manual_throttle()
@@ -1581,7 +1657,50 @@ void do_manual_throttle()
 }
 
 
+#ifdef USE_LEASH
+void do_leash_throttle()
+{
+    leash_t *leash = &truck.leash;
 
+// store new heading if leash reversed speed
+    if((leash->distance >= leash->distance0 && 
+        leash->distance2 < leash->distance0) ||
+        (leash->distance2 >= leash->distance0 && 
+        leash->distance < leash->distance0))
+    {
+        truck.target_heading = truck.current_heading;
+    }
+
+    leash->distance2 = leash->distance;
+
+    if(leash->distance < leash->distance0)
+    {
+        truck.power = 0;
+    }
+    else
+    {
+// convert leash distance to RPM
+        float pace = rpm_to_pace(leash->rpm0);
+        pace -= leash->speed_to_distance * ((float)leash->distance - leash->distance0);
+        float target_rpm = pace_to_rpm(pace);
+        truck.reverse = 0;
+        rpm_to_power(target_rpm);
+
+// static int debug_counter = 0;
+// debug_counter++;
+// if(!(debug_counter % 10))
+// {
+// TRACE2
+// print_float(rpm_to_pace(target_rpm));
+// }
+
+// leash steering
+        truck.steering_timeout = STEERING_RELOAD;
+    }
+}
+
+
+#endif // USE_LEASH
 
 
 void handle_bt_input(int throttle_magnitude)
@@ -1722,8 +1841,6 @@ void feedback()
 	        truck.steering2 = truck.steering;
         }
 
-
-
  		int throttle_magnitude = MOTOR_PWM_PERIOD;
 // 		if(truck.have_bt_controls && truck.bt_throttle < 0)
 // 		{
@@ -1762,10 +1879,18 @@ void feedback()
             }
 		}
 		else
+#ifdef USE_LEASH
+        if(truck.leash.active)
+        {
+// stick overrides leash if throttle is on
+            do_leash_throttle();
+        }
+        else
+#endif
 		{
 			truck.power = 0;
-
 		}
+
 
         handle_steering();
 
@@ -1777,18 +1902,6 @@ void feedback()
 // print_float(truck.mid_throttle_pwm);
 // print_text(" truck.throttle_pwm=");
 // print_number(truck.throttle_pwm);
-// 
-// 		if(truck.need_steering_feedback)
-// 		{
-//             auto_steering_output();
-// 
-// 		}
-// 		else
-// 		{
-//             manual_steering_output(steering_overshoot);
-// 		}
-
-
 
 
 
@@ -2455,7 +2568,7 @@ void handle_motors()
 // print_float(V_TO_MPH(truck.motors[LEFT_MOTOR].v));
 // print_float(V_TO_MPH(truck.motors[RIGHT_MOTOR].v));
 //print_number(truck.rpm);
-//print_number(truck.target_rpm);
+//print_number(target_rpm);
 //print_number(truck.power);
 //print_number(truck.motors[LEFT_MOTOR].angle);
 //print_number(truck.motors[LEFT_MOTOR].phase);
@@ -3059,6 +3172,7 @@ void init_watchdog()
 }
 
 
+#ifndef USE_LEASH
 // print the menu
 void print_menu()
 {
@@ -3079,6 +3193,62 @@ void handle_input()
         print_menu();
     }
 }
+#else // !USE_LEASH
+
+// handle leash input
+void handle_input()
+{
+
+//print_hex2(uart.input);
+
+    leash_t *leash = &truck.leash;
+    if(leash->offset == 0)
+    {
+        if(uart.input == 0xff) leash->offset++;
+    }
+    else
+    if(leash->offset == 1)
+    {
+        if(uart.input == 0xe5) 
+            leash->offset++;
+        else
+        if(uart.input == 0xff)
+            leash->offset = 1;
+        else
+        if(uart.input == 0xff)
+            leash->offset = 0;
+    }
+    else
+    {
+        leash->buffer[leash->offset - 2] = uart.input;
+        leash->offset++;
+        if(leash->offset >= 6)
+        {
+            leash->offset = 0;
+            DISABLE_INTERRUPTS
+            leash->timeout = 0;
+            ENABLE_INTERRUPTS
+            leash->active = 1;
+            leash->distance = (int16_t)(leash->buffer[0] | (leash->buffer[1] << 8));
+            leash->angle = (int16_t)(leash->buffer[2] | (leash->buffer[3] << 8));
+            leash->angle /= 256;
+            leash->angle = TO_RAD(leash->angle);
+
+
+            if(leash->distance < 0) leash->distance = 0;
+
+//             print_text("DISTANCE: ");
+//             print_number(leash->distance);
+//             print_text("ANGLE: ");
+//             print_float(leash->angle);
+//             print_lf();
+        }
+    }
+}
+
+#endif // USE_LEASH
+
+
 
 
 int main(void)
@@ -3136,10 +3306,8 @@ int main(void)
 	
 
 	
-	truck.max_rpm = 500;
-    truck.min_rpm = 60;
-    truck.max_reverse_rpm = 300;
-    truck.min_reverse_rpm = 60;
+	truck.target_rpm = 500;
+    truck.target_reverse_rpm = 300;
 
 	truck.pid_downsample = 1;
 	truck.min_steering_step = TO_RAD(30);
@@ -3170,6 +3338,10 @@ int main(void)
 
 
     truck.steering_pwm = truck.mid_steering_pwm;
+
+
+
+
 
 
 // general purpose timer
@@ -3244,8 +3416,11 @@ int main(void)
 
 	init_imu(&truck.imu);
 
+#ifdef USE_LEASH
+    print_text("Leash enabled\n");
+#else
     print_menu();
-
+#endif
 
 
 

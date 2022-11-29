@@ -20,6 +20,7 @@
 
 // make leash_fuse
 // make leash.hex
+// make leash_isp
 
 
 #define F_CPU 8000000L
@@ -257,7 +258,7 @@ void main()
         {
             bitSet(TIFR0, TOV0);
             tick++;
-            if(tick >= HZ / 10)
+            if(tick >= HZ / 25)
             {
                 tick = 0;
                 LED_TOGGLE
