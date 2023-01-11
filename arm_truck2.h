@@ -243,6 +243,8 @@ typedef struct
     float rpm0;
 // minutes per mile per encoder count
     float speed_to_distance;
+// minutes per mile maximum speed
+    float max_speed;
 // center leash angle in rads
 // adjust to have rover on left or right of animal
     float center;

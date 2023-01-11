@@ -2018,8 +2018,7 @@ Layer(10 "silk")
 	Text[101.8474mm 44.6069mm 0 117 "car_remote.X" "clearline"]
 	Text[99.0100mm 64.4400mm 0 78 "220R" ""]
 	Text[119.9300mm 53.3600mm 1 100 "GND" ""]
-	Text[97.3700mm 66.5400mm 0 78 "LED GND" ""]
-	Text[107.4500mm 53.4100mm 1 77 "LED 3.3V" ""]
+	Text[107.4500mm 53.4100mm 1 77 "3.3V" ""]
 	Text[134.0100mm 60.1100mm 0 78 "ANTENNA" ""]
 	Text[125.8500mm 66.4900mm 1 78 "16nH" ""]
 	Text[116.7100mm 72.9400mm 0 78 "GND" ""]
@@ -2104,4 +2103,5 @@ Layer(10 "silk")
 	Text[123.9000mm 61.6000mm 0 78 "15pF" ""]
 	Text[110.2300mm 71.2400mm 1 78 "100uF" ""]
 	Text[124.1800mm 59.3200mm 1 78 "100nH" ""]
+	Text[99.3100mm 66.4700mm 0 78 "LED+" ""]
 )

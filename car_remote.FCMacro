@@ -17,7 +17,7 @@ if False:
         -math.pi / 2,
         True)
 
-# isogrid
+# isogrid. Not used
 if False:
     W = 58
     H = 160
@@ -40,7 +40,7 @@ if False:
         App.Vector(-67, 36, -10.8),
         App.Rotation(App.Vector(0, 0, 1), 270))
 
-# isogrid borders
+# isogrid borders. Not used
 if False:
     BORDER_W = 4.0
     BORDER_H = 2.0
@@ -67,7 +67,7 @@ if False:
 #        False)
 
 # bottom bevel union tool
-if True:
+if False:
     libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
         1, 
         -5.4, 

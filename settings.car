@@ -78,12 +78,13 @@ LEASH_DISTANCE0 30
 # starting minutes/mile
 LEASH_SPEED0 40.0
 # minutes/mile per encoder count
-LEASH_SPEED_TO_DISTANCE 1.0
+LEASH_SPEED_TO_DISTANCE 2.0
+# minutes/mile maximum speed
+LEASH_MAX_SPEED 9.0
 # center leash angle in deg
-LEASH_CENTER 5
-# maximum pot deflection in deg
+LEASH_CENTER 0
+# pot deflection corresponding to full servo deflection
 LEASH_MAX_ANGLE 45
-
 
 
 

@@ -9,8 +9,20 @@
     <option name="TOOL_WINDOW_LOG_LEVEL" value="info" />
     <option name="TOOL_WINDOW_CONFIGURED_FILTER" value="Show only selected application" />
   </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="a53a3e7e-1d41-4964-8f32-13993da15ef4" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Truck.studio2.iml" beforeDir="false" afterPath="$PROJECT_DIR$/Truck.studio2.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/app.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../arm_truck2.c" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../arm_truck2.h" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" afterDir="false" />
@@ -31,14 +43,15 @@
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-variables.mk" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-variables.mk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Package-default.bash" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Package-default.bash" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../car_receive.X/dist/default/production/car_receive.X.production.hex.orig" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../traction.FCMacro" beforeDir="false" afterPath="$PROJECT_DIR$/../traction.FCMacro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../leash4.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../leash4.FCStd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../settings.car" beforeDir="false" afterPath="$PROJECT_DIR$/../settings.car" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="LMX320IZHUV4RWBUQK" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[/root/.android/avd/Pixel_XL_API_24.avd]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -63,7 +76,6 @@
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
@@ -86,12 +98,14 @@
       </method>
     </configuration>
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
-      <module name="app" />
+      <module name="Truck.studio2.app" />
       <option name="DEPLOY" value="true" />
       <option name="DEPLOY_APK_FROM_BUNDLE" value="false" />
       <option name="DEPLOY_AS_INSTANT" value="false" />
       <option name="ARTIFACT_NAME" value="" />
       <option name="PM_INSTALL_OPTIONS" value="" />
+      <option name="ALL_USERS" value="false" />
+      <option name="ALWAYS_INSTALL_WITH_PM" value="false" />
       <option name="DYNAMIC_FEATURES_DISABLED_LIST" value="" />
       <option name="ACTIVITY_EXTRA_FLAGS" value="" />
       <option name="MODE" value="default_activity" />
@@ -125,16 +139,22 @@
       </Native>
       <Profilers>
         <option name="ADVANCED_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_PROFILING_ENABLED" value="false" />
         <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
         <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Sample Java Methods" />
+        <option name="STARTUP_NATIVE_MEMORY_PROFILING_ENABLED" value="false" />
+        <option name="NATIVE_MEMORY_SAMPLE_RATE_BYTES" value="2048" />
       </Profilers>
       <option name="DEEP_LINK" value="" />
       <option name="ACTIVITY_CLASS" value="" />
+      <option name="SEARCH_ACTIVITY_IN_GLOBAL_SCOPE" value="false" />
+      <option name="SKIP_ACTIVITY_VALIDATION" value="false" />
       <method v="2">
         <option name="Android.Gradle.BeforeRunTask" enabled="true" />
       </method>
     </configuration>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
     <configuration />
   </component>

@@ -593,6 +593,8 @@ void dump_config()
 	print_float(rpm_to_pace(truck.leash.rpm0));
 	print_text("\nleash.pace to distance=");
 	print_float(truck.leash.speed_to_distance);
+	print_text("\nleash.max pace=");
+	print_float(truck.leash.max_speed);
 	print_text("\nleash.center=");
 	print_float(TO_DEG(truck.leash.center));
 	print_text("\nleash.max_angle=");
@@ -675,6 +677,7 @@ int read_config_packet(const unsigned char *buffer)
     truck.leash.distance0 = buffer[offset++];
     truck.leash.rpm0 = READ_FLOAT32(buffer, offset);
     truck.leash.speed_to_distance = READ_FLOAT32(buffer, offset);
+    truck.leash.max_speed = READ_FLOAT32(buffer, offset);
     truck.leash.center = READ_FLOAT32(buffer, offset);
     truck.leash.max_angle = READ_FLOAT32(buffer, offset);
 
@@ -1679,9 +1682,11 @@ void do_leash_throttle()
     }
     else
     {
-// convert leash distance to RPM
+// convert leash distance to a pace
         float pace = rpm_to_pace(leash->rpm0);
         pace -= leash->speed_to_distance * ((float)leash->distance - leash->distance0);
+
+        if(pace < leash->max_speed) pace = leash->max_speed;
         float target_rpm = pace_to_rpm(pace);
         truck.reverse = 0;
         rpm_to_power(target_rpm);
@@ -3232,7 +3237,7 @@ void handle_input()
             leash->distance = (int16_t)(leash->buffer[0] | (leash->buffer[1] << 8));
             leash->angle = (int16_t)(leash->buffer[2] | (leash->buffer[3] << 8));
             leash->angle /= 256;
-            leash->angle = TO_RAD(leash->angle);
+            leash->angle = -TO_RAD(leash->angle);
 
 
             if(leash->distance < 0) leash->distance = 0;

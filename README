@@ -80,7 +80,7 @@ heat sink/angle rod
 imu4.pcb: IMU for 3D printed truck
 
 
-cring.FCStd: retaining ring for the motors.  Not used anymore.
+cring.FCStd: failed retaining ring for the motors.  Not used anymore.
     .4mm nozzle
     .2mm layer height out of PETG
     no cooling fan
@@ -98,7 +98,7 @@ tire2.FCMacro: generate procedural tire.  Not used anymore.
     20mm print speed
     no retraction
 
-front_tire3.FCStd: front tire
+front_tire3.FCStd: front tire for hard TPU
     Import STL into blender
     Run helix.py to make the struts a helix
     Export new layers as an STL file
@@ -108,16 +108,23 @@ front_tire3.FCStd: front tire
     left & right must be mirror images
     timelapse mode with fixcura.py has better stringing
 
+front_tire3.FCStd: front tire for soft TPU
+
 front_wheel.FCStd: front wheel
     modeled for a .4mm nozzle
     .32 layer height
 
-offroad2.stl: offroad rear tire after the helix transformation
+offroad2.stl: offroad rear tire for hard TPU
     print with .4mm nozzle
     TPU
     .32mm layer height
     260C
     left & right must be mirror images
+
+offroad3.stl: offroad rear tire for soft TPU
+    print with .8mm nozzle
+    .32mm layer height
+    260C
 
 rear_tire3.FCStd: OBSOLETE rear wheel
 
@@ -131,25 +138,26 @@ rear_wheel3.FCStd: most recent off-road rear wheel
     .4mm nozzle .32mm layer height for INNER HUB, INNER RING
     .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
 
-tire3.stl: front tire after the helix transformation
+tire3.stl: front tire for hard TPU
     print with .8mm nozzle
     TPU
     .32mm layer height
     250C
     left & right must be mirror images
 
+tire4.stl: front tire for soft TPU
+
 tire6.FCMacro: creates sketches for the latest rear wheel & tire
     Extrude by a multiple of the layer height .32mm, then export tire.stl
-    Then run helix.c to generate a helix by 
-        creating discrete layers
+    Then run helix.c to generate a helix by creating discrete layers
     tires must be mirror images or the truck will pull to 1 side
-    1st layer is 220C to avoid sticking.  Next layer is 250C.
+    Printed at 250C with cheap TPU.
 
 
 
 
 
-truck_radio.pcb: remote control tx/rx for 3D printed truck & the camera
+truck_radio2.pcb: remote control tx/rx for 3D printed truck & the camera
 
 truck4.pcb: mane board for 3D printed truck
 
@@ -321,8 +329,6 @@ car_remote.FCStd: remote control for vehicle
         no support
         with wide part facing bed
     TODO:
-        use sacrificial layer instead of support for screw holes
-        holes for temporary screws
         clamp inductor in on the sides
 
 
