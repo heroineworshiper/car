@@ -35,6 +35,9 @@
 
 // reverse steering servo
 //#define REVERSE_STEERING
+// reverse analog values
+#define REVERSE_STEERING_ADC
+#define REVERSE_THROTTLE_ADC
 // pass bluetooth to debug port
 //#define BLUETOOTH_PASSTHROUGH
 // before a device is configured, its UART will be 9600

@@ -435,6 +435,15 @@ void handle_radio_packet(unsigned char *ptr)
 	truck.throttle = ptr[1];
 	truck.steering = ptr[0];
     truck.speed_offset = ptr[2];
+
+#ifdef REVERSE_STEERING_ADC
+    truck.steering = 0xff - truck.steering;
+#endif
+
+#ifdef REVERSE_THROTTLE_ADC
+    truck.throttle = 0xff - truck.throttle;
+#endif
+
     if(ptr[2] & 0x80)
     {
         truck.speed_offset = truck.speed_offset - 0x100;

@@ -335,9 +335,9 @@ car_remote.FCStd: remote control for vehicle
 
 
 
-charger.FCStd: charging stand for a Qi charger
+charger2.FCStd: charging stand for a Qi charger
     print with .4mm nozzle, .4mm line width, no support
-
+    TODO: 1 2mm screw on the USB side is misaligned
 
 
 
