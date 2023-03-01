@@ -114,6 +114,10 @@ front_wheel.FCStd: front wheel
     modeled for a .4mm nozzle
     .32 layer height
 
+
+leash6.FCStd: leash enclosure
+    
+
 offroad2.stl: offroad rear tire for hard TPU
     print with .4mm nozzle
     TPU
@@ -304,7 +308,7 @@ motor4.FCStd: motor mount
 
 
 car_remote.FCMacro:
-    create objects for car_remote
+    create objects for car_remote & cam_remote
 
 car_remote.FCStd: remote control for vehicle
     disable support for the top & bottom
@@ -339,7 +343,7 @@ charger2.FCStd: charging stand for a Qi charger
     print with .4mm nozzle, .4mm line width, no support
     TODO: 1 2mm screw on the USB side is misaligned
 
-
+confuser.FCStd: jetson nano enclosure
 
 
 filament budget for traction module:
@@ -422,7 +426,7 @@ cam_gearbox.FCStd: OBSOLETE
     print pinion with gear on bottom & no support
     install pinion with hex facing motor hex
 
-cam_remote.FCStd:
+cam_remote2.FCStd:
     remote control for camera panner
     no ironing
     no horizontal expansion
@@ -446,12 +450,6 @@ cam_remote.FCStd:
     top switch cover, bottom switch cover:
         support everywhere
 
-TODO:
-    transition layers still off
-    vertical gap between magnets & sensors
-    reverse clamshell
-    make shafts part of clamshell instead of levers
-    use single layer bridge instead of support for screw holes
 
 
 

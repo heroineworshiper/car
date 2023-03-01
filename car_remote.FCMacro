@@ -10,12 +10,31 @@ import math
 CLAMSHELL = 'clamshell003'
 
 # clamshell walls
-if False:
+if True:
     libclamshell.makeClam(libclamshell.getObj(CLAMSHELL), 
         5.4, 
         -5.4, 
         -math.pi / 2,
         True)
+
+# bottom bevel union tool
+if True:
+    libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
+        1, 
+        -5.4, 
+        4.8, 
+        math.pi / 2,
+        True)
+
+# top bevel union tool
+if True:
+    libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
+        -1, 
+        5.4, 
+        4.8,
+        math.pi / 2,
+        True)
+
 
 # isogrid. Not used
 if False:
@@ -65,25 +84,6 @@ if False:
 #        math.pi / 2,
 #        None,
 #        False)
-
-# bottom bevel union tool
-if False:
-    libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
-        1, 
-        -5.4, 
-        4.8, 
-        math.pi / 2,
-        True)
-
-# top bevel union tool
-if True:
-    libclamshell.makeBevel(libclamshell.getObj(CLAMSHELL), 
-        -1, 
-        5.4, 
-        4.8,
-        math.pi / 2,
-        True)
-
 
 
 
