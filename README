@@ -332,8 +332,6 @@ car_remote.FCStd: remote control for vehicle
     covers for power, increase speed, decrease speed:
         no support
         with wide part facing bed
-    TODO:
-        clamp inductor in on the sides
 
 
 
