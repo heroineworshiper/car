@@ -108,7 +108,7 @@ front_tire3.FCStd: front tire for hard TPU
     left & right must be mirror images
     timelapse mode with fixcura.py has better stringing
 
-front_tire3.FCStd: front tire for soft TPU
+front_tire3.FCStd: front tire for soft TPE
 
 front_wheel.FCStd: front wheel
     modeled for a .4mm nozzle
@@ -125,7 +125,7 @@ offroad2.stl: offroad rear tire for hard TPU
     260C
     left & right must be mirror images
 
-offroad3.stl: offroad rear tire for soft TPU
+offroad3.stl: offroad rear tire for soft TPE
     print with .8mm nozzle
     .32mm layer height
     260C
@@ -216,7 +216,12 @@ container.FCMacro:
     
 
 phone4.FCStd:
-    phone holster to be printed in TPU & welded with heat
+    wiko 3 phone
+
+phone5.FCStd:
+    moto phone holster to be printed in TPU & welded with soldering iron
+    .4mm nozzle
+    .2mm layer
 
 
 radio_box.FCStd:
@@ -231,6 +236,8 @@ radio_box.FCStd:
         shift cable hole left
 
 tool.FCStd: socket wrench for 6-32 locknuts
+
+tool2.FCStd: socket wrench for 4-40 locknuts
 
 traction.FCMacro: create objects for traction
 

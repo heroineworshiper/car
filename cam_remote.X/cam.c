@@ -1,6 +1,6 @@
 /*
  * REMOTE CONTROL FOR CAM PANNER
- * Copyright (C) 2020-2021 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2023 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
 #pragma config BORV = 22        // Brown-out Reset Voltage bits (VBOR set to 2.2 V nominal)
 
 // CONFIG2H
-#pragma config WDTEN = ON       // Watchdog Timer Enable bit (WDT is always enabled. SWDTEN bit has no effect.)
+#pragma config WDTEN = OFF       // Watchdog Timer Enable bit
 #pragma config WDTPS = 32768    // Watchdog Timer Postscale Select bits (1:32768)
 
 // CONFIG3H
@@ -62,9 +62,23 @@
 
 // maximum speed for sounds
 #define CLOCKSPEED 32000000
+// steering sounds
+#define USE_STEERING_SOUND
+
+// analog values from arm_cam.c
+#define ADC_CENTER 114
+#define ADC_DEADBAND 5
+// minimums
+#define MIN_LEFT (ADC_CENTER + ADC_DEADBAND)
+#define MIN_RIGHT (ADC_CENTER - ADC_DEADBAND)
+// maximums
+#define MAX_LEFT 210
+#define MAX_RIGHT 40
 
 // the system clock & the number of packets per second
 #define HZ 25
+// samples per packet
+#define ADC_PER_PACKET 64
 
 // delay between packets
 #define TIMER0_VALUE (-CLOCKSPEED / 4 / 32 / HZ)
@@ -215,12 +229,79 @@ const uint16_t channels[] =
 #define BBFCREG                 0xc23c
 
 
-// C * 10 to resistance in ohms
+
+// audio
+// speaker has peaks at -1876 & -938
+// TODO: shift major scale to -1876 to -938
+#define MIN_NOTE -2500
+#define MAX_NOTE -1250
+#define OCTAVE0 (MIN_NOTE - MIN_NOTE * 2)
+#define OCTAVE1 (MAX_NOTE - MIN_NOTE)
+#define OCTAVE2 (MAX_NOTE / 2 - MAX_NOTE)
+
+// index to freq in CPU clocks
+const uint16_t freqs[] = 
+{
+    MIN_NOTE * 2, // C0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.122465), // D0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.259933), // E0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.334849), // F0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.498309), // G0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.681796), // A0
+    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.887759), // B0
+    MIN_NOTE,  // C1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.122465), // D1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.259933), // E1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.334849), // F1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.498309), // G1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.681796), // A1
+    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.887759), // B1
+    MAX_NOTE, // C2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.122465), // D2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.259933), // E2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.334849), // F2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.414173), // FS2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.498309), // G2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.681796), // A2
+    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.887759), // B2
+    MAX_NOTE / 2 // C3
+};
+
+// indexes for different notes
+#define _C0 0
+#define _D0 1
+#define _E0 2
+#define _F0 3
+#define _G0 4
+#define _A0 5
+#define _B0 6
+#define _C1 7
+#define _D1 8
+#define _E1 9
+#define _F1 10
+#define _G1 11
+#define _A1 12
+#define _B1 13
+#define _C2 14
+#define _D2 15
+#define _E2 16
+#define _F2 17
+#define _FS2 18
+#define _G2 19
+#define _A2 20
+#define _B2 21
+#define _C3 22
+#define SONG_REST 0xfe
+#define SONG_END 0xff
+
 typedef struct
 {
-    int16_t t;
-    uint16_t adc;
-} table_t;
+// ticks before next note
+    uint8_t delay;   
+// note index
+    uint8_t freq_index;
+} song_t;
+
 
 
 
@@ -230,26 +311,84 @@ typedef union
 	struct
 	{
 		unsigned interrupt_complete : 1;
+        unsigned send_packet : 1;
         unsigned have_stick : 1;
-        unsigned done : 1;
-    	unsigned disable_adc : 1;
+        unsigned playing_sound : 1;
+#ifdef USE_STEERING_SOUND
+        unsigned is_steering : 1;
+#endif
 	};
 	
 	unsigned char value;
 } flags_t;
+
+#define DURATION 1
+#define DURATION2 4
+const song_t increase_tone[] =
+{
+    { DURATION, _G1 },
+    { DURATION, _A1 },
+    { DURATION, _B1 },
+    { DURATION, _C2 },
+    { DURATION, _D2 },
+    { DURATION, _E2 },
+    { DURATION, _F2 },
+    { DURATION, _G2 },
+    { 0, SONG_END },
+};
+
+
+const song_t decrease_tone[] =
+{
+    { DURATION, _G2 },
+    { DURATION, _F2 },
+    { DURATION, _E2 },
+    { DURATION, _D2 },
+    { DURATION, _C2 },
+    { DURATION, _B1 },
+    { DURATION, _A1 },
+    { DURATION, _G1 },
+    { 0, SONG_END },
+};
+
+const song_t flat_tone[] =
+{
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { DURATION, _G1 },
+    { DURATION, _G2 },
+    { 0, SONG_END },
+};
+
+const song_t steering_sound[] =
+{
+    { DURATION * 1, _C2 },
+    { DURATION * 3, SONG_REST },
+    { DURATION * 1, _B1 },
+    { DURATION * 3, SONG_REST },
+    { 0, SONG_END }
+};
+
+#define MAX_SONG 32
+song_t song_buffer[MAX_SONG];
 
 #define TIMELAPSE_OFF 0x3
 #define TIMELAPSE_FAST_LEFT 0x0
 #define TIMELAPSE_FAST_RIGHT 0x1
 
 #define LED_TICKS (HZ / 5)
-
-// analog thresholds for timelapse mode
-#define FAST_RIGHT 0x40
-#define FAST_LEFT 0xc0
-// deadband values from the ARM for starting the transmitter
-#define MIN_LEFT 130
-#define MIN_RIGHT 126 
 
 // Each byte is a number of LED_TICKS between LED toggles
 #define BLINK_PATTERN_SIZE 6
@@ -266,29 +405,28 @@ const uint8_t blink_patterns[] =
 
 flags_t flags;
 uint32_t tick;
-uint32_t prev_tick;
 uint8_t timelapse_mode = TIMELAPSE_OFF;
 uint8_t blink_offset = 0;
 uint8_t blink_counter = 0;
 // hall effect accumulator
 uint32_t adc_accum;
 uint32_t adc_count;
-uint8_t adc_watchdog = 0;
-#define ADC_TIMEOUT HZ
 uint8_t current_channel = 0;
+uint16_t song_tick = 0;
+uint8_t song_offset = 0;
+uint16_t current_note = 0;
+uint16_t current_delay = 0;
 
-void powerup();
 void get_timelapse();
 void wait_timelapse();
-void (*adc_state)() = powerup;
+void (*adc_state)() = get_timelapse;
 
 // called every tick
 void handle_led()
 {
-    if(adc_state == powerup ||
-        adc_state == get_timelapse)
+    if(adc_state == get_timelapse)
     {
-// do nothing until timelapse code is known
+// do nothing until timelapse mode is known
     }
     else
     if(timelapse_mode == TIMELAPSE_OFF)
@@ -347,6 +485,8 @@ void write_radio(uint16_t data)
 
 void radio_on()
 {
+// enable serial port 10mA
+    TXSTA = 0b00100100;
 // enable outputs
     RADIO_CS_LAT = 1;
     RADIO_CS_TRIS = 0;
@@ -393,21 +533,19 @@ void radio_on()
 // DEBUG
 //LED_LAT = 1;
 
-// can't use ADC & amplifier
-    flags.disable_adc = 1;
 // turn on amplifier
     AMP_TRIS = 0;
     AMP_LAT = 1;
-    ClrWdt();
 }
 
 void radio_off()
 {
+// disable serial port 10mA
+    TXSTA = 0b00000100;
+
 // turn off amplifier
     AMP_TRIS = 0;
     AMP_LAT = 0;
-    flags.disable_adc = 0;
-    ADCON0bits.GO = 1;
 // DEBUG
 //LED_LAT = 0;
 
@@ -450,14 +588,6 @@ void flush_serial()
     }
 }
 
-void serial_off()
-{
-    flush_serial();
-
-    TXSTA = 0x0;
-    RCSTA = 0x0;
-}
-
 void write_serial(uint8_t value)
 {
     while(!PIR1bits.TXIF)
@@ -468,46 +598,102 @@ void write_serial(uint8_t value)
 }
 
 
+
+// have to copy the sound in order to add the tones for the current speed
+uint8_t copy_song(const song_t *src)
+{
+    uint8_t i = 0;
+    while(1)
+    {
+        song_buffer[i] = src[i];
+        if(src[i].freq_index == SONG_END)
+        {
+            i++;
+            break;
+        }
+        i++;
+    }
+    
+    return i;
+}
+
+void play_song()
+{
+    song_tick = 0;
+    song_offset = 0;
+    flags.playing_sound = 1;
+    current_note = freqs[song_buffer[0].freq_index];
+    current_delay = song_buffer[0].delay;
+    T3CON = 0b10000001;
+    TMR3 = current_note;
+    PIR2bits.TMR3IF = 0;
+    PIE2bits.TMR3IE = 1;
+    SPEAKER_TRIS1 = 0;
+    SPEAKER_TRIS2 = 0;
+    SPEAKER_LAT1 = 1;
+    SPEAKER_LAT2 = 0;
+}
+
+void stop_song()
+{
+    flags.playing_sound = 0;
+// turn off speaker timer
+    T3CON = 0b10000000;
+    PIE2bits.TMR3IE = 0;
+    PIR2bits.TMR3IF = 0;
+    SPEAKER_TRIS1 = 1;
+    SPEAKER_TRIS2 = 1;
+    SPEAKER_LAT1 = 0;
+    SPEAKER_LAT2 = 0;
+}
+
 void get_stick()
 {
-    flags.have_stick = 1;
+    if(adc_count < ADC_PER_PACKET) ADCON0bits.GO = 1;
 }
 
 // wait for stick to be released to prevent timelapse selection from moving motor
 void wait_timelapse()
 {
-// LED now requires a free running tick
-    if(tick > prev_tick)
+    if(adc_count >= 64)
     {
         uint8_t value = adc_accum / adc_count / 4;
-// wait for the stick to center before transmitting
         if(value <= MIN_LEFT &&
             value >= MIN_RIGHT)
         {
             adc_state = get_stick;
+// move to manual mode
+            flags.have_stick = 1;
         }
         
         adc_accum = 0;
         adc_count = 0;
-        prev_tick = tick;
     }
+    ADCON0bits.GO = 1;
 }
 
 // get timelapse code
 void get_timelapse()
 {
-    if(tick >= HZ / 5)
+    if(adc_count >= 64)
     {
         uint8_t value = adc_accum / adc_count / 4;
-        if(value <= FAST_RIGHT)
+        if(value <= MAX_RIGHT)
         {
             timelapse_mode = TIMELAPSE_FAST_RIGHT;
+            copy_song(increase_tone);
         }
         else
-        if(value >= FAST_LEFT)
+        if(value >= MAX_LEFT)
         {
             timelapse_mode = TIMELAPSE_FAST_LEFT;
+            copy_song(decrease_tone);
         }
+        else
+        {
+            copy_song(flat_tone);
+        }
+        play_song();
 
         adc_accum = 0;
         adc_count = 0;
@@ -520,25 +706,14 @@ void get_timelapse()
         blink_counter = blink_pattern[0];
         LED_LAT = 0;
         tick = 0;
-        prev_tick = 0;
     }
-}
-
-// wait for voltages to rise
-void powerup()
-{
-    if(tick >= HZ / 5)
-    {
-        adc_accum = 0;
-        adc_count = 0;
-        adc_state = get_timelapse;
-        tick = 0;
-    }
+    ADCON0bits.GO = 1;
 }
 
 
 void main()
 {
+// 32 Mhz
     OSCCON = 0b11100000;
 
 
@@ -548,6 +723,8 @@ void main()
 // turn off amplifier
     AMP_TRIS = 0;
     AMP_LAT = 0;
+    SPEAKER_TRIS1 = 1;
+    SPEAKER_TRIS2 = 1;
 
 
     flags.value = 0;
@@ -559,13 +736,12 @@ void main()
     ANSEL = 0b00010000;
     ANSELH = 0b00000000;
     ADCON0 = 0b00010001;
-// the RC is the only reliable conversion clock when using the amplifier
-    ADCON2 = 0b10111111;
+// ADC clock is Fosc/64
+    ADCON2 = 0b10111110;
     PIR1bits.ADIF = 0;
-    PIE1bits.ADIE = 1;
 // off during initialization
     LED_LAT = 1;
-    
+
     radio_off();
     serial_on();
 
@@ -575,43 +751,37 @@ void main()
     T0CON = 0b10000100;
     TMR0 = TIMER0_VALUE;
 
-    INTCON = 0b11100000;
-
 // start getting stick values
     ADCON0bits.GO = 1;
 
+    uint8_t init_delay = 0;
+    while(init_delay < HZ / 4)
+    {
+        if(INTCONbits.TMR0IF)
+        {
+            TMR0 = TIMER0_VALUE;
+            INTCONbits.TMR0IF = 0;
+            init_delay++;
+        }
+    }
 
+    INTCON = 0b11100000;
+
+
+
+
+    uint8_t adc_value = 0;
     while(1)
     {
-    }
-    
-}
-
-void interrupt isr()
-{
-	while(1)
-	{
-		ClrWdt();
-		flags.interrupt_complete = 1;
-
-// tick counter
-		if(INTCONbits.TMR0IF)
-		{
-			INTCONbits.TMR0IF = 0;
-            TMR0 = TIMER0_VALUE;
-			flags.interrupt_complete = 0;
-            tick++;
-            adc_watchdog++;
-
-            if(adc_watchdog > ADC_TIMEOUT &&
-                adc_count == 0)
-            {
-                Reset();
-            }
-
+        if(flags.send_packet)
+        {
+            flags.send_packet = 0;
             handle_led();
+
             if(flags.have_stick)
             {
+// DEBUG
+//LED_LAT = 0;
 // transmit packet
                 radio_on();
 
@@ -621,10 +791,7 @@ void interrupt isr()
                 write_serial(0xff);
                 write_serial(0xff);
 
-                uint8_t adc_value;
                 adc_value = adc_accum / adc_count / 4;
-                adc_accum = 0;
-                adc_count = 0;
 
                 uint8_t i;
                 for(i = 0; i < sizeof(PACKET_KEY); i++)
@@ -655,33 +822,141 @@ void interrupt isr()
 
                 flush_serial();
                 radio_off();
+// DEBUG
+//LED_LAT = 1;
 
             }
+
+// advance song with or without stick & before testing steering
+            if(flags.playing_sound)
+            {
+                song_tick++;
+                if(song_tick >= current_delay)
+                {
+                    song_offset++;
+                    song_t *ptr = &song_buffer[song_offset];
+                    if(ptr->freq_index == SONG_END)
+                    {
+    #ifdef USE_STEERING_SOUND
+    // loop the steering sound
+                        if(flags.is_steering)
+                        {
+                            copy_song(steering_sound);
+                            play_song();
+                        }
+                        else
+    #endif
+                            stop_song();
+                    }
+                    else
+                    {
+                        song_tick = 0;
+                        current_delay = ptr->delay;
+                        if(ptr->freq_index == SONG_REST)
+                        {
+                            SPEAKER_TRIS1 = 1;
+                            SPEAKER_TRIS2 = 1;
+                        }
+                        else
+                        {
+                            current_note = freqs[ptr->freq_index];
+                            PIR2bits.TMR3IF = 0;
+                            PIE2bits.TMR3IE = 1;
+                            TMR3 = current_note;
+                            SPEAKER_TRIS1 = 0;
+                            SPEAKER_TRIS2 = 0;
+                        }
+                    }
+                }
+            }
+
+            if(flags.have_stick)
+            {
+    #ifdef USE_STEERING_SOUND
+    // start song after advancing song
+                uint8_t steering2 = adc_value;
+    // play steering sound as long as it's steering
+                if(!flags.playing_sound && 
+                    ((steering2 > MIN_LEFT) ||
+                    (steering2 < MIN_RIGHT)))
+                {
+                    copy_song(steering_sound);
+                    play_song();
+                    flags.is_steering = 1;
+                }
+                else
+                if(flags.is_steering && 
+                    steering2 >= MIN_RIGHT &&
+                    steering2 <= MIN_LEFT)
+                {
+                    flags.is_steering = 0;
+                    stop_song();
+                }
+    #endif // USE_STEERING_SOUND
+
+
+    // start a new set of ADC
+                adc_accum = 0;
+                adc_count = 0;
+                ADCON0bits.GO = 1;
+            }
+
+
         }
+
+
 
 
 // ADC
         if(PIR1bits.ADIF)
         {
-            flags.interrupt_complete = 0;
             PIR1bits.ADIF = 0;
-            adc_watchdog = 0;
 
-            if(!flags.disable_adc)
-            {
-                adc_accum += ADRES;
-                adc_count++;
-                ADCON0bits.GO = 1;
-            
-                adc_state();
-            }
+            adc_accum += ADRES;
+            adc_count++;
+// DEBUG
+//LED_LAT = !LED_LAT;
 
-
-
-            
-
+            adc_state();
         }
 
+
+    }
+    
+}
+
+void interrupt isr()
+{
+	while(1)
+	{
+		flags.interrupt_complete = 1;
+
+// tick counter
+		if(INTCONbits.TMR0IF)
+		{
+			INTCONbits.TMR0IF = 0;
+            TMR0 = TIMER0_VALUE;
+			flags.interrupt_complete = 0;
+            tick++;
+
+// cue the bottom half
+            flags.send_packet = 1;
+        }
+
+
+// sound
+        if(PIR2bits.TMR3IF)
+        {
+            flags.interrupt_complete = 0;
+            PIR2bits.TMR3IF = 0;
+            
+            if(flags.playing_sound)
+            {
+                TMR3 = current_note;
+                SPEAKER_LAT1 = !SPEAKER_LAT1;
+                SPEAKER_LAT2 = !SPEAKER_LAT2;
+            }
+        }
 
 		if(flags.interrupt_complete) break;
     }

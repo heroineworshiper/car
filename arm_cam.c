@@ -1,6 +1,6 @@
 /*
  * STM32 CONTROLLER FOR CAMERA PANNER
- * Copyright (C) 2020-2022 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2023 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,12 +57,14 @@
 
 
 // analog ranges
-// deadband
-#define MIN_LEFT 130
-#define MIN_RIGHT 126
+#define ADC_CENTER 114
+#define ADC_DEADBAND 5
+// minimums
+#define MIN_LEFT (ADC_CENTER + ADC_DEADBAND)
+#define MIN_RIGHT (ADC_CENTER - ADC_DEADBAND)
 // maximums
-#define MAX_LEFT 240
-#define MAX_RIGHT 20
+#define MAX_LEFT 210
+#define MAX_RIGHT 40
 
 #define FRACTION 256
 
@@ -329,11 +331,11 @@ void get_packet()
             timelapse_code = receive_buf[0];
             adc_raw = receive_buf[1];
             control_valid = 1;
-//TRACE2
-//print_text("timelapse_code=");
-//print_number(timelapse_code);
-//print_text("adc_raw=");
-//print_number(adc_raw);
+TRACE2
+print_text("timelapse_code=");
+print_number(timelapse_code);
+print_text("adc_raw=");
+print_number(adc_raw);
 
 // schedule the next hop to the start time of this packet + HOP duration + HOP_LAG
             scanning = 0;
