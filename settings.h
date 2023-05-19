@@ -4,6 +4,9 @@
 
 #define COPTER_MODE
 #define USE_NAV
+#define USE_USB
+
+
 
 #endif
 

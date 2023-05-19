@@ -154,6 +154,20 @@ ARM_OBJS := \
 	../copter/stm32f4/stm32f4xx_syscfg.o \
         ../copter/stm32f4/system_stm32f4xx.o
 
+USB_OBJS := \
+	stm32f4/usb_bsp.o \
+	stm32f4/usb_core.o \
+	stm32f4/usb_dcd.o \
+	stm32f4/usb_hcd.o \
+	stm32f4/usbd_core.o \
+	stm32f4/usbd_req.o \
+	stm32f4/usbd_ioreq.o \
+	stm32f4/usb_dcd_int.o \
+	stm32f4/usbh_core.o \
+	stm32f4/usbh_hcs.o \
+	stm32f4/usbh_ioreq.o \
+	stm32f4/usbh_stdreq.o
+
 
 VISION_OBJS := \
 	vision.o \
@@ -228,11 +242,10 @@ ARM_CAR_OBJS := \
 	arm_car.o \
 
 ARM_TRUCK_OBJS := \
-	arm_cc1101.o \
 	arm_nav.o \
 	arm_truck.o \
 	arm_imu.o \
-	arm_hardi2c.o \
+	arm_soft2c.o \
         arm_xbee.o
 
 ARM_TRUCK2_OBJS := \
@@ -242,7 +255,8 @@ ARM_TRUCK2_OBJS := \
 	arm_softi2c.o
 
 ARM_CAM_OBJS := \
-	arm_cam.o
+	arm_cam.o \
+        arm_usb.o
 
 PI_OBJS := \
 	vision.o
@@ -252,7 +266,7 @@ PI_OBJS := \
 
 
 
-all: truck.bin car_remote.hex
+all: truck2.bin arm_cam.bin
 
 # program atmega328 fuse.  page 283
 leash_fuse:
@@ -325,26 +339,26 @@ $(VISION_OBJS):
 
 
 
-car: car.bin
+#car: car.bin
 
-car_remote.hex: car_remote.s
-	gpasm -I../copter/pic -o car_remote.hex car_remote.s
+#car_remote.hex: car_remote.s
+#	gpasm -I../copter/pic -o car_remote.hex car_remote.s
 
-car.bin: $(ARM_CAR_OBJS) $(ARM_OBJS)
-	$(GCC_ARM) -o car.elf \
-		$(ARM_CAR_OBJS) \
-		$(ARM_OBJS) \
-		$(ARM_LFLAGS) \
-		-T../copter/stm32f4/main.ld
-	$(OBJCOPY) -O binary car.elf car.bin
+#car.bin: $(ARM_CAR_OBJS) $(ARM_OBJS)
+#	$(GCC_ARM) -o car.elf \
+#		$(ARM_CAR_OBJS) \
+#		$(ARM_OBJS) \
+#		$(ARM_LFLAGS) \
+#		-T../copter/stm32f4/main.ld
+#	$(OBJCOPY) -O binary car.elf car.bin
 
-truck.bin: $(ARM_TRUCK_OBJS) $(ARM_OBJS)
-	$(GCC_ARM) -o truck.elf \
-		$(ARM_TRUCK_OBJS) \
-		$(ARM_OBJS) \
-		$(ARM_LFLAGS) \
-		-T../copter/stm32f4/main.ld
-	$(OBJCOPY) -O binary truck.elf truck.bin
+#truck.bin: $(ARM_TRUCK_OBJS) $(ARM_OBJS)
+#	$(GCC_ARM) -o truck.elf \
+#		$(ARM_TRUCK_OBJS) \
+#		$(ARM_OBJS) \
+#		$(ARM_LFLAGS) \
+#		-T../copter/stm32f4/main.ld
+#	$(OBJCOPY) -O binary truck.elf truck.bin
 
 truck2.bin: $(ARM_TRUCK2_OBJS) $(ARM_OBJS) motor_table
 	$(GCC_ARM) -o truck2.elf \
@@ -354,15 +368,16 @@ truck2.bin: $(ARM_TRUCK2_OBJS) $(ARM_OBJS) motor_table
 		-T../copter/stm32f4/main.ld
 	$(OBJCOPY) -O binary truck2.elf truck2.bin
 
-cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS)
+cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS) $(USB_OBJS)
 	$(GCC_ARM) -o cam.elf \
 		$(ARM_CAM_OBJS) \
 		$(ARM_OBJS) \
+                $(USB_OBJS) \
 		$(ARM_LFLAGS) \
 		-T../copter/stm32f4/main.ld
 	$(OBJCOPY) -O binary cam.elf cam.bin
 
-$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_TRUCK2_OBJS) $(ARM_CAR_OBJS) $(ARM_CAM_OBJS):
+$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_TRUCK2_OBJS) $(ARM_CAR_OBJS) $(ARM_CAM_OBJS) $(USB_OBJS):
 	`cat arm_gcc` -c $< -o $*.o
 
 car: car.hex car_remote.s
@@ -485,6 +500,8 @@ lidar_test: lidar_test.c
 
 clean:
 	rm -f $(ARM_OBJS) \
+                $(ARM_CAM_OBJS) \
+                $(USB_OBJS) \
 		$(VISION_OBJS) \
 		vision \
 		*.o \
@@ -575,14 +592,31 @@ arm_motors.o:                        arm_motors.c
 arm_nav.o:                           arm_nav.c
 arm_truck.o: 			     arm_truck.c
 arm_truck2.o: 			     arm_truck2.c
-arm_cc1101.o: 			     arm_cc1101.c
+arm_usb.o:                           arm_usb.c
 arm_xbee.o: 			     arm_xbee.c
-arm_hardi2c.o:                       arm_hardi2c.c
 arm_softi2c.o:                       arm_softi2c.c
 arm_imu.o: 			     arm_imu.c
 vision.o: vision.c
 vision_surface.o: vision_surface.c
 vision_engine.o: vision_engine.c
 vision_server.o: vision_server.c
+
+
+
+
+
+stm32f4/usb_bsp.o:	      stm32f4/usb_bsp.c
+stm32f4/usb_core.o:	      stm32f4/usb_core.c
+stm32f4/usb_dcd.o:	      stm32f4/usb_dcd.c
+stm32f4/usb_hcd.o:	      stm32f4/usb_hcd.c
+stm32f4/usbd_core.o:	      stm32f4/usbd_core.c
+stm32f4/usbd_req.o:	      stm32f4/usbd_req.c
+stm32f4/usbd_ioreq.o:	      stm32f4/usbd_ioreq.c
+stm32f4/usb_dcd_int.o:	      stm32f4/usb_dcd_int.c
+stm32f4/usbh_core.o:	      stm32f4/usbh_core.c
+stm32f4/usbh_hcs.o:	      stm32f4/usbh_hcs.c
+stm32f4/usbh_ioreq.o:	      stm32f4/usbh_ioreq.c
+stm32f4/usbh_stdreq.o:	      stm32f4/usbh_stdreq.c
+
 
 

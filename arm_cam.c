@@ -22,10 +22,12 @@
 
 // make cam.bin;./uart_programmer cam.bin
 
-// The camera firmware takes commands from a face tracker over SPI or a remote.
+// The camera firmware takes commands over USB from a face tracker or 
+// an RF remote.
 // If the remote is on, the face tracker is ignored.
 
-// This version sends UART codes to a brushless servo programmed to be a stepper motor.
+// This version sends UART codes to a brushless servo programmed to be 
+// a stepper motor.
 
 
 #include "linux.h"
@@ -40,7 +42,7 @@
 #include "stm32f4xx_flash.h"
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
-
+#include "arm_usb.h"
 
 
 // settings
@@ -48,8 +50,8 @@
 #define HZ 1000
 
 // use A14 CLK & A13 DATA for external SPI commands
-#define USE_SPI
-
+//#define USE_SPI
+#define USE_USB
 
 // time before shutting motor down
 #define MOTOR_TIMEOUT (HZ / 4)
@@ -92,6 +94,7 @@
 #define SPI_TICKS 10
 // ticks before timing out adc_spi
 #define SPI_TIMEOUT (HZ / 2)
+
 #ifdef USE_SPI
 volatile int last_spi_tick = 0;
 volatile uint8_t spi_byte = 0;
@@ -101,6 +104,14 @@ volatile uint8_t spi_data[8];
 volatile uint8_t adc_spi = 0xff;
 volatile int spi_valid = 0;
 #endif
+
+#ifdef USE_USB
+volatile int last_usb_tick = 0;
+volatile uint8_t adc_usb = 0xff;
+volatile int usb_valid = 0;
+#endif
+
+
 
 // frequency hopping rate
 #define HOP_HZ 25
@@ -257,6 +268,7 @@ volatile int timeout_counter = 0;
 volatile uint8_t adc_raw = 0xff;
 volatile uint8_t timelapse_code = 0xff;
 volatile uint8_t control_valid = 0;
+volatile uint8_t spi_valid = 0;
 RCC_ClocksTypeDef RCC_ClocksStatus;
 
 #define RADIO_CS_GPIO GPIOB
@@ -664,6 +676,29 @@ void EXTI15_10_IRQHandler()
 
 #endif
 
+
+
+
+#ifdef USE_USB
+extern unsigned char *in_buf;
+uint8_t class_cb_DataOut (void  *pdev, uint8_t epnum)
+{
+print_buffer(in_buf, 64);
+    if(!control_valid)
+    {
+        TOGGLE_PIN(LED_GPIO, LED_PIN);
+    }
+    last_usb_tick = tick;
+    adc_usb = in_buf[0];
+    usb_valid = 1;
+//            TRACE
+//            print_hex(adc_spi);
+  return 0;
+}
+#endif // USE_USB
+
+
+
 int main(void)
 {
 	int i, j;
@@ -800,7 +835,7 @@ int main(void)
  	NVIC_Init(&NVIC_InitStructure);
 
 
-    
+
 #endif
 
 	init_motor();
@@ -811,6 +846,7 @@ int main(void)
     {
         ;
     }
+	init_usb();
 
     int seconds = 0;
     int prev_frame = 0;
@@ -818,7 +854,7 @@ int main(void)
 	while(1)
 	{
 		handle_uart();
-
+        handle_usb();
 
 // transmit motor code
 	    if((USART2->SR & USART_FLAG_TC) != 0)
@@ -852,8 +888,21 @@ int main(void)
             }
 #endif
 
+#ifdef USE_USB
+            if(!control_valid &&
+                tick - last_usb_tick < SPI_TIMEOUT)
+            {
+                adc = adc_usb;
+            }
+            else
+            {
+                usb_valid = 0;
+            }
+#endif
+
+
             goal_step = 0;
-            if(control_valid || spi_valid)
+            if(control_valid || spi_valid || usb_valid)
             {
                 if(adc < MIN_RIGHT)
                 {

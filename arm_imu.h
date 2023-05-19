@@ -101,7 +101,7 @@ typedef struct
 
 	int gyro_count;
 	
-	hardi2c_t i2c;
+	i2c_t i2c;
 } imu_t;
 
 void init_imu(imu_t *imu);
