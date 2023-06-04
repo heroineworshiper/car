@@ -351,6 +351,19 @@ charger2.FCStd: charging stand for a Qi charger
 confuser.FCStd: jetson nano enclosure
 
 
+
+
+nose2.FCStd: nose cone
+    print with .8mm nozzle, .20mm layers on glass
+    raise & lower print mask Z to subdivide the top panel
+nose.FCMacro: create isogrids for the nose cone
+
+
+
+
+
+
+
 filament budget for traction module:
 motor mounts: 39g * 2
 bottom: 55g
@@ -472,7 +485,7 @@ gopro_rightangle.FCStd
 
 
 gopro_motor.FCStd:
-    direct coupling of CF to motor for panning without a gearbox
+    coupling of CF to direct drive motor for panning without a gearbox
     must print with
         4 * "inner shroud slice"
          - TODO: make hole for motor shaft & make base wider to compensate for lost material

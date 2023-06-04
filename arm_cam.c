@@ -29,6 +29,10 @@
 // This version sends UART codes to a brushless servo programmed to be 
 // a stepper motor.
 
+// test the ttyACM device:
+// echo -n -e '\x80' > /dev/ttyACM0
+
+
 
 #include "linux.h"
 #include "uart.h"
@@ -43,7 +47,7 @@
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
 #include "arm_usb.h"
-
+#include "usb_core.h"
 
 // settings
 // time
@@ -80,8 +84,8 @@
 //#define DEBUG_PIN GPIO_Pin_4
 //#define DEBUG_GPIO GPIOB
 
-#define LED_PIN GPIO_Pin_0
-#define LED_GPIO GPIOB
+#define LED_PIN GPIO_Pin_13
+#define LED_GPIO GPIOC
 
 
 
@@ -274,7 +278,7 @@ RCC_ClocksTypeDef RCC_ClocksStatus;
 #define RADIO_CS_GPIO GPIOB
 #define RADIO_CS_PIN GPIO_Pin_12
 #define RADIO_SDO_GPIO GPIOB
-#define RADIO_SDO_PIN GPIO_Pin_15
+#define RADIO_SDO_PIN GPIO_Pin_14
 #define RADIO_CLK_GPIO GPIOB
 #define RADIO_CLK_PIN GPIO_Pin_13
 
@@ -392,6 +396,8 @@ void write_radio(uint16_t data)
 // print_hex(data);
 // print_lf();
     CLEAR_PIN(RADIO_CS_GPIO, RADIO_CS_PIN);
+// need the delay if the system clock is over 16Mhz
+    udelay(1);
 
     int i;
     for(i = 0; i < 16; i++)
@@ -406,12 +412,13 @@ void write_radio(uint16_t data)
         }
         data <<= 1;
 // need the delay if the system clock is over 16Mhz
-//        udelay(1);
+        udelay(1);
         SET_PIN(RADIO_CLK_GPIO, RADIO_CLK_PIN);
-//        udelay(1);
+        udelay(1);
         CLEAR_PIN(RADIO_CLK_GPIO, RADIO_CLK_PIN);
     }
     
+    udelay(1);
     SET_PIN(RADIO_CS_GPIO, RADIO_CS_PIN);
 }
 
@@ -529,16 +536,17 @@ void next_channel()
 void init_motor()
 {
 // transmit pin for motor UART
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);
 	GPIO_InitTypeDef  GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-	GPIO_ResetBits(GPIOA, GPIO_InitStructure.GPIO_Pin);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+
 
 	USART_InitTypeDef USART_InitStructure;
 	USART_InitStructure.USART_BaudRate = 115200;
@@ -549,9 +557,9 @@ void init_motor()
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Tx;
 /* USART configuration */
-  	USART_Init(USART2, &USART_InitStructure);
+  	USART_Init(USART1, &USART_InitStructure);
 /* Enable USART */
-  	USART_Cmd(USART2, ENABLE);
+  	USART_Cmd(USART1, ENABLE);
 
 
     write_motor();
@@ -683,16 +691,20 @@ void EXTI15_10_IRQHandler()
 extern unsigned char *in_buf;
 uint8_t class_cb_DataOut (void  *pdev, uint8_t epnum)
 {
-print_buffer(in_buf, 64);
+    int USB_Rx_Cnt = ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
+
+
+// assume the last character is the most recent
+    adc_usb = in_buf[USB_Rx_Cnt - 1];
+    usb_start_receive();
+
     if(!control_valid)
     {
         TOGGLE_PIN(LED_GPIO, LED_PIN);
     }
     last_usb_tick = tick;
-    adc_usb = in_buf[0];
     usb_valid = 1;
-//            TRACE
-//            print_hex(adc_spi);
+print_hex(adc_usb);
   return 0;
 }
 #endif // USE_USB
@@ -706,7 +718,7 @@ int main(void)
  
  
 // switch system clock to non PLL
-    RCC_SYSCLKConfig(RCC_SYSCLKSource_HSI);
+//    RCC_SYSCLKConfig(RCC_SYSCLKSource_HSI);
 // disable mane PLL
 //    RCC_PLLCmd(DISABLE);
 
@@ -725,10 +737,7 @@ int main(void)
 //         (RCC_PLLCFGR_PLLSRC_HSI) | 
 // 		(PLL_Q << 24);
 //     RCC_PLLCmd(ENABLE);
-
-
-
-    SystemCoreClockUpdate();
+//    SystemCoreClockUpdate();
 
 	init_linux();
 
@@ -745,22 +754,22 @@ int main(void)
 
 	RCC_GetClocksFreq(&RCC_ClocksStatus);
 	print_text("Welcome to cam panner\n");
-	flush_uart();
-	print_text("SYSCLK_Frequency=");
-	print_number(RCC_ClocksStatus.SYSCLK_Frequency);
-	print_lf();
-	print_text("SystemCoreClock=");
-	print_number(SystemCoreClock);
-	print_lf();
-	print_text("HCLK_Frequency=");
-	print_number(RCC_ClocksStatus.HCLK_Frequency);
-	print_lf();
-	print_text("PCLK1_Frequency=");
-	print_number(RCC_ClocksStatus.PCLK1_Frequency);
-	print_lf();
-	print_text("PCLK2_Frequency=");
-	print_number(RCC_ClocksStatus.PCLK2_Frequency);
-	print_lf();
+// 	flush_uart();
+// 	print_text("SYSCLK_Frequency=");
+// 	print_number(RCC_ClocksStatus.SYSCLK_Frequency);
+// 	print_lf();
+// 	print_text("SystemCoreClock=");
+// 	print_number(SystemCoreClock);
+// 	print_lf();
+// 	print_text("HCLK_Frequency=");
+// 	print_number(RCC_ClocksStatus.HCLK_Frequency);
+// 	print_lf();
+// 	print_text("PCLK1_Frequency=");
+// 	print_number(RCC_ClocksStatus.PCLK1_Frequency);
+// 	print_lf();
+// 	print_text("PCLK2_Frequency=");
+// 	print_number(RCC_ClocksStatus.PCLK2_Frequency);
+// 	print_lf();
 
 	flush_uart();
     init_watchdog();
@@ -842,10 +851,11 @@ int main(void)
     init_radio();
 
 // wait a while
-    while(tick < HZ)
-    {
-        ;
-    }
+//     while(tick < HZ)
+//     {
+//         ;
+//     }
+
 	init_usb();
 
     int seconds = 0;
@@ -857,11 +867,11 @@ int main(void)
         handle_usb();
 
 // transmit motor code
-	    if((USART2->SR & USART_FLAG_TC) != 0)
+	    if((USART1->SR & USART_FLAG_TC) != 0)
         {
             if(motor_offset < MOTOR_PACKET)
             {
-                USART2->DR = motor_packet[motor_offset++];
+                USART1->DR = motor_packet[motor_offset++];
             }
         }
 
@@ -978,20 +988,20 @@ int main(void)
 
 
 
-            if(debug_count == 0)
-            {
-                 print_text("adc=");
-                 print_number(adc);
-                 print_text("timelapse=");
-                 print_number(timelapse_code);
-                 print_text("step=");
-                 print_fixed(step);
-                 print_text("power=");
-                 print_number(motor_power);
-                 print_text("enabled=");
-                 print_number(motor_enabled);
-                 print_lf();
-            }
+//             if(debug_count == 0)
+//             {
+//                  print_text("adc=");
+//                  print_number(adc);
+//                  print_text("timelapse=");
+//                  print_number(timelapse_code);
+//                  print_text("step=");
+//                  print_fixed(step);
+//                  print_text("power=");
+//                  print_number(motor_power);
+//                  print_text("enabled=");
+//                  print_number(motor_enabled);
+//                  print_lf();
+//             }
 
         }
 

@@ -1,3 +1,26 @@
+/*
+ * Phone app for direct drive truck
+ * Copyright (C) 2012-2023 Adam Williams <broadcast at earthling dot net>
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+
+
+
+
 package com.truck;
 
 import java.io.BufferedWriter;
@@ -697,7 +720,7 @@ public class Truck extends Thread {
 
 		offset = Math2.write_int16(beacon, offset, (int) (Settings.getFileFloat("BATTERY_ANALOG")[0]));
 
-// meters per minute/wheel circumference in meters
+// base meters per minute/wheel circumference in meters
         offset = Math2.write_int16(beacon, offset, paceToRPM(Settings.targetPace, diameter));
 
 		float targetReversePace = Settings.getFileFloat("TARGET_REVERSE_PACE")[0];
@@ -727,8 +750,12 @@ public class Truck extends Thread {
 		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_SPEED_TO_DISTANCE")[0]);
 		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_MAX_SPEED")[0]);
 		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_CENTER")[0]));
-		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_MAX_ANGLE")[0]));
+//		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_MAX_ANGLE")[0]));
+		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_SIZE")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_I_LIMIT")[0]);
 
+        pid = Settings.getFileFloat("LEASH_PID");
+        offset = writePid(offset, pid);
         return offset;
     }
 

@@ -1,0 +1,64 @@
+# create isogrids for the nose
+
+
+
+import libisogrid
+import importlib
+importlib.reload(libisogrid)
+import math
+
+
+BORDER = 1.0
+
+# top 1
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(76.0, 
+        84.0, 
+        4,
+        4,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-42, 206, -20),
+        App.Rotation(App.Vector(0, 0, 1), 270))
+
+# top 2
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(81.0, 
+        174.0, 
+        4,
+        8,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-86, 100, -20),
+        App.Rotation(App.Vector(0, 0, 1), 270))
+
+
+# right
+if True:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(117.0, 
+        142.0, 
+        6,
+        6,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(20.60, 19, 14),
+        App.Rotation(App.Vector(0, 1, 0), 270))
+
+
+
+

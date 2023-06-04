@@ -252,7 +252,11 @@ typedef struct
 // adjust to have rover on left or right of animal
     float center;
 // maximum pot deflection in rads
-    float max_angle;
+//    float max_angle;
+	pid_t steering_pid;
+	derivative_t steering_d;
+	int steering_d_size;
+    float steering_i_limit;
 } leash_t;
 #define LEASH_TIMEOUT TIMER_HZ
 #endif // USE_LEASH
@@ -456,12 +460,12 @@ typedef struct
     int current_hall;
     motor_t motors[MOTORS];
     radio_t radio;
-#ifdef USE_LEASH
-    leash_t leash;
-#endif
 } truck_t;
 
 extern truck_t truck;
+#ifdef USE_LEASH
+extern leash_t leash;
+#endif
 
 
 

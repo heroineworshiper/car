@@ -43,7 +43,7 @@ ARM_CFLAGS := \
 	-ffreestanding \
 	-I. \
 	-I../copter/arm \
-	-I../copter/stm32f4
+	-I../stm32stuff
 ARM_LIBM := $(shell $(GCC_ARM) $(ARM_CFLAGS) -print-file-name=libm.a)
 ARM_LIBC := $(shell $(GCC_ARM) $(ARM_CFLAGS) -print-libgcc-file-name)
 ARM_LFLAGS := -mcpu=cortex-m4 \
@@ -134,39 +134,39 @@ INTERVAL_SRCS := \
 	touch_buttons.s
 
 ARM_OBJS := \
-	../copter/stm32f4/startup_main.o \
+	../stm32stuff/startup_main.o \
 	../copter/arm/arm_math.o \
 	../copter/arm/uart.o \
 	../copter/arm/linux.o \
-	../copter/stm32f4/misc.o \
-	../copter/stm32f4/stm32f4xx_rcc.o \
-	../copter/stm32f4/stm32f4xx_usart.o \
-	../copter/stm32f4/stm32f4xx_gpio.o \
-	../copter/stm32f4/stm32f4xx_dcmi.o \
-	../copter/stm32f4/stm32f4xx_dma.o \
-	../copter/stm32f4/stm32f4xx_i2c.o \
+	../stm32stuff/misc.o \
+	../stm32stuff/stm32f4xx_rcc.o \
+	../stm32stuff/stm32f4xx_usart.o \
+	../stm32stuff/stm32f4xx_gpio.o \
+	../stm32stuff/stm32f4xx_dcmi.o \
+	../stm32stuff/stm32f4xx_dma.o \
+	../stm32stuff/stm32f4xx_i2c.o \
 	stm32f4xx_it.o \
-	../copter/stm32f4/stm32f4xx_iwdg.o \
-	../copter/stm32f4/stm32f4xx_tim.o \
-	../copter/stm32f4/stm32f4xx_adc.o \
-	../copter/stm32f4/stm32f4xx_flash.o \
+	../stm32stuff/stm32f4xx_iwdg.o \
+	../stm32stuff/stm32f4xx_tim.o \
+	../stm32stuff/stm32f4xx_adc.o \
+	../stm32stuff/stm32f4xx_flash.o \
 	stm32f4xx_exti.o \
-	../copter/stm32f4/stm32f4xx_syscfg.o \
-        ../copter/stm32f4/system_stm32f4xx.o
+	../stm32stuff/stm32f4xx_syscfg.o \
+        ../stm32stuff/system_stm32f4xx.o
 
 USB_OBJS := \
-	stm32f4/usb_bsp.o \
-	stm32f4/usb_core.o \
-	stm32f4/usb_dcd.o \
-	stm32f4/usb_hcd.o \
-	stm32f4/usbd_core.o \
-	stm32f4/usbd_req.o \
-	stm32f4/usbd_ioreq.o \
-	stm32f4/usb_dcd_int.o \
-	stm32f4/usbh_core.o \
-	stm32f4/usbh_hcs.o \
-	stm32f4/usbh_ioreq.o \
-	stm32f4/usbh_stdreq.o
+	usb_dcd_int.o \
+	../stm32stuff/usb_bsp.o \
+	../stm32stuff/usb_core.o \
+	../stm32stuff/usb_dcd.o \
+	../stm32stuff/usb_hcd.o \
+	../stm32stuff/usbd_core.o \
+	../stm32stuff/usbd_req.o \
+	../stm32stuff/usbd_ioreq.o \
+	../stm32stuff/usbh_core.o \
+	../stm32stuff/usbh_hcs.o \
+	../stm32stuff/usbh_ioreq.o \
+	../stm32stuff/usbh_stdreq.o
 
 
 VISION_OBJS := \
@@ -349,7 +349,7 @@ $(VISION_OBJS):
 #		$(ARM_CAR_OBJS) \
 #		$(ARM_OBJS) \
 #		$(ARM_LFLAGS) \
-#		-T../copter/stm32f4/main.ld
+#		-T../stm32stuff/main.ld
 #	$(OBJCOPY) -O binary car.elf car.bin
 
 #truck.bin: $(ARM_TRUCK_OBJS) $(ARM_OBJS)
@@ -357,7 +357,7 @@ $(VISION_OBJS):
 #		$(ARM_TRUCK_OBJS) \
 #		$(ARM_OBJS) \
 #		$(ARM_LFLAGS) \
-#		-T../copter/stm32f4/main.ld
+#		-T../stm32stuff/main.ld
 #	$(OBJCOPY) -O binary truck.elf truck.bin
 
 truck2.bin: $(ARM_TRUCK2_OBJS) $(ARM_OBJS) motor_table
@@ -365,7 +365,7 @@ truck2.bin: $(ARM_TRUCK2_OBJS) $(ARM_OBJS) motor_table
 		$(ARM_TRUCK2_OBJS) \
 		$(ARM_OBJS) \
 		$(ARM_LFLAGS) \
-		-T../copter/stm32f4/main.ld
+		-T../stm32stuff/main.ld
 	$(OBJCOPY) -O binary truck2.elf truck2.bin
 
 cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS) $(USB_OBJS)
@@ -374,7 +374,7 @@ cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS) $(USB_OBJS)
 		$(ARM_OBJS) \
                 $(USB_OBJS) \
 		$(ARM_LFLAGS) \
-		-T../copter/stm32f4/main.ld
+		-T../stm32stuff/main.ld
 	$(OBJCOPY) -O binary cam.elf cam.bin
 
 $(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_TRUCK2_OBJS) $(ARM_CAR_OBJS) $(ARM_CAM_OBJS) $(USB_OBJS):
@@ -569,22 +569,22 @@ oscilloscope: oscilloscope.c
 ../copter/arm/arm_math.o: 	     ../copter/arm/arm_math.c
 ../copter/arm/uart.o: 		     ../copter/arm/uart.c
 ../copter/arm/linux.o:	       ../copter/arm/linux.c
-../copter/stm32f4/startup_main.o:    ../copter/stm32f4/startup_main.s
-../copter/stm32f4/misc.o: 	     ../copter/stm32f4/misc.c
-../copter/stm32f4/stm32f4xx_rcc.o:   ../copter/stm32f4/stm32f4xx_rcc.c
-../copter/stm32f4/stm32f4xx_usart.o: ../copter/stm32f4/stm32f4xx_usart.c
-../copter/stm32f4/stm32f4xx_gpio.o:  ../copter/stm32f4/stm32f4xx_gpio.c
-../copter/stm32f4/stm32f4xx_dcmi.o:  ../copter/stm32f4/stm32f4xx_dcmi.c
-../copter/stm32f4/stm32f4xx_dma.o:   ../copter/stm32f4/stm32f4xx_dma.c
-../copter/stm32f4/stm32f4xx_i2c.o:   ../copter/stm32f4/stm32f4xx_i2c.c
+../stm32stuff/startup_main.o:    ../stm32stuff/startup_main.s
+../stm32stuff/misc.o: 	     ../stm32stuff/misc.c
+../stm32stuff/stm32f4xx_rcc.o:   ../stm32stuff/stm32f4xx_rcc.c
+../stm32stuff/stm32f4xx_usart.o: ../stm32stuff/stm32f4xx_usart.c
+../stm32stuff/stm32f4xx_gpio.o:  ../stm32stuff/stm32f4xx_gpio.c
+../stm32stuff/stm32f4xx_dcmi.o:  ../stm32stuff/stm32f4xx_dcmi.c
+../stm32stuff/stm32f4xx_dma.o:   ../stm32stuff/stm32f4xx_dma.c
+../stm32stuff/stm32f4xx_i2c.o:   ../stm32stuff/stm32f4xx_i2c.c
 stm32f4xx_it.o:    stm32f4xx_it.c
-../copter/stm32f4/stm32f4xx_iwdg.o:  ../copter/stm32f4/stm32f4xx_iwdg.c
-../copter/stm32f4/stm32f4xx_tim.o:   ../copter/stm32f4/stm32f4xx_tim.c
-../copter/stm32f4/stm32f4xx_adc.o:   ../copter/stm32f4/stm32f4xx_adc.c
-../copter/stm32f4/stm32f4xx_flash.o: ../copter/stm32f4/stm32f4xx_flash.c
+../stm32stuff/stm32f4xx_iwdg.o:  ../stm32stuff/stm32f4xx_iwdg.c
+../stm32stuff/stm32f4xx_tim.o:   ../stm32stuff/stm32f4xx_tim.c
+../stm32stuff/stm32f4xx_adc.o:   ../stm32stuff/stm32f4xx_adc.c
+../stm32stuff/stm32f4xx_flash.o: ../stm32stuff/stm32f4xx_flash.c
 stm32f4xx_exti.o: stm32f4xx_exti.c
-../copter/stm32f4/stm32f4xx_syscfg.o: ../copter/stm32f4/stm32f4xx_syscfg.c
-../copter/stm32f4/system_stm32f4xx.o: ../copter/stm32f4/system_stm32f4xx.c
+../stm32stuff/stm32f4xx_syscfg.o: ../stm32stuff/stm32f4xx_syscfg.c
+../stm32stuff/system_stm32f4xx.o: ../stm32stuff/system_stm32f4xx.c
 arm_cam.o: 			     arm_cam.c
 arm_car.o: 			     arm_car.c
 arm_fs.o:                            arm_fs.c
@@ -605,18 +605,18 @@ vision_server.o: vision_server.c
 
 
 
-stm32f4/usb_bsp.o:	      stm32f4/usb_bsp.c
-stm32f4/usb_core.o:	      stm32f4/usb_core.c
-stm32f4/usb_dcd.o:	      stm32f4/usb_dcd.c
-stm32f4/usb_hcd.o:	      stm32f4/usb_hcd.c
-stm32f4/usbd_core.o:	      stm32f4/usbd_core.c
-stm32f4/usbd_req.o:	      stm32f4/usbd_req.c
-stm32f4/usbd_ioreq.o:	      stm32f4/usbd_ioreq.c
-stm32f4/usb_dcd_int.o:	      stm32f4/usb_dcd_int.c
-stm32f4/usbh_core.o:	      stm32f4/usbh_core.c
-stm32f4/usbh_hcs.o:	      stm32f4/usbh_hcs.c
-stm32f4/usbh_ioreq.o:	      stm32f4/usbh_ioreq.c
-stm32f4/usbh_stdreq.o:	      stm32f4/usbh_stdreq.c
+../stm32stuff/usb_bsp.o:	      ../stm32stuff/usb_bsp.c
+../stm32stuff/usb_core.o:	      ../stm32stuff/usb_core.c
+../stm32stuff/usb_dcd.o:	      ../stm32stuff/usb_dcd.c
+../stm32stuff/usb_hcd.o:	      ../stm32stuff/usb_hcd.c
+../stm32stuff/usbd_core.o:	      ../stm32stuff/usbd_core.c
+../stm32stuff/usbd_req.o:	      ../stm32stuff/usbd_req.c
+../stm32stuff/usbd_ioreq.o:	      ../stm32stuff/usbd_ioreq.c
+usb_dcd_int.o:                usb_dcd_int.c
+../stm32stuff/usbh_core.o:	      ../stm32stuff/usbh_core.c
+../stm32stuff/usbh_hcs.o:	      ../stm32stuff/usbh_hcs.c
+../stm32stuff/usbh_ioreq.o:	      ../stm32stuff/usbh_ioreq.c
+../stm32stuff/usbh_stdreq.o:	      ../stm32stuff/usbh_stdreq.c
 
 
 

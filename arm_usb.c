@@ -20,13 +20,15 @@
 
 
 #include "linux.h"
+#include "misc.h"
 #include "uart.h"
 #include "usb_core.h"
 #include "usb_dcd.h"
 #include "usbh_core.h"
 #include "usb_hcd_int.h"
 #include "stm32f4xx_gpio.h"
-
+#include "stm32f4xx_rcc.h"
+#include "arm_usb.h"
 
 
 USB_OTG_CORE_HANDLE  USB_OTG_dev;
@@ -62,8 +64,6 @@ uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SIZ];
 
 
 unsigned char *in_buf;
-int have_beacon;
-int have_response;
 
 
 /* USB Standard Device Descriptor */
@@ -72,8 +72,8 @@ const uint8_t USBD_DeviceDesc_const[] __attribute__ ((aligned (4))) =
     0x12,                       /*bLength */
     USB_DEVICE_DESCRIPTOR_TYPE, /*bDescriptorType*/
     USB_WORD(0x0110),                       /*bcdUSB */
-    239,                       /*bDeviceClass*/
-    0x02,                       /*bDeviceSubClass*/
+    0x02,                       /*bDeviceClass*/
+    0x00,                       /*bDeviceSubClass*/
     0x01,                       /*bDeviceProtocol*/
     USB_OTG_MAX_EP0_SIZE,      /*bMaxPacketSize*/
     USB_WORD(USBD_VID),           /*idVendor*/
@@ -110,7 +110,7 @@ uint8_t USBD_LangIDDesc[USB_SIZ_STRING_LANGID];
 */
 uint8_t *  USBD_USR_ManufacturerStrDescriptor( uint8_t speed , uint16_t *length)
 {
-  USBD_GetString ("Heroine Virtual Ltd.", USBD_StrDesc, length);
+  USBD_GetString ("McLionhead", USBD_StrDesc, length);
   return USBD_StrDesc;
 }
 
@@ -129,7 +129,7 @@ uint8_t *  USBD_USR_ManufacturerStrDescriptor( uint8_t speed , uint16_t *length)
 */
 uint8_t *  USBD_USR_ProductStrDescriptor( uint8_t speed , uint16_t *length)
 {
-    USBD_GetString ("CP33 raw audio", USBD_StrDesc, length);
+    USBD_GetString ("Camera panner", USBD_StrDesc, length);
   return USBD_StrDesc;
 }
 
@@ -318,15 +318,23 @@ static uint8_t  class_cb_Init (void  *pdev,
                                uint8_t cfgidx)
 {
 // open the endpoints
-  DCD_EP_Open(pdev,
-              EP1_IN_ID,
-              EP1_SIZE,
-              USB_OTG_EP_BULK);
+// CDC commands
+    DCD_EP_Open(pdev,
+                EP1_IN_ID,
+                EP1_SIZE,
+                USB_OTG_EP_INT);
 
-  DCD_EP_PrepareRx(pdev,
-               EP2_OUT_ID,
-               (uint8_t*)in_buf,                        
-               EP2_SIZE);  
+// data
+    DCD_EP_Open(pdev,
+                EP2_IN_ID,
+                EP2_SIZE,
+                USB_OTG_EP_BULK);
+    DCD_EP_Open(pdev,
+                EP2_OUT_ID,
+                EP2_SIZE,
+                USB_OTG_EP_BULK);
+
+    usb_start_receive();
 
   return USBD_OK;
 }
@@ -380,25 +388,22 @@ static uint8_t  class_cb_DataIn (void  *pdev,
   DCD_EP_Flush(pdev, EP1_IN_ID);
 
 
-  have_response = 1;
   return USBD_OK;
 }
 
-uint8_t  class_cb_DataOut (void  *pdev, uint8_t epnum);
+uint8_t class_cb_DataOut (void  *pdev, uint8_t epnum);
+
 
 void usb_start_receive()
 {
-//TRACE
-	have_beacon = 0;
 	DCD_EP_PrepareRx(&USB_OTG_dev,
-               EP1_OUT_ID,
+               EP2_OUT_ID,
                (uint8_t*)in_buf,                        
-               EP1_SIZE);  
+               EP2_SIZE);  
 }
 
 void usb_start_transmit(unsigned char *data, int len)
 {
-	have_response = 0;
 	DCD_EP_Tx ( &USB_OTG_dev,
         EP1_IN_ID,
         data,
@@ -475,7 +480,7 @@ const uint8_t USBD_CfgDesc_const[] __attribute__ ((aligned (4))) =
     CDC_EP | _EP_IN,           // EndpointAddress
     USB_OTG_EP_INT,          // Attributes
     USB_WORD(EP1_SIZE),         // size
-    0x20,                        // Interval
+    0xff,                        // Interval
 
     /* Interface Descriptor */
     0x09,                   // Size of this descriptor in bytes
@@ -590,12 +595,67 @@ const uint8_t USBD_DeviceQualifierDesc_const[USB_LEN_DEV_QUALIFIER_DESC] __attri
 
 uint8_t USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC];
 
+void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
+{
+ /* Note: On STM32F4-Discovery board only USB OTG FS core is supported. */
+#ifdef USE_ACCURATE_TIME
+	BSP_delay = 0;
+#endif
+
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA , ENABLE);
+
+  /* Configure DM DP Pins */
+// FS core
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11 | GPIO_Pin_12;
+  
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+// FS core
+  GPIO_Init(GPIOA, &GPIO_InitStructure);  
+  
+// FS core
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource11, GPIO_AF_OTG1_FS) ; 
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource12, GPIO_AF_OTG1_FS) ;
+
+// The reference does this last
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+  RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_OTG_FS, ENABLE) ; 
+
+
+  /* Intialize Timer for delay function */
+  USB_OTG_BSP_TimeInit();   
+
+}
+
+void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
+{
+  	NVIC_InitTypeDef NVIC_InitStructure;
+  /* Enable USB Interrupt */
+  	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
+
+    NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
+  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+  	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+  	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+ 	NVIC_Init(&NVIC_InitStructure);
+}
+
+void OTG_FS_IRQHandler(void)
+{
+  USBD_OTG_ISR_Handler(&USB_OTG_dev);
+}
+
+void handle_usb()
+{
+//    USBD_OTG_ISR_Handler(&USB_OTG_dev);
+}
 
 void init_usb()
 {
-
-    have_beacon = 0;
-    have_response = 1;
 	in_buf = kmalloc(EP2_SIZE, 1);
   	bzero((unsigned char*)&USB_OTG_dev, sizeof(USB_OTG_dev));
 
@@ -606,15 +666,10 @@ void init_usb()
 
 
  	USBD_Init(&USB_OTG_dev,
-        USB_OTG_HS_CORE_ID,
+        USB_OTG_FS_CORE_ID,
         &USR_desc, 
         &USBD_class_cb, 
         &USR_cb);
-}
-
-void handle_usb()
-{
-    USBD_OTG_ISR_Handler(&USB_OTG_dev);
 }
 
 
