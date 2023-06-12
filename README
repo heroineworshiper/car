@@ -317,7 +317,7 @@ motor4.FCStd: motor mount
 car_remote.FCMacro:
     create objects for car_remote & cam_remote
 
-car_remote.FCStd: remote control for vehicle
+car_remote2.FCStd: remote control for vehicle
     disable support for the top & bottom
     use support only for the joysticks
     no ironing
