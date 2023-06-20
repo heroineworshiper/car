@@ -339,7 +339,7 @@ car_remote2.FCStd: remote control for vehicle
     covers for power, increase speed, decrease speed:
         no support
         with wide part facing bed
-
+    sock top/bottom: must clean the inside before welding
 
 
 
@@ -383,13 +383,11 @@ isogrid_plane.FCMacro:
 clamshell.FCMacro:
     create walls for cam_remote, car_remote
 
-gopro_case.FCStd: case for a gopro 7
-    print case union with print mask
-    print case cut with print mask & all base objects
+gopro_case2.FCStd: case for a gopro 7
     print with support everywhere, lesser overhangs facing up
     skirt adhesion
-    TODO: copy hinges from gopro_to_wood
-     - knobs for the wire bits
+    .2mm layers .4mm nozzle
+
 
 
 
