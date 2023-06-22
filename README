@@ -115,8 +115,10 @@ front_wheel.FCStd: front wheel
     .32 layer height
 
 
-leash6.FCStd: leash enclosure
-    
+leash9.FCStd: leash enclosure
+    no support except for the pot
+    .2mm layers .4mm nozzle
+
 
 offroad2.stl: offroad rear tire for hard TPU
     print with .4mm nozzle
