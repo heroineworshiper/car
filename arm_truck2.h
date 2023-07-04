@@ -278,6 +278,8 @@ typedef struct
 	int steering;
     int binary_steering;
     int speed_offset;
+// controller is in calibration mode
+    int calibration_mode;
 // last throttle value when the motor moved
 	int throttle2;
 	int steering2;

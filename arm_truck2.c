@@ -20,7 +20,7 @@
 
 // Useful commands to install it:
 
-// make truck2.bin;uart_programmer truck2.bin
+// make truck2.bin;./uart_programmer truck2.bin
 
 // pass bluetooth to the debug port to configure the device by enabling 
 // BLUETOOTH_PASSTHROUGH
@@ -435,8 +435,8 @@ void handle_radio_packet(unsigned char *ptr)
 
 	truck.throttle = ptr[1];
 	truck.steering = ptr[0];
-    truck.speed_offset = ptr[2];
-
+    truck.speed_offset = (ptr[2] & 0x7f);
+    truck.calibration_mode = (ptr[2] & 0x80) ? 1 : 0;
 #ifdef REVERSE_STEERING_ADC
     truck.steering = 0xff - truck.steering;
 #endif
@@ -445,10 +445,8 @@ void handle_radio_packet(unsigned char *ptr)
     truck.throttle = 0xff - truck.throttle;
 #endif
 
-    if(ptr[2] & 0x80)
-    {
-        truck.speed_offset = truck.speed_offset - 0x100;
-    }
+    if((ptr[2] & 0x40))
+        truck.speed_offset = truck.speed_offset - 0x80;
 
 // convert to a binary steering value
     truck.binary_steering = STEERING_MID;
@@ -1819,7 +1817,8 @@ void feedback()
 	float steering_overshoot = 0;
 
 
-	if(truck.have_gyro_center)
+	if(truck.have_gyro_center &&
+        !truck.calibration_mode)
 	{
 // cancel bluetooth controls
 		if(truck.have_bt_controls && truck.bt_timeout <= 0)
@@ -2446,6 +2445,7 @@ void handle_motors()
 
 // handle commutations
     if(!truck.testing_motors &&
+        !truck.calibration_mode &&
         truck.have_gyro_center &&
         truck.halls[LEFT_HALL].readings >= HALL_OVERSAMPLE &&
         truck.halls[LEFT_HALL + 1].readings >= HALL_OVERSAMPLE &&
