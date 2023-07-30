@@ -14,15 +14,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a53a3e7e-1d41-4964-8f32-13993da15ef4" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Truck.studio2.iml" beforeDir="false" afterPath="$PROJECT_DIR$/Truck.studio2.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/app.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_truck2.c" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_truck2.h" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../arm_gcc" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_gcc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../arm_imu.c.bak" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_imu.c.bak" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" afterDir="false" />
@@ -42,9 +36,9 @@
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-impl.mk" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-impl.mk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-variables.mk" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Makefile-variables.mk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/nbproject/Package-default.bash" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/nbproject/Package-default.bash" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../car.sch.bak" beforeDir="false" afterPath="$PROJECT_DIR$/../car.sch.bak" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../car_receive.X/dist/default/production/car_receive.X.production.hex.orig" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../leash4.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../leash4.FCStd" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../settings.car" beforeDir="false" afterPath="$PROJECT_DIR$/../settings.car" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../stm32f4" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -1702,6 +1702,7 @@ void do_leash_throttle()
         leash.distance < leash.distance0))
     {
         truck.target_heading = truck.current_heading;
+        reset_pid(&leash.steering_pid);
     }
 
     leash.distance2 = leash.distance;

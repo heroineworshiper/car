@@ -246,7 +246,8 @@ const uint8_t afc_values[] =
 // index to freq in CPU clocks
 #define LATENCY 0
 // tuned based on speaker & clockspeed
-#define BASE_FREQ 5232400
+//#define BASE_FREQ 5232400
+#define BASE_FREQ 5886628
 #define FREQ_TO_PERIOD(f) (uint16_t)(-BASE_FREQ / 4 / (f * 2) + LATENCY)
 
 const uint16_t freqs[] = 
@@ -271,7 +272,7 @@ const uint16_t freqs[] =
 	FREQ_TO_PERIOD(329.63), 
 	FREQ_TO_PERIOD(349.23), 
 	FREQ_TO_PERIOD(369.99), 
-	FREQ_TO_PERIOD(392.00), 
+	FREQ_TO_PERIOD(392.00), // G1
 	FREQ_TO_PERIOD(415.30), 
 	FREQ_TO_PERIOD(440.00), 
 	FREQ_TO_PERIOD(466.16), 
@@ -397,6 +398,7 @@ typedef union
     struct
     {
         unsigned calibration_mode : 1;
+        unsigned calibration_done : 1;
         unsigned throttle_up : 1;
         unsigned throttle_down : 1;
         unsigned steering_up : 1;
@@ -1087,56 +1089,17 @@ void main()
 // handle calibration with raw ADC values
             if(flags2.calibration_mode)
             {
-// flip input values to get intuitive offsets from stick positions
-//                uint8_t steering2 = 255 - steering_value;
-                uint8_t steering2 = steering_value;
-                uint8_t throttle2 = throttle_value;
-
-// cancel user input
-                if(flags2.throttle_up && throttle2 < STICK_DRIFT_CENTER + STICK_DRIFT_DEADBAND)
-                    flags2.throttle_up = 0;
-                if(flags2.steering_up && steering2 < STICK_DRIFT_CENTER + STICK_DRIFT_DEADBAND)
-                    flags2.steering_up = 0;
-                if(flags2.throttle_down && throttle2 >= STICK_DRIFT_CENTER - STICK_DRIFT_DEADBAND)
-                    flags2.throttle_down = 0;
-                if(flags2.steering_down && steering2 >= STICK_DRIFT_CENTER - STICK_DRIFT_DEADBAND)
-                    flags2.steering_down = 0;
-
-// begin user input
-                if(!flags2.throttle_up && throttle2 >= STICK_DRIFT_CENTER + STICK_DRIFT_MAX)
+// wait for song to finish & buttons to be released
+                if(!flags.playing_sound &&
+                    INCREASE_PORT &&
+                    DECREASE_PORT)
                 {
-                    flags2.throttle_up = 1;
-                    throttle_offset++;
-                    if(throttle_offset > MAX_STICK_OFFSET) throttle_offset = MAX_STICK_OFFSET;
+// set centers to current values
+                    throttle_offset = 128 - throttle_value;
+                    steering_offset = 128 - steering_value;
                     write_settings();
-                    play_offset(throttle_offset);
-                }
-                else
-                if(!flags2.steering_up && steering2 >= STICK_DRIFT_CENTER + STICK_DRIFT_MAX)
-                {
-                    flags2.steering_up = 1;
-                    steering_offset++;
-                    if(steering_offset > MAX_STICK_OFFSET) steering_offset = MAX_STICK_OFFSET;
-                    write_settings();
-                    play_offset(steering_offset);
-                }
-                else
-                if(!flags2.throttle_down && throttle2 < STICK_DRIFT_CENTER - STICK_DRIFT_MAX)
-                {
-                    flags2.throttle_down = 1;
-                    throttle_offset--;
-                    if(throttle_offset < MIN_STICK_OFFSET) throttle_offset = MIN_STICK_OFFSET;
-                    write_settings();
-                    play_offset(throttle_offset);
-                }
-                else
-                if(!flags2.steering_down && steering2 < STICK_DRIFT_CENTER - STICK_DRIFT_MAX)
-                {
-                    flags2.steering_down = 1;
-                    steering_offset--;
-                    if(steering_offset < MIN_STICK_OFFSET) steering_offset = MIN_STICK_OFFSET;
-                    write_settings();
-                    play_offset(steering_offset);
+// exit calibration mode
+                    flags2.calibration_mode = 0;
                 }
             }
 

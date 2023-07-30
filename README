@@ -185,33 +185,20 @@ bumper.FCStd:
     print in TPU
 
 
-container2.FCStd:
+container3.FCStd:
     print masks have to be booleaned with panels in Blender
+    Must tweek boolean so all bits appear
     Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
 
-    Use PLA 100% infill 220C
+    Use PLA, 100% infill, 220C/60C on glass
+    Use .24mm on 1st 4 layers & .2 on later layers with fixcura.py.
+    Ideally would use .32 on later layers.
 
     top corner master:
     bottom corner master:
         require .32 layers 250C for adhesion
         
-
-    container budget:
-    radio panel: 42, 32
-    back left: 42, 23
-    back right: 36, 25
-    bottom right rear: 43, 27
-    right rear: 65, 40
-    left rear: 65, 40
-    right front: 57, 35
-    left front: 57, 35
-    bottom right front: 42, 26
-    front right: 44, 25
-    front left: 44, 27
-    bottom left front: 38, 24
-    bottom left rear: 40, 25
-
-    TODO: shift cable hole right.  Create tab for aligning handle.
+    TODO: Create tab for aligning handle.
 
 container.FCMacro:
     scripts for creating the container
