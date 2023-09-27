@@ -66,14 +66,18 @@
 #define USE_STEERING_SOUND
 
 // analog values from arm_cam.c
-#define ADC_CENTER 114
+// an offset is added to the ADC to get this range
+#define ADC_CENTER 128
 #define ADC_DEADBAND 5
+// max offset for computing a center value, otherwise
+// we load it from flash
+#define MAX_ADC_OFFSET 32
 // minimums
 #define MIN_LEFT (ADC_CENTER + ADC_DEADBAND)
 #define MIN_RIGHT (ADC_CENTER - ADC_DEADBAND)
 // maximums
-#define MAX_LEFT 210
-#define MAX_RIGHT 40
+#define MAX_LEFT (ADC_CENTER + MAX_ADC_OFFSET)
+#define MAX_RIGHT (ADC_CENTER - MAX_ADC_OFFSET)
 
 // the system clock & the number of packets per second
 #define HZ 25
@@ -231,66 +235,124 @@ const uint16_t channels[] =
 
 
 // audio
-// speaker has peaks at -1876 & -938
-// TODO: shift major scale to -1876 to -938
-#define MIN_NOTE -2500
-#define MAX_NOTE -1250
-#define OCTAVE0 (MIN_NOTE - MIN_NOTE * 2)
-#define OCTAVE1 (MAX_NOTE - MIN_NOTE)
-#define OCTAVE2 (MAX_NOTE / 2 - MAX_NOTE)
-
 // index to freq in CPU clocks
+#define LATENCY 0
+// tuned based on speaker & clockspeed
+//#define BASE_FREQ 5886628
+#define BASE_FREQ 3000000
+#define FREQ_TO_PERIOD(f) (uint16_t)(-BASE_FREQ / 4 / (f * 2) + LATENCY)
+
+
 const uint16_t freqs[] = 
 {
-    MIN_NOTE * 2, // C0
-    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.122465), // D0
-    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.259933), // E0
-    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.334849), // F0
-    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.498309), // G0
-    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.681796), // A0
-    (uint16_t)(MIN_NOTE * 2 + OCTAVE0 * 0.887759), // B0
-    MIN_NOTE,  // C1
-    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.122465), // D1
-    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.259933), // E1
-    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.334849), // F1
-    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.498309), // G1
-    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.681796), // A1
-    (uint16_t)(MIN_NOTE + OCTAVE1 * 0.887759), // B1
-    MAX_NOTE, // C2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.122465), // D2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.259933), // E2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.334849), // F2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.414173), // FS2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.498309), // G2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.681796), // A2
-    (uint16_t)(MAX_NOTE + OCTAVE2 * 0.887759), // B2
-    MAX_NOTE / 2 // C3
+	FREQ_TO_PERIOD(130.81), // C0
+	FREQ_TO_PERIOD(138.59), // _Db0
+	FREQ_TO_PERIOD(146.83), // _D0
+	FREQ_TO_PERIOD(155.56), // _Eb0
+	FREQ_TO_PERIOD(164.81), // _E0
+	FREQ_TO_PERIOD(174.61), // _F0
+	FREQ_TO_PERIOD(185.00), // _Gb0
+	FREQ_TO_PERIOD(196.00), // _G0
+	FREQ_TO_PERIOD(207.65), // _Ab0
+	FREQ_TO_PERIOD(220.00), // _A0
+	FREQ_TO_PERIOD(233.08), // _Bb0
+	FREQ_TO_PERIOD(246.94), // _B0
+
+	FREQ_TO_PERIOD(261.63), // C1
+	FREQ_TO_PERIOD(277.18), 
+	FREQ_TO_PERIOD(293.66), 
+	FREQ_TO_PERIOD(311.13), 
+	FREQ_TO_PERIOD(329.63), 
+	FREQ_TO_PERIOD(349.23), 
+	FREQ_TO_PERIOD(369.99), 
+	FREQ_TO_PERIOD(392.00), // G1
+	FREQ_TO_PERIOD(415.30), 
+	FREQ_TO_PERIOD(440.00), 
+	FREQ_TO_PERIOD(466.16), 
+	FREQ_TO_PERIOD(493.88), 
+
+	FREQ_TO_PERIOD(523.251), // C2
+	FREQ_TO_PERIOD(554.365),
+	FREQ_TO_PERIOD(587.330),
+	FREQ_TO_PERIOD(622.254),
+	FREQ_TO_PERIOD(659.255),
+	FREQ_TO_PERIOD(698.456),
+	FREQ_TO_PERIOD(739.989),
+	FREQ_TO_PERIOD(783.991),
+	FREQ_TO_PERIOD(830.609),
+	FREQ_TO_PERIOD(880.000),
+	FREQ_TO_PERIOD(932.328),
+	FREQ_TO_PERIOD(987.767),
+
+	FREQ_TO_PERIOD(1046.50), // C3
+	FREQ_TO_PERIOD(1108.73),
+	FREQ_TO_PERIOD(1174.66),
+	FREQ_TO_PERIOD(1244.51),
+	FREQ_TO_PERIOD(1318.51),
+	FREQ_TO_PERIOD(1396.91),
+	FREQ_TO_PERIOD(1479.98),
+	FREQ_TO_PERIOD(1567.98),
+	FREQ_TO_PERIOD(1661.22),
+	FREQ_TO_PERIOD(1760.00),
+	FREQ_TO_PERIOD(1864.66),
+	FREQ_TO_PERIOD(1975.53),
+
+	FREQ_TO_PERIOD(2093.00) // C4
 };
 
 // indexes for different notes
 #define _C0 0
-#define _D0 1
-#define _E0 2
-#define _F0 3
-#define _G0 4
-#define _A0 5
-#define _B0 6
-#define _C1 7
-#define _D1 8
-#define _E1 9
-#define _F1 10
-#define _G1 11
-#define _A1 12
-#define _B1 13
-#define _C2 14
-#define _D2 15
-#define _E2 16
-#define _F2 17
-#define _FS2 18
-#define _G2 19
-#define _A2 20
-#define _B2 21
-#define _C3 22
+#define _Db0 1
+#define _D0 2
+#define _Eb0 3
+#define _E0 4
+#define _F0 5
+#define _Gb0 6
+#define _G0 7
+#define _Ab0 8
+#define _A0 9
+#define _Bb0 10
+#define _B0 11
+
+#define _C1 12
+#define _Db1 13
+#define _D1 14
+#define _Eb1 15
+#define _E1 16
+#define _F1 17
+#define _Gb1 18
+#define _G1 19
+#define _Ab1 20
+#define _A1 21
+#define _Bb1 22
+#define _B1 23
+
+#define _C2 24
+#define _Db2 25
+#define _D2 26
+#define _Eb2 27
+#define _E2 28
+#define _F2 29
+#define _Gb2 30
+#define _G2 31
+#define _Ab2 32
+#define _A2 33
+#define _Bb2 34
+#define _B2 35
+
+#define _C3 36
+#define _Db3 37
+#define _D3 38
+#define _Eb3 39
+#define _E3 40
+#define _F3 41
+#define _Gb3 42
+#define _G3 43
+#define _Ab3 44
+#define _A3 45
+#define _Bb3 46
+#define _B3 47
+
 #define SONG_REST 0xfe
 #define SONG_END 0xff
 
@@ -385,8 +447,8 @@ const song_t steering_sound[] =
 song_t song_buffer[MAX_SONG];
 
 #define TIMELAPSE_OFF 0x3
-#define TIMELAPSE_FAST_LEFT 0x0
-#define TIMELAPSE_FAST_RIGHT 0x1
+#define TIMELAPSE_LEFT 0x0
+#define TIMELAPSE_RIGHT 0x1
 
 #define LED_TICKS (HZ / 5)
 
@@ -411,6 +473,8 @@ uint8_t blink_counter = 0;
 // hall effect accumulator
 uint32_t adc_accum;
 uint32_t adc_count;
+// computed at startup
+int8_t adc_offset = 0;
 uint8_t current_channel = 0;
 uint16_t song_tick = 0;
 uint8_t song_offset = 0;
@@ -655,11 +719,17 @@ void get_stick()
 // wait for stick to be released to prevent timelapse selection from moving motor
 void wait_timelapse()
 {
+// fall through to print ADC value on receiver
+    const int8_t bypass = 0;
     if(adc_count >= 64)
     {
         uint8_t value = adc_accum / adc_count / 4;
-        if(value <= MIN_LEFT &&
-            value >= MIN_RIGHT)
+        if(!bypass) value -= adc_offset;
+
+// centered
+        if(bypass || 
+            (value < MIN_LEFT &&
+            value >= MIN_RIGHT))
         {
             adc_state = get_stick;
 // move to manual mode
@@ -672,22 +742,78 @@ void wait_timelapse()
     ADCON0bits.GO = 1;
 }
 
+
+void write_byte(uint8_t address, uint8_t value)
+{
+    EEADR = address;
+    EEDATA = value;
+    EECON1bits.EEPGD = 0;
+    EECON1bits.CFGS = 0;
+    EECON1bits.WREN = 1;
+
+    INTCONbits.GIE = 0;
+    EECON2 = 0x55;
+    EECON2 = 0xaa;
+    EECON1bits.WR = 1;
+// wait for write
+    while(EECON1bits.WR) 
+        ;
+    
+    INTCONbits.GIE = 1;
+    EECON1bits.WREN = 0;
+}
+
+void save_settings()
+{
+    write_byte(0, adc_offset);
+}
+
+uint8_t read_byte(uint8_t address)
+{
+    EEADR = address;
+    EECON1bits.EEPGD = 0;
+    EECON1bits.CFGS = 0;
+    EECON1bits.RD = 1;
+    return EEDATA;
+}
+
+void load_settings()
+{
+    adc_offset = read_byte(0);
+}
+
 // get timelapse code
 void get_timelapse()
 {
     if(adc_count >= 64)
     {
         uint8_t value = adc_accum / adc_count / 4;
+// get new center offset
+        if(value >= ADC_CENTER - MAX_ADC_OFFSET &&
+            value < ADC_CENTER + MAX_ADC_OFFSET)
+        {
+            adc_offset = value - ADC_CENTER;
+            save_settings();
+        }
+        else
+        {
+// load previous center offset
+            load_settings();
+        }
+
+// center it
+        value -= adc_offset;
+
         if(value <= MAX_RIGHT)
         {
-            timelapse_mode = TIMELAPSE_FAST_RIGHT;
-            copy_song(increase_tone);
+            timelapse_mode = TIMELAPSE_RIGHT;
+            copy_song(decrease_tone);
         }
         else
         if(value >= MAX_LEFT)
         {
-            timelapse_mode = TIMELAPSE_FAST_LEFT;
-            copy_song(decrease_tone);
+            timelapse_mode = TIMELAPSE_LEFT;
+            copy_song(increase_tone);
         }
         else
         {
@@ -792,6 +918,7 @@ void main()
                 write_serial(0xff);
 
                 adc_value = adc_accum / adc_count / 4;
+                adc_value -= adc_offset;
 
                 uint8_t i;
                 for(i = 0; i < sizeof(PACKET_KEY); i++)

@@ -29,9 +29,8 @@
 // This version sends UART codes to a brushless servo programmed to be 
 // a stepper motor.
 
-// test the ttyACM device:
-// echo -n -e '\x80' > /dev/ttyACM0
-
+// send a motor command to the ttyACM device:
+// echo -n -e '\xff\xd2\x80' > /dev/ttyACM0
 
 
 #include "linux.h"
@@ -46,6 +45,7 @@
 #include "stm32f4xx_flash.h"
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
+#include "arm_fs.h"
 #include "arm_usb.h"
 #include "usb_core.h"
 
@@ -57,29 +57,30 @@
 //#define USE_SPI
 #define USE_USB
 
+// reverse direction
+#define SIGN -1
+
 // time before shutting motor down
 #define MOTOR_TIMEOUT (HZ / 4)
 
 
 
-// analog ranges
-#define ADC_CENTER 114
+// analog ranges for the remote transmitter
+#define ADC_CENTER 128
 #define ADC_DEADBAND 5
+#define ADC_MAX 64
 // minimums
 #define MIN_LEFT (ADC_CENTER + ADC_DEADBAND)
 #define MIN_RIGHT (ADC_CENTER - ADC_DEADBAND)
 // maximums
-#define MAX_LEFT 210
-#define MAX_RIGHT 40
+#define MAX_LEFT (ADC_CENTER + ADC_MAX)
+#define MAX_RIGHT (ADC_CENTER - ADC_MAX)
 
 #define FRACTION 256
 
 #define MAX_STEP (24 * FRACTION)
 #define MIN_STEP (FRACTION)
 #define ACCELERATION (8 * FRACTION / 256)
-
-// 20x timelapse
-#define TIMELAPSE_STEP (MAX_STEP / 80)
 
 //#define DEBUG_PIN GPIO_Pin_4
 //#define DEBUG_GPIO GPIOB
@@ -96,7 +97,7 @@
 
 // idle ticks before resetting SPI
 #define SPI_TICKS 10
-// ticks before timing out adc_spi
+// ticks before timing out the SPI/USB code
 #define SPI_TIMEOUT (HZ / 2)
 
 #ifdef USE_SPI
@@ -236,6 +237,23 @@ int phase = 0;
 // phase change per frame * FRACTION
 int step = 0;
 int goal_step = 0;
+// motion control state
+int motion_control_on = 0;
+// a timelapse code indicating the last direction
+int motion_control_dir = 0xff;
+int motion_control_tick = 0;
+
+// configuration
+// configured for single camera movement instead of timelapse
+volatile int motion_control = 1;
+// speed of the movement
+// 1-80
+volatile int motion_control_speed = 60;
+// ticks of the movement duration
+volatile int motion_control_len = HZ;
+// timelapse speed 1-80
+// 1 = 20x timelapse speed
+volatile int timelapse_speed = 1;
 
 // motor codes
 #define GROUND_MOTOR 0xfe
@@ -245,7 +263,7 @@ int motor_enabled = 0;
 
 #define MAX_POWER 0xc0
 #define MIN_POWER 0x20
-int motor_power = 0xc0;
+int motor_power = MAX_POWER;
 
 // motor UART
 #define MOTOR_PACKET 4
@@ -266,12 +284,17 @@ void (*radio_function)();
 volatile unsigned char receive_buf[RADIO_BUFSIZE];
 volatile int radio_counter = 0;
 volatile unsigned char radio_data = 0;
+// ticks before timing out the RF code
 #define RADIO_TIMEOUT HZ
 volatile int timeout_counter = 0;
+
+
 // values from the radio
 volatile uint8_t adc_raw = 0xff;
 volatile uint8_t timelapse_code = 0xff;
-volatile uint8_t control_valid = 0;
+#define TIMELAPSE_LEFT 0
+#define TIMELAPSE_RIGHT 1
+volatile uint8_t rf_valid = 0;
 volatile uint8_t spi_valid = 0;
 RCC_ClocksTypeDef RCC_ClocksStatus;
 
@@ -339,6 +362,7 @@ void get_packet()
 // print_number(receive_buf[1]);
 // print_lf();
 
+// flash for RF reception
             TOGGLE_PIN(LED_GPIO, LED_PIN);
             timeout_counter = 0;
 //print_text("got chan=");
@@ -346,7 +370,7 @@ void get_packet()
 //print_lf();
             timelapse_code = receive_buf[0];
             adc_raw = receive_buf[1];
-            control_valid = 1;
+            rf_valid = 1;
 TRACE2
 print_text("timelapse_code=");
 print_number(timelapse_code);
@@ -619,15 +643,17 @@ void TIM1_UP_TIM10_IRQHandler()
 	{
 		TIM10->SR = ~TIM_FLAG_Update;
 		
-//        TOGGLE_PIN(LED_GPIO, LED_PIN);
-
 		tick++;
 
 
 // reset the control code
         if(timeout_counter >= RADIO_TIMEOUT)
         {
-            control_valid = 0;
+// solid for power on
+            if(rf_valid) SET_PIN(LED_GPIO, LED_PIN);
+// emergency shut down of the motor
+            rf_valid = 0;
+            motion_control_on = 0;
         }
         else
         {
@@ -685,27 +711,172 @@ void EXTI15_10_IRQHandler()
 #endif
 
 
-
+void dump_config()
+{
+	TRACE2
+	print_text("\nmotion_control=");
+	print_number(motion_control);
+	print_text("\nmotion_control_speed=");
+	print_number(motion_control_speed);
+	print_text("\nmotion_control_len=");
+	print_number(motion_control_len);
+	print_text("\ntimelapse_speed=");
+	print_number(timelapse_speed);
+    print_lf();
+    flush_uart();
+}
 
 #ifdef USE_USB
 extern unsigned char *in_buf;
+static void handle_code1(uint8_t c);
+void (*code_state)(uint8_t c) = handle_code1;
+int config_offset = 0;
+// Magic number for settings
+#define CONFIG_MAGIC 0x10291976
+#define CONFIG_SIZE 7
+#define CONFIG_SIZE_ROUNDED 8
+// must write a multiple of 4 bytes
+uint8_t config_packet[CONFIG_SIZE_ROUNDED] = { 0 };
+
+void flush_motor()
+{
+    while(motor_offset < MOTOR_PACKET)
+    {
+	    if((USART1->SR & USART_FLAG_TC) != 0)
+        {
+            USART1->DR = motor_packet[motor_offset++];
+        }
+    }
+}
+
+void write_config()
+{
+// must write a multiple of 4 bytes
+    save_file(CONFIG_MAGIC,
+        config_packet,
+		CONFIG_SIZE_ROUNDED);
+
+
+// wiggle motor
+    int i;
+    int steps = 200;
+    flush_motor();
+    motor_power = MAX_POWER;
+    motor_enabled = 1;
+    for(i = 0; i < steps; i++)
+    {
+        if(i < steps / 2)
+            phase += MAX_STEP;
+        else
+            phase -= MAX_STEP;
+        while(phase < 0)
+            phase += SIN_TOTAL * FRACTION;
+        while(phase >= SIN_TOTAL * FRACTION)
+            phase -= SIN_TOTAL * FRACTION;
+        write_motor();
+        flush_motor();
+        udelay(5000);
+        PET_WATCHDOG
+    }
+
+    motor_power = MIN_POWER;
+    motor_enabled = 0;
+    write_motor();
+}
+
+void read_config()
+{
+// Load settings from flash
+	uint32_t address = next_address(CONFIG_MAGIC);
+	if(address != 0xffffffff)
+    {
+        address += 8;
+        const uint8_t *buffer = (unsigned char*)address;
+        const uint8_t *ptr = buffer;
+		motion_control = *ptr++;
+        motion_control_speed = *ptr++;
+        motion_control_len = *ptr++;
+        motion_control_len |= ((uint32_t)(*ptr++)) << 8;
+        motion_control_len |= ((uint32_t)(*ptr++)) << 16;
+        motion_control_len |= ((uint32_t)(*ptr++)) << 24;
+        timelapse_speed = *ptr++;
+	}
+    else
+    {
+        TRACE2
+        print_text("config not found\n");
+    }
+}
+
+
+static void handle_config_code(uint8_t c)
+{
+    config_packet[config_offset++] = c;
+    if(config_offset >= CONFIG_SIZE)
+    {
+        write_config();
+        read_config();
+        dump_config();
+// reset it
+        motion_control_dir = 0xff;
+        motion_control_on = 0;
+        code_state = handle_code1;
+    }
+}
+
+static void handle_adc_code(uint8_t c)
+{
+    adc_usb = c;
+    print_text("ADC=");
+    print_hex(adc_usb);
+    print_lf();
+
+    if(!rf_valid)
+    {
+// flash for USB reception if not receiving RF
+        TOGGLE_PIN(LED_GPIO, LED_PIN);
+    }
+    last_usb_tick = tick;
+    usb_valid = 1;
+    code_state = handle_code1;
+}
+
+static void handle_code2(uint8_t c)
+{
+    if(c == 0xd2)
+        code_state = handle_adc_code;
+    else
+    if(c == 0xcf)
+    {
+        code_state = handle_config_code;
+        config_offset = 0;
+    }
+    else
+    if(c != 0xff)
+        code_state = handle_code1;
+}
+
+static void handle_code1(uint8_t c)
+{
+    if(c == 0xff)
+        code_state = handle_code2;
+}
+
+// got chars from the host
 uint8_t class_cb_DataOut (void  *pdev, uint8_t epnum)
 {
     int USB_Rx_Cnt = ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
 
 
-// assume the last character is the most recent
-    adc_usb = in_buf[USB_Rx_Cnt - 1];
-    usb_start_receive();
-
-    if(!control_valid)
+// process the codes
+    int i;
+    for(i = 0; i < USB_Rx_Cnt; i++)
     {
-        TOGGLE_PIN(LED_GPIO, LED_PIN);
+        code_state(in_buf[i]);
     }
-    last_usb_tick = tick;
-    usb_valid = 1;
-print_hex(adc_usb);
-  return 0;
+
+    usb_start_receive();
+    return 0;
 }
 #endif // USE_USB
 
@@ -774,6 +945,7 @@ int main(void)
 	flush_uart();
     init_watchdog();
 	flush_uart();
+    list_flash();
 
 // general purpose timer
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -842,10 +1014,7 @@ int main(void)
 
  	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
  	NVIC_Init(&NVIC_InitStructure);
-
-
-
-#endif
+#endif // USE_SPI
 
 	init_motor();
     init_radio();
@@ -856,7 +1025,12 @@ int main(void)
 //         ;
 //     }
 
+#ifdef USE_USB
 	init_usb();
+    read_config();
+#endif
+
+    dump_config();
 
     int seconds = 0;
     int prev_frame = 0;
@@ -887,33 +1061,68 @@ int main(void)
 
 // use face tracker
 #ifdef USE_SPI
-            if(!control_valid && 
+            if(!rf_valid && 
                 tick - last_spi_tick < SPI_TIMEOUT)
             {
                 adc = adc_spi;
             }
             else
             {
+// solid for power on
+                if(!rf_valid) SET_PIN(LED_GPIO, LED_PIN);
                 spi_valid  = 0;
             }
 #endif
 
 #ifdef USE_USB
-            if(!control_valid &&
+            if(!rf_valid &&
                 tick - last_usb_tick < SPI_TIMEOUT)
             {
                 adc = adc_usb;
             }
             else
             {
+// solid for power on
+                if(!rf_valid) SET_PIN(LED_GPIO, LED_PIN);
                 usb_valid = 0;
             }
 #endif
 
 
             goal_step = 0;
-            if(control_valid || spi_valid || usb_valid)
+            if(rf_valid || spi_valid || usb_valid)
             {
+// exit motion control if out of timelapse mode
+                if((motion_control_on || motion_control_dir < 2) &&
+                    timelapse_code >= 2)
+                {
+// reset the motion control state
+                    motion_control_on = 0;
+                    motion_control_dir = 0xff;
+                    goal_step = 0;
+                }
+
+                if(motion_control && rf_valid && timelapse_code < 2)
+                {
+// start motion control
+                    if(adc <= MAX_RIGHT && 
+                        motion_control_dir != TIMELAPSE_RIGHT)
+                    {
+                        motion_control_on = 1;
+                        motion_control_dir = TIMELAPSE_RIGHT;
+                        motion_control_tick = 0;
+                    }
+                    else
+                    if(adc >= MAX_LEFT && 
+                        motion_control_dir != TIMELAPSE_LEFT)
+                    {
+                        motion_control_on = 1;
+                        motion_control_dir = TIMELAPSE_LEFT;
+                        motion_control_tick = 0;
+                    }
+                }
+                else
+// manual or timelapse mode
                 if(adc < MIN_RIGHT)
                 {
                     goal_step = -MIN_STEP - (MAX_STEP - MIN_STEP) * 
@@ -930,18 +1139,33 @@ int main(void)
                     CLAMP(goal_step, 0, MAX_STEP);
                 }
                 else
-                if(control_valid && timelapse_code < 2)
+                if(rf_valid && timelapse_code < 2)
                 {
 // handle the timelapse code
-                    if(timelapse_code == 0)
-                        goal_step = TIMELAPSE_STEP;
+                    if(timelapse_code == TIMELAPSE_LEFT)
+                        goal_step = MAX_STEP * timelapse_speed / 80;
                     else
-                    if(timelapse_code == 1)
-                        goal_step = -TIMELAPSE_STEP;
+                    if(timelapse_code == TIMELAPSE_RIGHT)
+                        goal_step = -MAX_STEP * timelapse_speed / 80;
                 }
             }
 
-
+// update motion control
+            if(motion_control_on)
+            {
+                if(motion_control_dir == TIMELAPSE_LEFT)
+                    goal_step = MAX_STEP * motion_control_speed / 80;
+                else
+                    goal_step = -MAX_STEP * motion_control_speed / 80;
+            
+                if(motion_control_tick >= motion_control_len)
+                {
+                    motion_control_on = 0;
+                    goal_step = 0;
+                }
+                else
+                    motion_control_tick++;
+            }
 
 
 // apply acceleration
@@ -977,7 +1201,7 @@ int main(void)
             {
                 motor_power = MIN_POWER + 
                     ABS(step) * (MAX_POWER - MIN_POWER) / MAX_STEP;
-                phase += step;
+                phase += SIGN * step;
                 while(phase < 0)
                     phase += SIN_TOTAL * FRACTION;
                 while(phase >= SIN_TOTAL * FRACTION)
@@ -1058,8 +1282,9 @@ int main(void)
 #ifdef USE_SPI
         if(spi_len >= 1)
         {
-            if(!control_valid)
+            if(!rf_valid)
             {
+// flash for SPI reception
                 TOGGLE_PIN(LED_GPIO, LED_PIN);
             }
             adc_spi = spi_data[0];

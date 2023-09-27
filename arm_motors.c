@@ -149,6 +149,7 @@ void init_motor_tables()
         print_number(hall2_size);
         print_text("hall3_size=");
         print_number(hall3_size);
+        print_lf();
         flush_uart();
 
         if(hall0_size <= 0 || hall0_size > MAX_TABLE_SIZE)
@@ -191,6 +192,35 @@ void init_motor_tables()
         memcpy(motor0_table_ptr, buffer + offset, hall0_size * hall1_size);
         offset += hall0_size * hall1_size;
         memcpy(motor1_table_ptr, buffer + offset, hall2_size * hall3_size);
+
+        int i;
+        TRACE2
+        print_lf();
+        for(i = 0; i < MAX_TABLE_SIZE; i++)
+        {
+            print_text("MOTORS: ");
+            print_number(i * ANGLE_STEP);
+            if(i < hall0_size) 
+                print_number(hall0_table_ptr[i]);
+            else
+                print_number(-1);
+            if(i < hall1_size) 
+                print_number(hall1_table_ptr[i]);
+            else
+                print_number(-1);
+            if(i < hall2_size) 
+                print_number(hall2_table_ptr[i]);
+            else
+                print_number(-1);
+            if(i < hall3_size) 
+                print_number(hall3_table_ptr[i]);
+            else
+                print_number(-1);
+
+            print_lf();
+            flush_uart();
+        }
+
 	}
     else
     {

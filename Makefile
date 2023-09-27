@@ -256,6 +256,7 @@ ARM_TRUCK2_OBJS := \
 
 ARM_CAM_OBJS := \
 	arm_cam.o \
+        arm_fs.o \
         arm_usb.o
 
 PI_OBJS := \

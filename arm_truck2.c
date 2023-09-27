@@ -611,6 +611,8 @@ void dump_config()
     print_number(leash.steering_d_size);
     print_text("\nleash_i_limit=");
     print_float(leash.steering_i_limit);
+    print_text("\nleash_d_limit=");
+    print_float(leash.steering_d_limit);
     print_text("\nleash PID=");
     dump_pid(&leash.steering_pid);
 #endif // USE_LEASH
@@ -696,9 +698,11 @@ int read_config_packet(const unsigned char *buffer)
 //    leash.max_angle = READ_FLOAT32(buffer, offset);
 	leash.steering_d_size = buffer[offset++];
 	leash.steering_i_limit = buffer[offset++];
+	leash.steering_d_limit = buffer[offset++];
     offset = read_pid(&leash.steering_pid, buffer, offset);
     resize_derivative(&leash.steering_d, leash.steering_d_size);
     leash.steering_pid.i_limit = leash.steering_i_limit;
+    leash.steering_pid.d_limit = leash.steering_d_limit;
     reset_pid(&leash.steering_pid);
 
 

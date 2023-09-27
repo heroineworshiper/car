@@ -62,6 +62,8 @@ truck3.pcb: last layout for the tamiya board
 
 arm_truck2.c, arm_truck2.h: the 3D printed truck firmware
 
+settings.car: settings file that goes in /sdcard/truck/
+
 antler2.FCStd: antlers  
     Print with .8mm nozzle .32 layer height, 20% infill
     Print in halves.  Glue a half to a tab to make a right angle.
@@ -134,24 +136,25 @@ offroad3.stl: offroad rear tire for soft TPE
 
 rear_tire3.FCStd: OBSOLETE rear wheel
 
-rear_wheel2.FCStd: most recent on-road rear wheel
+rear_wheel2.FCStd: OBSOLETE on-road rear wheel
     print hub cap in PLA 
         .4mm nozzle .32mm layer height for INNER HUB, INNER RING
         .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
     tire model is a mockup
 
-rear_wheel3.FCStd: most recent off-road rear wheel
+rear_wheel4.FCStd: most recent off-road rear wheel
     .4mm nozzle .32mm layer height for INNER HUB, INNER RING
     .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
+    change screw_r2 to select m2 or 6-32 farsteners
 
 tire3.stl: front tire for hard TPU
+
+tire4.stl: front tire for soft TPU
     print with .8mm nozzle
     TPU
     .32mm layer height
-    250C
+    260C
     left & right must be mirror images
-
-tire4.stl: front tire for soft TPU
 
 tire6.FCMacro: creates sketches for the latest rear wheel & tire
     Extrude by a multiple of the layer height .32mm, then export tire.stl
@@ -194,15 +197,33 @@ container3.FCStd:
     Use .24mm on 1st 4 layers & .2 on later layers with fixcura.py.
     Ideally would use .32 on later layers.
 
-    top corner master:
-    bottom corner master:
-        require .32 layers 250C for adhesion
-        
     TODO: Create tab for aligning handle.
+        Round all the wire passages
+
+
 
 container.FCMacro:
     scripts for creating the container
+
+corners.FCStd:
+    top front corners with light positions
+    print corner & support
+    .4 nozzle, .2 layers 260C
+
+
     
+
+handle.FCStd:
+    collapsing handle for the latest container & 14mm diameter carbon fiber
+    print bearing + collars for camera pole or a wide collar without camera pole
+    
+          
+rear_light.FCStd:
+    enclosure for rear lights
+    print rear corner with black TPU
+    print window with clear TPU
+    .4 nozzle, .2 layers 260C
+
 
 phone4.FCStd:
     wiko 3 phone
@@ -213,7 +234,7 @@ phone5.FCStd:
     .2mm layer
 
 
-radio_box.FCStd:
+radio_box2.FCStd:
     container for radio modules & switches.
     use print mask to create wall & isogrid parts
     walls contain temporary plastic stringers to aid gluing
@@ -252,7 +273,7 @@ traction.FCStd: traction section
     union for both sides (motor support | side cutout) & top mask
 
     TODO: captive nuts for angle rod farsteners
-
+        round all wire passages
 
 
 
@@ -260,14 +281,17 @@ traction.FCStd: traction section
 steering.FCMacro:
     create objects for steering
 
-steering.FCStd: steering section
+steering2.FCStd: steering section
     print with 0.8mm nozzle 
     .32mm layer height
     shield
-    wheel vertical, wheel vertical mirror001
+    vertical part
      - print sideways
-    wheel fork, wheel stopper
-     - TPU with 0.8mm nozzle .32mm layer height
+    wheel mount
+    servo plate
+    bushing, bushing001
+     - hard TPU
+    
 
     TODO: make shield removable for accessing the ball links
 
@@ -306,7 +330,7 @@ motor4.FCStd: motor mount
 car_remote.FCMacro:
     create objects for car_remote & cam_remote
 
-car_remote2.FCStd: remote control for vehicle
+car_remote3.FCStd: remote control for vehicle
     disable support for the top & bottom
     use support only for the joysticks
     no ironing
@@ -330,6 +354,8 @@ car_remote2.FCStd: remote control for vehicle
         with wide part facing bed
     sock top/bottom: must clean the inside before welding
 
+    TODO: restore sock spacing for body tape
+        reduce power button protector to 1mm
 
 
 
@@ -408,11 +434,15 @@ gopro.FCStd
 
 =============================================================================
 
-Panning mount:
+Camera panning mount:
+
+This is used together with countreps to get automatic tracking, motion
+control.
+
 
 arm_cam.c: camera motor receiver using STM32.
     Build with make cam.bin
-    Uses a brushless servo hacked into a stepper motor.
+    Uses a brushless servo hacked into a stepper motor with the servo/ firmware.
     
     
 arm_cam.c.l6234: camera motor receiver using an L6234 
@@ -432,6 +462,9 @@ cam_gearbox.FCStd: OBSOLETE
     install pinion with hex facing motor hex
 
 cam_remote2.FCStd:
+    TODO: 5mm longer for new battery
+        guard for power switch
+
     remote control for camera panner
     no ironing
     no horizontal expansion
@@ -454,7 +487,6 @@ cam_remote2.FCStd:
         print with no support
     top switch cover, bottom switch cover:
         support everywhere
-
 
 
 
@@ -485,6 +517,7 @@ servo/:
     Must be built with the silabs IDE & flashed with the blheli tool.
     https://www.silabs.com/developers/8-bit-8051-microcontroller-software-studio
     http://www.olliw.eu/2012/owsilprog/#firmware
+
 
 shroud.FCStd:
     the shroud for a direct drive panning motor

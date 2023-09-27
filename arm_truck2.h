@@ -257,6 +257,7 @@ typedef struct
 	derivative_t steering_d;
 	int steering_d_size;
     float steering_i_limit;
+    float steering_d_limit;
 } leash_t;
 #define LEASH_TIMEOUT TIMER_HZ
 #endif // USE_LEASH

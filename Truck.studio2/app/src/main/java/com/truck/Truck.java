@@ -753,6 +753,7 @@ public class Truck extends Thread {
 //		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_MAX_ANGLE")[0]));
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_SIZE")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_I_LIMIT")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_LIMIT")[0]);
 
         pid = Settings.getFileFloat("LEASH_PID");
         offset = writePid(offset, pid);
