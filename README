@@ -87,7 +87,7 @@ cring.FCStd: failed retaining ring for the motors.  Not used anymore.
     .2mm layer height out of PETG
     no cooling fan
 
-tire2.FCMacro: generate procedural tire.  Not used anymore.
+tire2.FCMacro: OBSOLETE generate procedural tire.
     requires creating a rigid body 1st
     .28mm layer height
     .8mm line width
@@ -100,19 +100,17 @@ tire2.FCMacro: generate procedural tire.  Not used anymore.
     20mm print speed
     no retraction
 
-front_tire3.FCStd: front tire for hard TPU
-    Import STL into blender
-    Run helix.py to make the struts a helix
-    Export new layers as an STL file
-    print with .8mm nozzle
-    TPU
-    .32mm layer height
-    left & right must be mirror images
-    timelapse mode with fixcura.py has better stringing
-
 front_tire3.FCStd: front tire for soft TPE
+    Import STL into blender
+    Rename the object "Tire"
+    Run helix.py to make it a helix
+    Export new layers as an STL file
+    .8mm nozzle.  .32 mm layer height stretched to .36 after slicing.
+    The wheels must be wider to compensate for the stretching.
+    left & right must be mirror images
 
-front_wheel.FCStd: front wheel
+
+front_wheel2.FCStd: latest front wheel
     modeled for a .4mm nozzle
     .32 layer height
 
@@ -122,7 +120,7 @@ leash9.FCStd: leash enclosure
     .2mm layers .4mm nozzle
 
 
-offroad2.stl: offroad rear tire for hard TPU
+offroad2.stl: OBSOLETE offroad rear tire for hard TPU
     print with .4mm nozzle
     TPU
     .32mm layer height
@@ -131,8 +129,10 @@ offroad2.stl: offroad rear tire for hard TPU
 
 offroad3.stl: offroad rear tire for soft TPE
     print with .8mm nozzle
-    .32mm layer height
+    .32mm layer height stretched to .36
     260C
+    Set Z seam to "shortest" to overcome nozzle clogs
+    Print 1st layer at 10mm/s
 
 rear_tire3.FCStd: OBSOLETE rear wheel
 
@@ -147,21 +147,21 @@ rear_wheel4.FCStd: most recent off-road rear wheel
     .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
     change screw_r2 to select m2 or 6-32 farsteners
 
-tire3.stl: front tire for hard TPU
+tire3.stl: OBSOLETE front tire for hard TPU
 
-tire4.stl: front tire for soft TPU
+tire4.stl: front tire for soft TPE
     print with .8mm nozzle
-    TPU
-    .32mm layer height
+    TPE
+    .32mm layer height stretch to .36mm
     260C
     left & right must be mirror images
 
-tire6.FCMacro: creates sketches for the latest rear wheel & tire
-    Extrude by a multiple of the layer height .32mm, then export tire.stl
+tire6.FCMacro: Create layer for the latest rear tire
+    Extrude by the layer height .32mm, then export tire.stl
     Then run helix.c to generate a helix by creating discrete layers
     tires must be mirror images or the truck will pull to 1 side
-    Printed at 250C with cheap TPU.
-
+    Printed at 260C with soft TPE.
+    .8mm nozzle.  .32 mm layer height stretched to .36 after slicing.
 
 
 

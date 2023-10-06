@@ -25,7 +25,7 @@
 // the source model must be a single layer height
 // gcc -O2 -o helix helix.c -lm
 // ./helix <input> <output>
-// ./helix tire.stl tire2.stl
+// ./helix offroad.stl offroad3.stl
 
 
 #include "3dstuff.h"
@@ -36,7 +36,10 @@
 //#define TOTAL_ANGLE (360.0 / 18 * 6 / 31.04)
 
 // 40mm offroad tire
-#define TOTAL_H 40
+//#define TOTAL_H 40
+
+// 40mm tire after stretching the layers to .36mm
+#define TOTAL_H 36
 #define TOTAL_ANGLE (360.0 / 16)
 
 //#define TOTAL_H 31.04 // parallel tread
@@ -99,9 +102,6 @@ int main(int argc, char *argv[])
     printf("layer_h=%f\n", layer_h);
 
 
-#ifdef DO_Z
-    
-#endif
 
     int total_layers = (int)(TOTAL_H / layer_h);
     printf("total_layers=%d\n", total_layers);

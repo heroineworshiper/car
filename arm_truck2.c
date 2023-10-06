@@ -1718,10 +1718,32 @@ void do_leash_throttle()
     else
     {
 // convert leash distance to a pace
-        float pace = rpm_to_pace(leash.rpm0);
+// slowest min/mile
+        float min_speed = rpm_to_pace(leash.rpm0);
+        float pace = min_speed;
         pace -= leash.speed_to_distance * ((float)leash.distance - leash.distance0);
 
-        if(pace < leash.max_speed) pace = leash.max_speed;
+// limit to fastest min/mile
+        float max_speed = leash.max_speed;
+        float taper_angle0 = TO_RAD(30.0);
+        float taper_angle1 = TO_RAD(45.0);
+        float angle_mag = fabs(leash.angle - leash.center);
+// reduce max speed if angle is over a certain amount
+        if(angle_mag >= taper_angle0)
+        {
+            if(angle_mag >= taper_angle1)
+            {
+                max_speed = min_speed;
+            }
+            else
+            {
+                max_speed += (angle_mag - taper_angle0) / 
+                    (taper_angle1 - taper_angle0) *
+                    (min_speed - max_speed);
+            }
+        }
+        
+        if(pace < max_speed) pace = max_speed;
         float target_rpm = pace_to_rpm(pace);
         truck.reverse = 0;
         rpm_to_power(target_rpm);
