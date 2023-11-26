@@ -230,15 +230,19 @@ typedef struct
 typedef struct
 {
     uint8_t buffer[8];
+// offset in the packet
     int offset;
 // leash angle in rads
     float angle;
-// latest distance
+// latest distance in encoder counts
     int distance;
 // previous distance
     int distance2;
     int timeout;
     int active;
+// X Y in encoder counts
+    float x;
+    float y;
 
 // encoder count to start moving at
     int distance0;
@@ -249,10 +253,14 @@ typedef struct
 // minutes per mile maximum speed
     float max_speed;
 // center leash angle in rads
-// adjust to have rover on left or right of animal
     float center;
-// maximum pot deflection in rads
-//    float max_angle;
+// X offset user can manually add or subtract from center in encoder counts
+    float x_offset;
+// number of the current offset: -1, 0, 1
+    int current_offset;
+// last binary steering value for adjusting offset
+    int stick_state;
+// the PID controller
 	pid_t steering_pid;
 	derivative_t steering_d;
 	int steering_d_size;
@@ -323,8 +331,9 @@ typedef struct
 	int motor_timer;
 // timeout for loss of bluetooth
 	int bt_timeout;
-// timeout for loss of 433Mhz radio
+// timeout for loss of proprietary radio
 	int radio_timeout;
+
 // timeout for end of heading hold, to keep it on the same path after stopping
 	int steering_timeout;
 // maximum analog amount gyros can move while calculating center
@@ -452,7 +461,7 @@ typedef struct
 #define TEST_PASS2 2
 #define TEST_DONE 3
     int test_state;
-    int test_counter;
+    int test_read;
     int test_phase;
     int test_tick;
     int testing_motors;

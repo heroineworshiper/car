@@ -8,6 +8,14 @@ import android.graphics.Rect;
 
 public class SmallReadout extends Container
 {
+	int total;
+	int[] positions;
+	String[] values;
+	String title;
+    int title_color = Truck.settings.foreground;
+    int value_color = Truck.settings.foreground;
+
+
 	public SmallReadout(int x, int y, int total)
 	{
 		super(x, y, 0, 0);
@@ -19,7 +27,7 @@ public class SmallReadout extends Container
 	
 	public void draw(Canvas g, Paint p)
 	{
-		p.setColor(Truck.settings.foreground);
+		p.setColor(title_color);
         p.setStyle(Paint.Style.FILL);
 		p.setTypeface(Truck.settings.small_font);
 		p.setTextSize(Truck.settings.small_font_size);
@@ -36,6 +44,7 @@ public class SmallReadout extends Container
 			g.drawText(title, x, y, p);
 		}
 		
+		p.setColor(value_color);
 		for(int i = 0; i < total; i++)
 		{
 			int x2 = x + positions[i];
@@ -69,10 +78,4 @@ public class SmallReadout extends Container
 		           textSize);
 		return textSize.height();
 	}
-	
-	
-	int total;
-	int[] positions;
-	String[] values;
-	String title;
 }

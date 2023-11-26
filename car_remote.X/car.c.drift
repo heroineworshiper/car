@@ -19,8 +19,7 @@
  */
 
 // this uses the SI4463 radio
-// supports stick drift adjustment
-// it burns 45mA
+// calibrates stick drift during startup
 
 
 #include <stdio.h>
@@ -63,12 +62,6 @@
 #define STEERING_CENTER 128
 #define STEERING_DEADBAND 3
 
-// stick drift input thresholds need to be fixed
-// there's no way to see the raw ADC value except maybe erasing the flash & 
-// subtracting the offset
-#define STICK_DRIFT_CENTER 128
-#define STICK_DRIFT_DEADBAND 10
-#define STICK_DRIFT_MAX 32
 
 // limited by song length
 #define MAX_STICK_OFFSET 8
@@ -96,8 +89,6 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 // radio CTS dies below a certain speed
 #define CLOCKSPEED2 2000000
 
-// frequency scaling
-//#define USE_FREQSCALE
 // steering sounds
 #define USE_STEERING_SOUND
 
@@ -382,9 +373,6 @@ typedef union
         unsigned playing_sound : 1;
         unsigned increase_pressed : 1;
         unsigned decrease_pressed : 1;
-#ifdef USE_FREQSCALE
-        unsigned fastclock : 1;
-#endif
 #ifdef USE_STEERING_SOUND
         unsigned is_steering : 1;
 #endif
@@ -397,12 +385,8 @@ typedef union
 {
     struct
     {
-        unsigned calibration_mode : 1;
-        unsigned calibration_done : 1;
-        unsigned throttle_up : 1;
-        unsigned throttle_down : 1;
-        unsigned steering_up : 1;
-        unsigned steering_down : 1;
+        unsigned raw_mode : 1;
+        unsigned calibrating : 1;
     };
     unsigned char value;
 } flags2_t;
@@ -500,9 +484,11 @@ uint16_t throttle_accum = 0;
 uint16_t throttle_count = 0;
 uint8_t prev_steering = 0;
 int8_t speed_offset = 0;
-// stick drift
+// stick drifts 0-255
 int8_t throttle_offset = 0;
 int8_t steering_offset = 0; 
+// multiple calibration packets
+uint8_t calibration_count = 0;
 uint16_t temp;
 // limited by song length
 #define MIN_SPEED_OFFSET -8
@@ -706,14 +692,7 @@ void radio_on()
 // DEBUG
 //LED_LAT = 0;
     T1CON = 0b10100001;
-#ifndef USE_FREQSCALE
     TMR1 = RADIO_DELAY;
-#else
-    if(flags.playing_sound)
-        TMR1 = RADIO_DELAY;
-    else
-        TMR1 = RADIO_DELAY2;
-#endif
 
 
     PIR1bits.TMR1IF = 0;
@@ -776,16 +755,6 @@ void write_serial(uint8_t value)
 
 void play_song()
 {
-#ifdef USE_FREQSCALE
-// 1:32 prescaler for 32Mhz clock
-    T0CON = 0b10000100;
-    SPBRG = CLOCKSPEED / 4 / BAUD - 1;
-// ADC clock is Fosc/64
-    ADCON2 = 0b10111110;
-// high clockspeed
-    OSCCON = 0b11100000;
-    flags.fastclock = 1;
-#endif
 
 
     song_tick = 0;
@@ -925,16 +894,13 @@ uint8_t read_byte(uint8_t address)
 
 void write_settings()
 {
-    write_byte(0, speed_offset);
-    write_byte(1, throttle_offset);
-    write_byte(2, steering_offset);
+// no reason for the address beside wear leveling
+    write_byte(8, speed_offset);
 }
 
 void read_settings()
 {
-    speed_offset = read_byte(0);
-    throttle_offset = read_byte(1);
-    steering_offset = read_byte(2);
+    speed_offset = read_byte(8);
     if(speed_offset > MAX_SPEED_OFFSET ||
         speed_offset < MIN_SPEED_OFFSET)
     {
@@ -996,9 +962,7 @@ void main()
 
 	flags.value = 0;
     flags2.value = 0;
-#ifdef USE_FREQSCALE
-    flags.fastclock = 1;
-#endif
+    flags2.calibrating = 1;
 
     tick = 0;
 
@@ -1051,7 +1015,7 @@ void main()
 // get calibration mode from buttons
     if(!INCREASE_PORT || !DECREASE_PORT)
     {
-        flags2.calibration_mode = 1;
+        flags2.raw_mode = 1;
         play_calibration_tone();
     }
     else
@@ -1080,37 +1044,31 @@ void main()
             flags.send_packet = 0;
 
 
-// division step from interrupt handler
-            uint8_t steering_value = steering_accum / steering_count / 4;
-            uint8_t throttle_value = throttle_accum / throttle_count / 4;
-            uint8_t code_byte = (flags2.calibration_mode << 7) | 
+            uint16_t steering_value = steering_accum / steering_count / 4;
+            uint16_t throttle_value = throttle_accum / throttle_count / 4;
+            uint8_t code_byte = (flags2.raw_mode << 7) | 
                 (speed_offset & 0x7f);
 
-// handle calibration with raw ADC values
-            if(flags2.calibration_mode)
+// detect stick centers
+// LDO drifts when it starts, so this is using a fudge factor
+            if(flags2.calibrating && !flags2.raw_mode)
             {
-// wait for song to finish & buttons to be released
-                if(!flags.playing_sound &&
-                    INCREASE_PORT &&
-                    DECREASE_PORT)
-                {
-// set centers to current values
-                    throttle_offset = 128 - throttle_value;
-                    steering_offset = 128 - steering_value;
-                    write_settings();
-// exit calibration mode
-                    flags2.calibration_mode = 0;
-                }
+#define LDO_FUDGE 1
+                throttle_offset = 128 - throttle_value - LDO_FUDGE;
+                steering_offset = 128 - steering_value - LDO_FUDGE;
+                flags2.calibrating = 0;
             }
 
-// stick drift applies to next steps
-            steering_value += steering_offset;
-            throttle_value += throttle_offset;
 
-// DEBUG
-//uint8_t steering_value = 121;
-//uint8_t throttle_value = 130;
+// apply stick drift to accumulated values
+            if(!flags2.raw_mode && !flags2.calibrating)
+            {
+                steering_value += steering_offset;
+                throttle_value += throttle_offset;
+            }
 
+
+// throw away 1st packet
             radio_on();
 
 
@@ -1146,12 +1104,14 @@ void main()
 
             flush_serial();
             radio_off();
+
+
 // DEBUG
 //LED_LAT = 0;
 
-            if(!flags2.calibration_mode)
+            if(!flags2.raw_mode)
             {
-
+// don't trap these if they start up pressed
                 DEBOUNCE(flags.increase_pressed, \
                     INCREASE_PORT, \
                     handle_speed_increase())
@@ -1223,9 +1183,10 @@ void main()
 //             }
 //            prev_steering = steering2;
 
-            if(!flags2.calibration_mode)
+            if(!flags2.raw_mode)
             {
 // play steering sound as long as it's steering
+// don't trap these if they're not stick drift compensated
                 if(!flags.playing_sound && 
                     ((steering2 > STEERING_CENTER + STEERING_DEADBAND) ||
                     (steering2 < STEERING_CENTER - STEERING_DEADBAND)))
@@ -1245,21 +1206,6 @@ void main()
             }
 #endif // USE_STEERING_SOUND
 
-#ifdef USE_FREQSCALE
-// serial port must be done before changing clockspeed
-            if(!flags.playing_sound && flags.fastclock)
-            {
-// low clockspeed
-// PLL doesn't work at this speed
-                OSCCON = 0b11000000;
-// 1:2 prescaler for 2Mhz clock
-                T0CON = 0b10000000;
-                SPBRG = CLOCKSPEED2 / 4 / BAUD - 1;
-// ADC clock is Fosc/16
-                ADCON2 = 0b10111101;
-                flags.fastclock = 0;
-            }
-#endif // USE_FREQSCALE
 
 
 

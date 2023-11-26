@@ -111,6 +111,9 @@ const uint8_t DATA_KEY[] =
 #define SPEAKER_LAT2 LATAbits.LATA4
 #define SPEAKER_TRIS1 TRISAbits.TRISA5
 #define SPEAKER_TRIS2 TRISAbits.TRISA4
+
+
+
 #define INCREASE_PORT PORTCbits.RC5
 #define DECREASE_PORT PORTCbits.RC6
 
@@ -238,8 +241,8 @@ const uint16_t channels[] =
 // index to freq in CPU clocks
 #define LATENCY 0
 // tuned based on speaker & clockspeed
-//#define BASE_FREQ 5886628
-#define BASE_FREQ 3000000
+#define BASE_FREQ 5886628
+//#define BASE_FREQ 3000000
 #define FREQ_TO_PERIOD(f) (uint16_t)(-BASE_FREQ / 4 / (f * 2) + LATENCY)
 
 

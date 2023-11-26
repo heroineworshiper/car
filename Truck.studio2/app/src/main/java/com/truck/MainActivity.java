@@ -118,6 +118,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				int y = Settings.border;
 				Log.v("MainActivity", "updateGUI");
 				readouts.add(battery = new LargeReadout(x, y, "BATTERY:", "0.00"));
+                battery.value_color = Color.GREEN;
 				battery.x = canvas.getWidth() / 2 - battery.getW(paint) / 2;
 				y += battery.getH(paint);
 				
@@ -133,6 +134,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				};
 
 				readouts.add(batteryAnalog = new SmallReadout(x, y, 1));
+                batteryAnalog.value_color = Color.GREEN;
 				batteryAnalog.setPositions(positions);
 				batteryAnalog.setTitle("BATTERY ADC:");
 				y += batteryAnalog.getH(paint);
@@ -147,6 +149,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				y += gyroTitle.getH(paint);
 				
 				readouts.add(gyro = new SmallReadout(x, y, 2));
+                gyro.value_color = Color.GREEN;
 				gyro.setPositions(positions);
 				gyro.update(0, "0");
 				gyro.update(1, "0");
@@ -167,6 +170,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				y += radioTitle.getH(paint);
 				
 				readouts.add(radios = new SmallReadout(x, y, 2));
+                radios.value_color = Color.GREEN;
 				radios.setPositions(positions);
 				radios.update(0, "0");
 				radios.update(1, "0");
@@ -174,12 +178,14 @@ public class MainActivity extends WindowBase implements OnTouchListener
 
 
 				readouts.add(heading = new SmallReadout(x, y, 2));
+                heading.value_color = Color.GREEN;
 				heading.setTitle("HEADING:");
 				heading.setPositions(positions);
 				heading.update(0, "0.0");
 				y += heading.getH(paint);
 
 				readouts.add(throttle = new SmallReadout(x, y, 1));
+                throttle.value_color = Color.GREEN;
 				throttle.setTitle("THROTTLE:");
 				throttle.setPositions(positions);
 				throttle.update(0, "0");
@@ -197,6 +203,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 //				y += path_x.getH(paint);
 
 				readouts.add(rpm = new SmallReadout(x, y, 2));
+                rpm.value_color = Color.GREEN;
 				rpm.setTitle("RPM:");
 				rpm.setPositions(positions);
 				rpm.update(0, "0.0");
@@ -213,6 +220,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				y += leashTitle.getH(paint);
 
                 readouts.add(leash = new SmallReadout(x, y, 2));
+                leash.value_color = Color.GREEN;
 				leash.setPositions(positions);
 				leash.update(0, "0");
 				leash.update(1, "0");
@@ -221,16 +229,20 @@ public class MainActivity extends WindowBase implements OnTouchListener
 
 
 
+                SmallReadout remote_title;
+				readouts.add(remote_title = new SmallReadout(x, y, 2));
+				remote_title.setPositions(positions);
+				remote_title.setTitle("REMOTE:");
+				remote_title.update(0, "STEERING");
+				remote_title.update(1, "THROTTLE");
+				y += remote_title.getH(paint);
 
-				readouts.add(remote_steering = new SmallReadout(x, y, 2));
-				remote_steering.setTitle("REMOTE STEERING:");
-				remote_steering.setPositions(positions2);
-				y += remote_steering.getH(paint);
-
-				readouts.add(remote_throttle = new SmallReadout(x, y, 2));
-				remote_throttle.setTitle("REMOTE THROTTLE:");
-				remote_throttle.setPositions(positions2);
-				y += remote_throttle.getH(paint);
+				readouts.add(remote = new SmallReadout(x, y, 2));
+				remote.setPositions(positions);
+                remote.value_color = Color.GREEN;
+				remote.update(0, "0");
+				remote.update(1, "0");
+				y += remote.getH(paint);
 
 // 				readouts.add(mag_z = new SmallReadout(x, y, 3));
 // 				mag_z.setTitle("MAG Z:");
@@ -238,6 +250,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 // 				y += mag_z.getH(paint);
 
 				readouts.add(messages = new SmallReadout(x, y, 1));
+                messages.value_color = Color.GREEN;
 				messages.update(0, Settings.message);
 			}
 
@@ -279,8 +292,8 @@ public class MainActivity extends WindowBase implements OnTouchListener
 							.format("%d", Truck.rpm)
 							.toString());
 
-            remote_steering.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_steering).toString());
-            remote_throttle.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_throttle).toString());
+            remote.update(0, new Formatter(new StringBuilder()).format("%d", Truck.remote_steering).toString());
+            remote.update(1, new Formatter(new StringBuilder()).format("%d", Truck.remote_throttle).toString());
 
 			leash.update(0, Integer.toString(Truck.leash_distance));
 			leash.update(1, new Formatter(
@@ -311,7 +324,7 @@ public class MainActivity extends WindowBase implements OnTouchListener
 	LargeReadout battery;
 	SmallReadout gyro, heading /*, headingFeedback */;
 	SmallReadout radios, throttle;
-	SmallReadout remote_throttle, remote_steering;
+	SmallReadout remote;
 	SmallReadout rpm;
 	SmallReadout leash;
 	SmallReadout batteryAnalog;

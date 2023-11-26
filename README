@@ -64,11 +64,11 @@ arm_truck2.c, arm_truck2.h: the 3D printed truck firmware
 
 settings.car: settings file that goes in /sdcard/truck/
 
-antler2.FCStd: antlers  
+antler3.FCStd: antlers  
     Print with .8mm nozzle .32 layer height, 20% infill
     Print in halves.  Glue a half to a tab to make a right angle.
     Then glue the other half to the right angle.
-    
+
 
 a1323.pcb: hall effect sensor board for motor sensor
 
@@ -119,6 +119,7 @@ leash9.FCStd: leash enclosure
     no support except for the pot
     .2mm layers .4mm nozzle
 
+light3.FCStd: nose mount for LED lightbulb
 
 offroad2.stl: OBSOLETE offroad rear tire for hard TPU
     print with .4mm nozzle
@@ -197,8 +198,10 @@ container3.FCStd:
     Use .24mm on 1st 4 layers & .2 on later layers with fixcura.py.
     Ideally would use .32 on later layers.
 
-    TODO: Create tab for aligning handle.
-        Round all the wire passages
+    TODO: Create fiducials for aligning handle.
+        New mounting holes for antlers.
+        2nd row of front mounting holes for nose.
+        Isogrid on the inside
 
 
 
@@ -309,15 +312,15 @@ rear_wheel.FCStd: OBSOLETE motor wheel coupling
 
 
 motor4.FCStd: motor mount
-    The following use .8mm nozzle, .32 layer height, support with 80deg overhang
-    shroud
+    The following use .8mm nozzle, .32 layer height, 100% infill
+    SHROUD - support with 80deg overhang
     tpu out of TPU
     clamp * 4
-    motor plate
+    MOTOR PLATE - no support, PETG
 
     The following use .4mm nozzle, .2mm layer
     SENSOR PLATE
-        .8mm top/bottom thickness
+        100% infill
     MAGNET HOLDER
         PETG
         support to base
@@ -396,7 +399,7 @@ isogrid_plane.FCMacro:
     create isogrids for cam_remote, car_remote, & cam_gearbox.FCStd
 
 clamshell.FCMacro:
-    create walls for cam_remote, car_remote
+    create walls for cam_remote, car_remote OBSOLETE
 
 gopro_case2.FCStd: case for a gopro 7
     print with support everywhere, lesser overhangs facing up

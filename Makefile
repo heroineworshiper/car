@@ -256,7 +256,7 @@ ARM_TRUCK2_OBJS := \
 
 ARM_CAM_OBJS := \
 	arm_cam.o \
-        arm_fs.o \
+        arm_fs_.o \
         arm_usb.o
 
 PI_OBJS := \
@@ -267,7 +267,7 @@ PI_OBJS := \
 
 
 
-all: truck2.bin arm_cam.bin
+all: truck2.bin cam.bin
 
 # program atmega328 fuse.  page 283
 leash_fuse:
@@ -589,6 +589,7 @@ stm32f4xx_exti.o: stm32f4xx_exti.c
 arm_cam.o: 			     arm_cam.c
 arm_car.o: 			     arm_car.c
 arm_fs.o:                            arm_fs.c
+arm_fs_.o:                            arm_fs.c
 arm_motors.o:                        arm_motors.c
 arm_nav.o:                           arm_nav.c
 arm_truck.o: 			     arm_truck.c

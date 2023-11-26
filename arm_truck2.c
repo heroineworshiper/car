@@ -83,7 +83,8 @@
 
 #define M_TO_MI 1609.0
 #define PI 3.14159
-
+// encoder counts per meter
+#define LEASH_TO_M 28.0
 
 // size of settings block
 #define SETTINGS_SIZE 256
@@ -424,6 +425,7 @@ uint16_t get_chksum(uint8_t *buffer, uint8_t size)
 void handle_radio_packet(unsigned char *ptr)
 {
     truck.stick_packets++;
+//TRACE2
 
 // packet good
 	TOGGLE_PIN(LED_GPIO, GREEN_LED);
@@ -447,6 +449,7 @@ void handle_radio_packet(unsigned char *ptr)
 
     if((ptr[2] & 0x40))
         truck.speed_offset = truck.speed_offset - 0x80;
+
 
 // convert to a binary steering value
     truck.binary_steering = STEERING_MID;
@@ -474,8 +477,38 @@ void handle_radio_packet(unsigned char *ptr)
         }
     }
 
+
+
+#ifdef USE_LEASH
+// adjust leash offset with the binary steering value
+    if(leash.active)
+    {
+// reset the stick position
+        if(truck.binary_steering == STEERING_MID)
+            leash.stick_state = truck.binary_steering;
+            
+        if((leash.stick_state == STEERING_MID ||
+            leash.stick_state == FAST_LEFT) &&
+            truck.binary_steering == FAST_RIGHT)
+        {
+            leash.stick_state = truck.binary_steering;
+            leash.current_offset--;
+            if(leash.current_offset < -1) leash.current_offset = -1;
+        }
+        else
+        if((leash.stick_state == STEERING_MID ||
+            leash.stick_state == FAST_RIGHT) &&
+            truck.binary_steering == FAST_LEFT)
+        {
+            leash.stick_state = truck.binary_steering;
+            leash.current_offset++;
+            if(leash.current_offset > 1) leash.current_offset = 1;
+        }
 //TRACE2
-//print_number(truck.binary_steering);
+//print_number(leash.current_offset);
+    }
+#endif
+
 
 
 
@@ -605,8 +638,8 @@ void dump_config()
 	print_float(leash.max_speed);
 	print_text("\nleash.center=");
 	print_float(TO_DEG(leash.center));
-//	print_text("\nleash.max_angle=");
-//	print_float(TO_DEG(leash.max_angle));
+	print_text("\nleash.x_offset=");
+	print_float(TO_DEG(leash.x_offset));
     print_text("\nleash_d_size=");
     print_number(leash.steering_d_size);
     print_text("\nleash_i_limit=");
@@ -695,6 +728,7 @@ int read_config_packet(const unsigned char *buffer)
     leash.speed_to_distance = READ_FLOAT32(buffer, offset);
     leash.max_speed = READ_FLOAT32(buffer, offset);
     leash.center = READ_FLOAT32(buffer, offset);
+    leash.x_offset = READ_FLOAT32(buffer, offset);
 //    leash.max_angle = READ_FLOAT32(buffer, offset);
 	leash.steering_d_size = buffer[offset++];
 	leash.steering_i_limit = buffer[offset++];
@@ -864,7 +898,9 @@ static void handle_beacon()
                 buf[offset++] = truck.throttle;
 
 #ifdef USE_LEASH
-                WRITE_FLOAT32(buf, offset, leash.angle);
+// write raw angle
+                float angle2 = leash.angle + leash.center;
+                WRITE_FLOAT32(buf, offset, angle2);
                 WRITE_INT16(buf, offset, leash.distance);
 #endif
 
@@ -1064,11 +1100,12 @@ void TIM1_UP_TIM10_IRQHandler()
 		
 		truck.tick++;
 
-// Update shutdown timer
+// Update timeouts
 		if(truck.bt_timeout > 0)
 		{
 			truck.bt_timeout--;
 		}
+
 		if(truck.radio_timeout > 0)
 		{
 			truck.radio_timeout--;
@@ -1080,10 +1117,13 @@ void TIM1_UP_TIM10_IRQHandler()
             leash.timeout++;
         }
         else
+        if(leash.active)
         {
+// reset the offset after deactivating it
+            leash.current_offset = 0;
             leash.active = 0;
         }
-#endif
+#endif // USE_LEASH
 
 // update statistics
         if(truck.tick - truck.stat_time >= TIMER_HZ)
@@ -1315,9 +1355,14 @@ int leash_steering()
 {
     if(leash.active)
     {
+// apply user offset to center X
+        float center = leash.x_offset * LEASH_TO_M * leash.current_offset;
+// make X encoder count similar to the range of angles
+#define X_SCALER 32
+// feedback based on X
         float steering_feedback100 = do_pid(&leash.steering_pid,
-		        leash.angle - leash.center,
-		        get_derivative(&leash.steering_d),
+		        (leash.x - center) / X_SCALER,
+		        get_derivative(&leash.steering_d) / X_SCALER,
 		        0);
         truck.steering_pwm = truck.mid_steering_pwm +
 		    steering_feedback100 * 
@@ -1361,7 +1406,17 @@ void handle_steering()
 {
     int throttle_active = 0;
     float steering_overshoot = 0;
-    
+
+#ifdef USE_LEASH
+// leash overrides proprietary radio
+    if(leash.active)
+    {
+        if(leash.distance >= leash.distance0)
+            throttle_active = 1;
+    }
+    else
+#endif
+// proprietary radio
     if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband ||
         truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
     {
@@ -1369,11 +1424,13 @@ void handle_steering()
     }
 
 #ifdef USE_LEASH
-    if(leash.active && leash.distance >= leash.distance0)
-        throttle_active = 1;
-#endif
-
-// manual steering
+// leash overrides proprietary radio for manual & auto steering
+    if(leash_steering())
+    {
+    }
+    else
+#endif // USE_LEASH
+// manual steering with proprietary radio
     if(!throttle_active || !truck.auto_steering)
     {
         if(truck.steering > truck.remote_steering_mid + truck.remote_steering_deadband)
@@ -1418,13 +1475,6 @@ void handle_steering()
             truck.steering_timeout = 0;
         }
         else
-// stick has priority over leash
-#ifdef USE_LEASH
-        if(leash_steering())
-        {
-        }
-        else
-#endif // USE_LEASH
 // no steering input
         {
 		    truck.steering_pwm = truck.mid_steering_pwm;
@@ -1494,16 +1544,7 @@ void handle_steering()
                 break;
             
             default:
-#ifdef USE_LEASH
-// leash to PWM
-                if(leash_steering())
-                {
-                }
-                else
-#endif // USE_LEASH
-                {
-                    truck.need_steering_feedback = 1;
-                }
+                truck.need_steering_feedback = 1;
                 break;
         }
     }
@@ -1711,6 +1752,7 @@ void do_leash_throttle()
 
     leash.distance2 = leash.distance;
 
+// distance must be above minimum to start
     if(leash.distance < leash.distance0)
     {
         truck.power = 0;
@@ -1721,14 +1763,22 @@ void do_leash_throttle()
 // slowest min/mile
         float min_speed = rpm_to_pace(leash.rpm0);
         float pace = min_speed;
-        pace -= leash.speed_to_distance * ((float)leash.distance - leash.distance0);
+// default to using Y for speed
+        float distance = leash.y;
+// clamp Y to minimum distance0
+        if(distance < leash.distance0)
+            distance = leash.distance0;
+// increase speed proportionally to distance
+        pace -= leash.speed_to_distance * ((float)distance - leash.distance0);
 
-// limit to fastest min/mile
+// fastest min/mile allowed
         float max_speed = leash.max_speed;
+// start tapering here
         float taper_angle0 = TO_RAD(30.0);
+// maximum tapering here
         float taper_angle1 = TO_RAD(45.0);
-        float angle_mag = fabs(leash.angle - leash.center);
-// reduce max speed if angle is over a certain amount
+        float angle_mag = fabs(leash.angle);
+// reduce max min/mile if angle is over a certain amount
         if(angle_mag >= taper_angle0)
         {
             if(angle_mag >= taper_angle1)
@@ -1925,6 +1975,14 @@ void feedback()
             handle_bt_input(throttle_magnitude);
 		}
 		else
+#ifdef USE_LEASH
+        if(leash.active)
+        {
+// leash overrides stick
+            do_leash_throttle();
+        }
+        else
+#endif
 // stick controller
 		if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband ||
             truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
@@ -1942,14 +2000,6 @@ void feedback()
             }
 		}
 		else
-#ifdef USE_LEASH
-        if(leash.active)
-        {
-// stick overrides leash if throttle is on
-            do_leash_throttle();
-        }
-        else
-#endif
 		{
 			truck.power = 0;
 		}
@@ -2448,7 +2498,7 @@ void start_motor_test()
     TRACE2
     print_text("Starting motor test\n");
     truck.testing_motors = 1;
-    truck.power = MOTOR_PWM_PERIOD / 4;
+    truck.power = MOTOR_PWM_PERIOD / 2;
     truck.test_tick = truck.tick + TIMER_HZ;
     truck.test_state = START_TEST;
 }
@@ -2683,17 +2733,18 @@ void handle_motors()
 
 // 1 revolution for the starting points
                 case TEST_PASS1:
-                    truck.test_tick = truck.tick + TIMER_HZ / 10;
+                    truck.test_tick = truck.tick + TIMER_HZ / 100;
 
-                    truck.test_phase += ANGLE_STEP;
+                    truck.test_phase += ANGLE_STEP / 10;
                     if(truck.test_phase >= 360 * 7)
                     {
                         truck.test_state = TEST_PASS2;
                         truck.test_phase = 0;
-                        truck.test_counter = 0;
+                        truck.test_read = 0;
                         truck.motors[LEFT_MOTOR].phase = 0;
                         truck.motors[RIGHT_MOTOR].phase = 0;
                         write_motors();
+// wait 1 second before starting test
                         truck.test_tick = truck.tick + TIMER_HZ;
                     }
                     else
@@ -2705,13 +2756,12 @@ void handle_motors()
                     break;
 
 
-// capture waveforms
+// build motor tables
                 case TEST_PASS2:
-//                    truck.test_tick = truck.tick + TIMER_HZ;
-                    truck.test_tick = truck.tick + TIMER_HZ / 2;
-                    if(truck.test_counter == 1)
+                    if(truck.test_read == 1)
                     {
-                        truck.test_counter = 0;
+// capture sensor values
+                        truck.test_read = 0;
 
                         if(truck.power > 0)
                         {
@@ -2732,7 +2782,7 @@ void handle_motors()
                             motor_lines[index][3] = truck.halls[RIGHT_HALL + 1].value;
                         }
 
-                        truck.test_phase += ANGLE_STEP;
+                        truck.test_phase += ANGLE_STEP / 40;
                         if(truck.test_phase >= 360 * 7)
                         {
 // done testing
@@ -2750,6 +2800,7 @@ void handle_motors()
                         else
                         {
 // advance motor phase
+                            truck.test_tick = truck.tick + TIMER_HZ / 100;
                             truck.motors[LEFT_MOTOR].phase = truck.test_phase % 360;
                             truck.motors[RIGHT_MOTOR].phase = truck.test_phase % 360;
                             write_motors();
@@ -2757,8 +2808,21 @@ void handle_motors()
                     }
                     else
                     {
-                        truck.test_counter = 1;
-// begin reading halls
+                        if((truck.test_phase % ANGLE_STEP) == 0)
+                        {
+                            truck.test_read = 1;
+// read the sensors
+                            truck.test_tick = truck.tick + TIMER_HZ / 10;
+                        }
+                        else
+                        {
+// rotate the motors
+                            truck.test_phase += ANGLE_STEP / 40;
+                            truck.test_tick = truck.tick + TIMER_HZ / 100;
+                            truck.motors[LEFT_MOTOR].phase = truck.test_phase % 360;
+                            truck.motors[RIGHT_MOTOR].phase = truck.test_phase % 360;
+                            write_motors();
+                        }
                     }
                     break;
             }
@@ -3289,14 +3353,36 @@ void handle_input()
             DISABLE_INTERRUPTS
             leash.timeout = 0;
             ENABLE_INTERRUPTS
-            leash.active = 1;
+
+// initialize the leash
+            if(!leash.active)
+            {
+                leash.stick_state = STEERING_MID;
+                leash.current_offset = 0;
+                leash.active = 1;
+            }
+
+// get the raw data
             leash.distance = (int16_t)(leash.buffer[0] | (leash.buffer[1] << 8));
             leash.angle = (int16_t)(leash.buffer[2] | (leash.buffer[3] << 8));
             leash.angle /= 256;
             leash.angle = -TO_RAD(leash.angle);
-            update_derivative(&leash.steering_d, leash.angle);
+            leash.angle -= leash.center;
+// convert to X Y in encoder counts
+            leash.x = leash.distance * sin(leash.angle);
+            leash.y = leash.distance * cos(leash.angle);
 
+//            update_derivative(&leash.steering_d, leash.angle);
+            update_derivative(&leash.steering_d, leash.x);
+
+// deglitch
             if(leash.distance < 0) leash.distance = 0;
+
+            print_text("LEASH X: ");
+            print_float(leash.x);
+            print_text("Y: ");
+            print_float(leash.y);
+            print_lf();
 
 //             print_text("DISTANCE: ");
 //             print_number(leash.distance);
@@ -3343,6 +3429,7 @@ int main(void)
 	truck.steering = 0;
 
 
+// some default settings
 	truck.mid_steering100 = 50;
 	truck.max_steering100 = 100;
     truck.min_steering100 = 25;
@@ -3389,9 +3476,13 @@ int main(void)
 // RPM error -> throttle
 	init_pid(&truck.rpm_pid, 0, 0, 0, 0, 0, 0, 0);
 
+#ifdef USE_LEASH
+// some default settings
+    leash.x_offset = .5;
 	init_pid(&leash.steering_pid, 0, 0, 0, 0, 0, 0, 0);
 	leash.steering_d_size = 10;
 	init_derivative(&leash.steering_d, leash.steering_d_size);
+#endif // USE_LEASH
 
 	truck.rpm_dv_size = 10;
 	init_derivative(&truck.rpm_dv, truck.rpm_dv_size);

@@ -8,6 +8,12 @@ import android.graphics.Rect;
 import android.util.Log;
 
 public class LargeReadout extends Container {
+
+	String title;
+	String value;
+    int title_color = Truck.settings.foreground;
+    int value_color = Truck.settings.foreground;
+
 	public LargeReadout(int x, 
 			int y,
 			String title,
@@ -21,7 +27,7 @@ public class LargeReadout extends Container {
 	public void draw(Canvas g, Paint p)
 	{
 //System.out.println("CopterMainWindow.paint 1");
-		p.setColor(Truck.settings.foreground);
+		p.setColor(title_color);
         p.setStyle(Paint.Style.FILL);
 
 		int x = this.x;
@@ -45,6 +51,7 @@ public class LargeReadout extends Container {
 		y += text_size.height();
 		g.drawText(title, centerX - text_size.width() / 2, y, p);
 
+		p.setColor(value_color);
 		p.setTypeface(Truck.settings.big_font);
 		p.setTextSize(Truck.settings.big_font_size);
 		p.getTextBounds(value,
@@ -115,10 +122,6 @@ public class LargeReadout extends Container {
            text_size);
 		return result + text_size.height() + Settings.margin;
 	}
-
-	String title;
-	String value;
-
 }
 
 

@@ -1,4 +1,4 @@
-# create sections for car_remote
+# create sections for car_remote & cam_remote
 
 import libclamshell
 import libisogrid
