@@ -88,7 +88,8 @@
 #define LED_PIN GPIO_Pin_13
 #define LED_GPIO GPIOC
 
-
+#define BRAKE_PIN GPIO_Pin_14
+#define BRAKE_GPIO GPIOA
 
 // SPI
 #define CLK_PIN GPIO_Pin_14
@@ -144,11 +145,12 @@ const uint8_t DATA_KEY[] =
 #define MIN_FREQ 160
 #define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
 // freq hopping.  Offset the traction controller frequencies.
+// use freq_worksheet.ods to visualize these
 const uint16_t channels[] = 
 {
     MIN_FREQ + FREQ_RANGE / 16, 
     MAX_FREQ - FREQ_RANGE / 16, 
-    MIN_FREQ + FREQ_RANGE * 4 / 8 + FREQ_RANGE / 16,
+    MIN_FREQ + FREQ_RANGE * 4 / 8 + FREQ_RANGE / 16 - 100, // fudge the spacing
     MIN_FREQ + FREQ_RANGE * 2 / 8 + FREQ_RANGE / 16, 
     MIN_FREQ + FREQ_RANGE * 6 / 8 - FREQ_RANGE / 16,
     MIN_FREQ + FREQ_RANGE * 1 / 8 + FREQ_RANGE / 16, 
@@ -222,6 +224,8 @@ volatile int missed_packets = 0;
 volatile int packet_tick = 0;
 // time of next hop
 volatile int next_hop = 0;
+// time of last hop
+volatile int last_hop = 0;
 volatile int need_hop = 0;
 volatile int scanning = 0;
 #define MAX_MISSED_PACKETS HOP_HZ
@@ -317,7 +321,10 @@ void write_motor()
         if(motor_enabled)
             motor_packet[3] = phase / FRACTION;
         else
+        if(PIN_IS_SET(BRAKE_GPIO, BRAKE_PIN))
             motor_packet[3] = COAST_MOTOR;
+        else
+            motor_packet[3] = GROUND_MOTOR;
     }
 }
 
@@ -371,13 +378,19 @@ void get_packet()
             timelapse_code = receive_buf[0];
             adc_raw = receive_buf[1];
             rf_valid = 1;
-TRACE2
-print_text("timelapse_code=");
-print_number(timelapse_code);
-print_text("adc_raw=");
-print_number(adc_raw);
+            
+            int time_diff = packet_tick - last_hop;
+// TRACE2
+// print_text("timelapse_code=");
+// print_number(timelapse_code);
+// print_text("adc_raw=");
+// print_number(adc_raw);
+print_text("GOT IT ");
+// ticks after last hop
+print_number(time_diff);
+print_lf();
 
-// schedule the next hop to the start time of this packet + HOP duration + HOP_LAG
+// schedule the next hop based on the end time of this packet
             scanning = 0;
             missed_packets = 0;
             next_hop = packet_tick + HZ / HOP_HZ - HOP_LAG;
@@ -545,9 +558,10 @@ void next_channel()
     {
         current_channel = 0;
     }
-//print_text("tune chan=");
-//print_number(current_channel);
-//print_lf();
+print_text("tune chan=");
+print_number(current_channel);
+print_number(channels[current_channel]);
+print_lf();
     write_radio(CFSREG(channels[current_channel]));
 }
 
@@ -663,6 +677,7 @@ void TIM1_UP_TIM10_IRQHandler()
 
         if(tick >= next_hop)
         {
+            last_hop = tick;
             need_hop = 1;
         }
 
@@ -914,7 +929,8 @@ int main(void)
 
 /* Enable the GPIOs */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA |
-			RCC_AHB1Periph_GPIOB, 
+			RCC_AHB1Periph_GPIOB |
+            RCC_AHB1Periph_GPIOC, 
 		ENABLE);
 
 // enable the interrupt handler
@@ -1004,7 +1020,7 @@ int main(void)
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
 	GPIO_Init(SPI_GPIO, &GPIO_InitStructure);
-    
+
     EXTI_InitTypeDef EXTI_InitStructure;
     EXTI_InitStructure.EXTI_Line = EXTI_Line14;
     EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
@@ -1015,6 +1031,14 @@ int main(void)
  	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
  	NVIC_Init(&NVIC_InitStructure);
 #endif // USE_SPI
+
+// init the brake button
+    GPIO_InitStructure.GPIO_Pin = BRAKE_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(BRAKE_GPIO, &GPIO_InitStructure);
+
+
 
 	init_motor();
     init_radio();

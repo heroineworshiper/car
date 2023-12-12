@@ -1156,6 +1156,20 @@ Element["" "PAD" "" "" 85.5300mm 58.2200mm 184.00mil 50.00mil 3 100 ""]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
 
 	)
+
+Element["" "PAD" "" "" 69.5200mm 39.8800mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
+
+Element["" "PAD" "" "" 69.5300mm 37.9300mm 184.00mil 50.00mil 3 100 ""]
+(
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
+	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
+
+	)
 Layer(1 "top")
 (
 )
@@ -1320,6 +1334,8 @@ Layer(5 "power")
 	Line[61.4500mm 51.3300mm 61.4500mm 54.0300mm 0.2500mm 20.00mil "clearline"]
 	Line[61.4500mm 54.0300mm 63.0000mm 55.5800mm 0.2500mm 20.00mil "clearline"]
 	Line[85.5000mm 58.1400mm 83.2400mm 58.1400mm 0.2500mm 20.00mil "clearline"]
+	Line[68.9700mm 42.7000mm 68.9700mm 39.5900mm 0.2500mm 20.00mil "clearline"]
+	Line[69.4700mm 39.4200mm 69.4900mm 39.4000mm 0.2500mm 20.00mil "clearline"]
 )
 Layer(6 "bottom")
 (
@@ -1371,4 +1387,5 @@ Layer(10 "silk")
 	Text[79.1400mm 65.6600mm 0 78 "100nH" ""]
 	Text[74.5200mm 59.6500mm 0 78 "SI4421" ""]
 	Text[82.3800mm 60.0100mm 1 78 "100uF" ""]
+	Text[69.1000mm 36.6200mm 1 78 "BRAKE" ""]
 )

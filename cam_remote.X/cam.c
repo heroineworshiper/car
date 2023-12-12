@@ -162,7 +162,7 @@ const uint16_t channels[] =
 {
     MIN_FREQ + FREQ_RANGE / 16, 
     MAX_FREQ - FREQ_RANGE / 16, 
-    MIN_FREQ + FREQ_RANGE * 1 / 2 + FREQ_RANGE / 16,
+    MIN_FREQ + FREQ_RANGE * 1 / 2 + FREQ_RANGE / 16 - 100, // fudge the spacing
     MIN_FREQ + FREQ_RANGE * 1 / 4 + FREQ_RANGE / 16, 
     MIN_FREQ + FREQ_RANGE * 3 / 4 - FREQ_RANGE / 16,
     MIN_FREQ + FREQ_RANGE * 1 / 8 + FREQ_RANGE / 16, 
