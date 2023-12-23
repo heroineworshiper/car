@@ -216,8 +216,12 @@ typedef struct
 // motor state
 typedef struct
 {
-// sensed position in absolute degrees
+// last sensed position in absolute degrees
     int angle;
+// last angle for computing direction in absolute degrees
+    int ref_angle;
+// last direction detected
+    int reverse;
 // driven position in degrees in the current pole
     int phase;
     int prev_phase;
@@ -234,9 +238,11 @@ typedef struct
     int offset;
 // leash angle in rads
     float angle;
-// latest distance in encoder counts
-    int distance;
-// previous distance
+// length read from serial port
+    int length;
+// latest ground distance in encoder counts
+    float distance;
+// previous ground distance
     int distance2;
     int timeout;
     int active;

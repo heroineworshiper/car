@@ -130,7 +130,7 @@ offroad2.stl: OBSOLETE offroad rear tire for hard TPU
 
 offroad3.stl: offroad rear tire for soft TPE
     print with .8mm nozzle
-    .32mm layer height stretched to .36
+    All .32mm layer height stretched to .36
     260C
     Set Z seam to "shortest" to overcome nozzle clogs
     Print 1st layer at 10mm/s
@@ -153,7 +153,7 @@ tire3.stl: OBSOLETE front tire for hard TPU
 tire4.stl: front tire for soft TPE
     print with .8mm nozzle
     TPE
-    .32mm layer height stretch to .36mm
+    All .32mm layer height stretched to .36mm
     260C
     left & right must be mirror images
 

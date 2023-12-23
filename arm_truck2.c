@@ -83,8 +83,11 @@
 
 #define M_TO_MI 1609.0
 #define PI 3.14159
+// leash parameters
 // encoder counts per meter
 #define LEASH_TO_M 28.0
+// animal height above leash in encoder counts
+#define ANIMAL_Z (LEASH_TO_M * .6)
 
 // size of settings block
 #define SETTINGS_SIZE 256
@@ -507,7 +510,7 @@ void handle_radio_packet(unsigned char *ptr)
 //TRACE2
 //print_number(leash.current_offset);
     }
-#endif
+#endif // USE_LEASH
 
 
 
@@ -898,10 +901,10 @@ static void handle_beacon()
                 buf[offset++] = truck.throttle;
 
 #ifdef USE_LEASH
-// write raw angle
+// write raw angle & length
                 float angle2 = leash.angle + leash.center;
                 WRITE_FLOAT32(buf, offset, angle2);
-                WRITE_INT16(buf, offset, leash.distance);
+                WRITE_INT16(buf, offset, leash.length);
 #endif
 
 // write the correct size
@@ -977,6 +980,10 @@ static void handle_beacon()
                     }
 
 					truck.writing_settings = 0;
+                    truck.motors[LEFT_MOTOR].ref_angle = -1;
+                    truck.motors[RIGHT_MOTOR].ref_angle = -1;
+                    truck.motors[LEFT_MOTOR].reverse = 0;
+                    truck.motors[RIGHT_MOTOR].reverse = 0;
 // solid red
 					SET_PIN(LED_GPIO, RED_LED);
 				}
@@ -1491,7 +1498,7 @@ void handle_steering()
         switch(truck.binary_steering)
         {
             case FAST_LEFT:
-                if(truck.reverse)
+                if(get_motor_reverse())
                 {
                     truck.target_heading += truck.max_steering_step / TIMER_HZ;
                 }
@@ -1504,7 +1511,7 @@ void handle_steering()
                 break;
 
             case SLOW_LEFT:
-                if(truck.reverse)
+                if(get_motor_reverse())
                 {
                     truck.target_heading += truck.min_steering_step / TIMER_HZ;
                 }
@@ -1518,7 +1525,7 @@ void handle_steering()
                 break;
 
             case SLOW_RIGHT:
-                if(truck.reverse)
+                if(get_motor_reverse())
                 {
                     truck.target_heading -= truck.min_steering_step / TIMER_HZ;
                 }
@@ -1531,7 +1538,7 @@ void handle_steering()
                 break;
 
             case FAST_RIGHT:
-                if(truck.reverse)
+                if(get_motor_reverse())
                 {
                     truck.target_heading -= truck.max_steering_step / TIMER_HZ;
                 }
@@ -1578,7 +1585,7 @@ void handle_steering()
 	        float error = -get_angle_change(truck.current_heading, truck.target_heading);
 
     // reverse feedback if going in reverse
-            if(truck.reverse)
+            if(get_motor_reverse())
             {
                 error = -error;
             }
@@ -2281,6 +2288,7 @@ void init_motors()
     for(i = 0; i < MOTORS; i++)
     {
         truck.motors[i].prev_phase = -1;
+        truck.motors[i].ref_angle = -1;
     }
 
     init_motor_tables();
@@ -2501,23 +2509,64 @@ void start_motor_test()
     truck.power = MOTOR_PWM_PERIOD / 2;
     truck.test_tick = truck.tick + TIMER_HZ;
     truck.test_state = START_TEST;
+    truck.motors[LEFT_MOTOR].ref_angle = -1;
+    truck.motors[RIGHT_MOTOR].ref_angle = -1;
+    truck.motors[LEFT_MOTOR].reverse = 0;
+    truck.motors[RIGHT_MOTOR].reverse = 0;
+}
+
+void get_halls()
+{
+    truck.halls[0].value = truck.halls[0].accum / truck.halls[0].readings;
+    truck.halls[1].value = truck.halls[1].accum / truck.halls[1].readings;
+    truck.halls[2].value = truck.halls[2].accum / truck.halls[2].readings;
+    truck.halls[3].value = truck.halls[3].accum / truck.halls[3].readings;
+    truck.halls[0].accum = 0;
+    truck.halls[0].readings = 0;
+    truck.halls[1].accum = 0;
+    truck.halls[1].readings = 0;
+    truck.halls[2].accum = 0;
+    truck.halls[2].readings = 0;
+    truck.halls[3].accum = 0;
+    truck.halls[3].readings = 0;
+}
+
+// detect direction of rotation
+void update_direction(motor_t *motor, int angle)
+{
+    if(motor->ref_angle < 0)
+        motor->ref_angle = angle;
+
+// in degrees 
+#define ROTATION_THRESH (360 / 8)
+// get change in degrees
+    int change = angle - motor->ref_angle;
+    if(change > 180) change -= 360;
+    else
+    if(change < -180) change += 360;
+
+    if(ABS(change) >= ROTATION_THRESH)
+    {
+        motor->ref_angle = angle;
+        if(change >= 0) 
+            motor->reverse = 0;
+        else
+            motor->reverse = 1;
+    }
+}
+
+// get the total detected direction of the motors
+int get_motor_reverse()
+{
+    if(truck.motors[LEFT_MOTOR].reverse &&
+        truck.motors[RIGHT_MOTOR].reverse)
+        return 1;
+    else
+        return 0;
 }
 
 void handle_motors()
 {
-#define GET_HALLS \
-    truck.halls[0].value = truck.halls[0].accum / truck.halls[0].readings; \
-    truck.halls[1].value = truck.halls[1].accum / truck.halls[1].readings; \
-    truck.halls[2].value = truck.halls[2].accum / truck.halls[2].readings; \
-    truck.halls[3].value = truck.halls[3].accum / truck.halls[3].readings; \
-    truck.halls[0].accum = 0; \
-    truck.halls[0].readings = 0; \
-    truck.halls[1].accum = 0; \
-    truck.halls[1].readings = 0; \
-    truck.halls[2].accum = 0; \
-    truck.halls[2].readings = 0; \
-    truck.halls[3].accum = 0; \
-    truck.halls[3].readings = 0;
 
 
 // handle commutations
@@ -2530,7 +2579,7 @@ void handle_motors()
         truck.halls[RIGHT_HALL + 1].readings >= HALL_OVERSAMPLE)
     {
         DISABLE_INTERRUPTS
-        GET_HALLS
+        get_halls();
         ENABLE_INTERRUPTS
 
 
@@ -2540,14 +2589,26 @@ void handle_motors()
         int prev_right = truck.motors[RIGHT_MOTOR].angle;
 // how far ahead the magnets should pull
         int phase_offset = 90;
-//         if(truck.auto_throttle)
-//         {
-//             phase_offset = 120;
-//         }
-        
+
         truck.motors[LEFT_MOTOR].angle = left_angle;
         truck.motors[RIGHT_MOTOR].angle = right_angle;
 
+        update_direction(&truck.motors[LEFT_MOTOR], left_angle);
+        update_direction(&truck.motors[RIGHT_MOTOR], right_angle);
+
+
+//         static int debug_counter = 0;
+//         debug_counter++;
+//         if((debug_counter % 100) == 0)
+//         {
+//             TRACE2
+//             print_text("ANGLES: ");
+//             print_number(left_angle);
+//             print_number(right_angle);
+//             print_text(" REVERSE: ");
+//             print_number(truck.motors[LEFT_MOTOR].reverse);
+//             print_number(truck.motors[RIGHT_MOTOR].reverse);
+//         }
 
 // tachometer
         if(!truck.reverse)
@@ -2719,7 +2780,7 @@ void handle_motors()
             truck.halls[RIGHT_HALL].readings >= HALL_OVERSAMPLE &&
             truck.halls[RIGHT_HALL + 1].readings >= HALL_OVERSAMPLE)
         {
-            GET_HALLS
+            get_halls();
             switch(truck.test_state)
             {
                 case START_TEST:
@@ -2792,6 +2853,7 @@ void handle_motors()
                             write_motors();
                             truck.test_state = TEST_DONE;
                             truck.testing_motors = 0;
+                            
 
 // create new RAM tables
                             do_motor_table();
@@ -3363,11 +3425,16 @@ void handle_input()
             }
 
 // get the raw data
-            leash.distance = (int16_t)(leash.buffer[0] | (leash.buffer[1] << 8));
+            leash.length = (int16_t)(leash.buffer[0] | (leash.buffer[1] << 8));
             leash.angle = (int16_t)(leash.buffer[2] | (leash.buffer[3] << 8));
             leash.angle /= 256;
             leash.angle = -TO_RAD(leash.angle);
             leash.angle -= leash.center;
+// compute ground distance from measured length & animal height in encoder counts
+            if(leash.length > ANIMAL_Z)
+                leash.distance = sqrt((leash.length * leash.length) - (ANIMAL_Z * ANIMAL_Z));
+            else
+                leash.distance = 0;
 // convert to X Y in encoder counts
             leash.x = leash.distance * sin(leash.angle);
             leash.y = leash.distance * cos(leash.angle);
