@@ -245,8 +245,8 @@ typedef struct
     int encoder0_adc;
     int encoder1_adc;
 // parameters for the magnetic angle sensor
-    float min_angle;
-    float max_angle;
+//    float min_angle;
+//    float max_angle;
 //    int min_angle_adc;
 //    int max_angle_adc;
 //    int center_angle_adc;
