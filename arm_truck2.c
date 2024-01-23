@@ -85,9 +85,9 @@
 #define PI 3.14159
 // leash parameters
 // encoder counts per meter
-#define LEASH_TO_M 28.0
+#define M_TO_LEASH 27.0
 // animal height above leash in encoder counts
-#define ANIMAL_Z (LEASH_TO_M * .6)
+#define ANIMAL_Z (M_TO_LEASH * .6)
 
 // size of settings block
 #define SETTINGS_SIZE 256
@@ -202,8 +202,22 @@ const uint8_t sin_table[] =
 #define ABS(x) ((x) > 0 ? (x) : (-(x)))
 #define V_TO_MPH(v) ((v) * 10 * 3600 * 3.14 * 107 / 360 / 1609363)
 
-
-
+// leash angle table
+float adc_to_angle[] = 
+{
+    193, TO_RAD(-90 + 9.5),
+    190, TO_RAD(-90 + 22.5),
+    186, TO_RAD(-90 + 30),
+    178, TO_RAD(-90 + 45),
+    163, TO_RAD(-90 + 60),
+    148, TO_RAD(-90 + 75),
+    132, TO_RAD(0),
+    114, TO_RAD(90 - 75),
+    97,  TO_RAD(90 - 60),
+    83,  TO_RAD(90 - 45),
+    72,  TO_RAD(90 - 30),
+    66,  TO_RAD(90 - 22)
+};
 
 
 void write_pwm();
@@ -578,8 +592,8 @@ void dump_config()
 	print_number(truck.angle_to_gyro);
 	print_text("\ngyro_bandwidth=");
 	print_number((int)(truck.imu.gyro_bandwidth * 255));
-	print_text("\nd_bandwidth=");
-	print_number(truck.d_bandwidth);
+	print_text("\nhighpass_bandwidth=");
+	print_number(truck.highpass_bandwidth);
 
 	print_text("\nremote_steering_mid=");
 	print_number(truck.remote_steering_mid);
@@ -642,13 +656,21 @@ void dump_config()
 	print_text("\nleash.center=");
 	print_float(TO_DEG(leash.center));
 	print_text("\nleash.x_offset=");
+#ifdef LEASH_XY
+	print_float(leash.x_offset);
+#else
 	print_float(TO_DEG(leash.x_offset));
+#endif
     print_text("\nleash_d_size=");
     print_number(leash.steering_d_size);
     print_text("\nleash_i_limit=");
     print_float(leash.steering_i_limit);
     print_text("\nleash_d_limit=");
     print_float(leash.steering_d_limit);
+    print_text("\nleash_highpass_bandwidth=");
+    print_float(leash.highpass_bandwidth);
+    print_text("\nleash_lowpass_bandwidth=");
+    print_float(leash.lowpass_bandwidth);
     print_text("\nleash PID=");
     dump_pid(&leash.steering_pid);
 #endif // USE_LEASH
@@ -674,7 +696,7 @@ int read_config_packet(const unsigned char *buffer)
 	truck.max_gyro_drift = (float)READ_UINT16(buffer, offset) / 256;
 	truck.angle_to_gyro = READ_INT16(buffer, offset);
 	truck.imu.gyro_bandwidth = (float)buffer[offset++] / 0xff;
-	truck.d_bandwidth = (float)buffer[offset++];
+	truck.highpass_bandwidth = (float)buffer[offset++];
 
 	truck.remote_steering_mid = buffer[offset++];
 	truck.remote_steering_deadband = buffer[offset++];
@@ -705,8 +727,7 @@ int read_config_packet(const unsigned char *buffer)
 	offset = read_pid(&truck.heading_pid, buffer, offset);
 	offset = read_pid(&truck.rpm_pid, buffer, offset);
 	
-	init_filter(&truck.d_filter, 0, truck.d_bandwidth / 100);
-	
+
 	resize_derivative(&truck.rpm_dv, truck.rpm_dv_size);
 
 	truck.mid_steering_pwm = MIN_PWM + 
@@ -736,14 +757,24 @@ int read_config_packet(const unsigned char *buffer)
 	leash.steering_d_size = buffer[offset++];
 	leash.steering_i_limit = buffer[offset++];
 	leash.steering_d_limit = buffer[offset++];
+    leash.highpass_bandwidth = buffer[offset++];
+    leash.lowpass_bandwidth = buffer[offset++];
+
+    
     offset = read_pid(&leash.steering_pid, buffer, offset);
     resize_derivative(&leash.steering_d, leash.steering_d_size);
     leash.steering_pid.i_limit = leash.steering_i_limit;
     leash.steering_pid.d_limit = leash.steering_d_limit;
     reset_pid(&leash.steering_pid);
+    reset_filter(&leash.error_highpass);
+    reset_filter(&leash.error_lowpass);
 
 
 #endif // USE_LEASH
+
+	init_filter(&truck.error_highpass, 0, truck.highpass_bandwidth / 100);
+	init_filter(&leash.error_highpass, 0, leash.highpass_bandwidth / 100);
+	init_filter(&leash.error_lowpass, 0, leash.lowpass_bandwidth / 100);
 
 TRACE2
 print_text("size of config packet=");
@@ -1358,54 +1389,64 @@ void init_analog()
 
 #ifdef USE_LEASH
 // return 1 if leash was used
-int leash_steering()
+// fires at TIMER_HZ
+void leash_steering()
 {
-    if(leash.active)
-    {
+#ifdef LEASH_XY
 // apply user offset to center X
-        float center = leash.x_offset * LEASH_TO_M * leash.current_offset;
+    float center = leash.x_offset * M_TO_LEASH * leash.current_offset;
 // make X encoder count similar to the range of angles
 #define X_SCALER 32
-// feedback based on X
-        float steering_feedback100 = do_pid(&leash.steering_pid,
-		        (leash.x - center) / X_SCALER,
-		        get_derivative(&leash.steering_d) / X_SCALER,
-		        0);
-        truck.steering_pwm = truck.mid_steering_pwm +
-		    steering_feedback100 * 
-		    truck.max_steering_magnitude / 
-		    100;
-        truck.auto_steering = 0;
-        truck.need_steering_feedback = 0;
-        truck.steering_timeout = 0;
-        return 1;
-    }
-    
-    
-//     if(leash.active && leash.angle > leash.center)
+    float error = (leash.x - center) / X_SCALER;
+// d using X
+//    float d = get_derivative(&leash.steering_d) / X_SCALER;
+#else // LEASH_XY
+    float center = leash.x_offset * leash.current_offset;
+    float error = leash.angle - center;
+//    float d = get_derivative(&leash.steering_d);
+#endif // !LEASH_XY
+
+// d using gyro
+    float d = -(float)truck.imu.gyro_z_centered / truck.angle_to_gyro;
+// d using angle
+//    float d = get_derivative(&leash.steering_d);
+
+
+// lowpass filter to avoid bouncing
+    float error_lowpass = do_lowpass(&leash.error_lowpass, error);
+// highpass filter for lead compensation
+    float error_highpass = do_highpass(&leash.error_highpass, error_lowpass);
+// use lowpassed error for d
+    update_derivative(&leash.steering_d, error_lowpass);
+//    float d = get_derivative(&leash.steering_d);
+
+
+// feedback
+// direct leash to servo
+    float steering_feedback100 = -do_pid(&leash.steering_pid,
+		    error_lowpass,
+		    d,
+		    error_highpass);
+
+    truck.steering_pwm = truck.mid_steering_pwm -
+		steering_feedback100 * 
+		truck.max_steering_magnitude / 
+		100;
+//     static int debug_counter = 0;
+//     debug_counter++;
+//     if((debug_counter % 10) == 0)
 //     {
-//         truck.steering_pwm = truck.mid_steering_pwm +
-//             (leash.angle - leash.center) *
-//             truck.max_steering_magnitude /
-//             leash.max_angle;
-// 		truck.auto_steering = 0;
-// 		truck.need_steering_feedback = 0;
-//         truck.steering_timeout = 0;
-//         return 1;
+//         TRACE2
+//         print_text("error=");
+//         print_float(error);
+//         print_text("steering_feedback100=");
+//         print_float(steering_feedback100);
+//         print_text("steering_pwm=");
+//         print_number(truck.steering_pwm);
 //     }
-//     else
-//     if(leash.active && leash.angle < leash.center)
-//     {
-//         truck.steering_pwm = truck.mid_steering_pwm -
-//             (leash.center - leash.angle) *
-//             truck.max_steering_magnitude /
-//             leash.max_angle;
-// 		truck.auto_steering = 0;
-// 		truck.need_steering_feedback = 0;
-//         truck.steering_timeout = 0;
-//         return 1;
-//     }
-    return 0;
+    truck.auto_steering = 0;
+    truck.need_steering_feedback = 0;
+    truck.steering_timeout = 0;
 }
 #endif // USE_LEASH
 
@@ -1432,8 +1473,9 @@ void handle_steering()
 
 #ifdef USE_LEASH
 // leash overrides proprietary radio for manual & auto steering
-    if(leash_steering())
+    if(leash.active)
     {
+        leash_steering();
     }
     else
 #endif // USE_LEASH
@@ -1572,33 +1614,21 @@ void handle_steering()
 
 
 
-// disable feedback if the gyro malfunctioned
-        if(!truck.imu.gyro_valid)
+// filtered heading errors
+	    float error = -get_angle_change(truck.current_heading, truck.target_heading);
+
+// reverse feedback if going in reverse
+        if(get_motor_reverse())
         {
-            steering_feedback100 = 0;
+            error = -error;
         }
-        else
-        {
-	        int raw_gyro = truck.imu.gyro_z_centered;
+	    float d = (float)truck.imu.gyro_z_centered / truck.angle_to_gyro;
+	    float error2 = do_highpass(&truck.error_highpass, error);
 
-    // filtered heading errors
-	        float error = -get_angle_change(truck.current_heading, truck.target_heading);
-
-    // reverse feedback if going in reverse
-            if(get_motor_reverse())
-            {
-                error = -error;
-            }
-	        float p = error;
-	        float d = (float)raw_gyro / truck.angle_to_gyro;
-	        float d2 = do_highpass(&truck.d_filter, error);
-
-            truck.imu.gyro_valid = 0;
-	        steering_feedback100 = do_pid(&truck.heading_pid, 
-		        p, 
-		        d, 
-		        d2);
-        }
+	    steering_feedback100 = do_pid(&truck.heading_pid, 
+		    error, 
+		    d, 
+		    error2);
 
 	    truck.steering_pwm = truck.mid_steering_pwm -
 		    steering_feedback100 * 
@@ -1624,7 +1654,7 @@ void handle_steering()
     else
     {
 // manual steering
-        reset_filter(&truck.d_filter);
+        reset_filter(&truck.error_highpass);
 	    reset_pid(&truck.heading_pid);
 
 
@@ -1747,7 +1777,7 @@ void do_manual_throttle()
 #ifdef USE_LEASH
 void do_leash_throttle()
 {
-// store new heading if leash reversed speed
+// store new heading if leash changed between stop & start
     if((leash.distance >= leash.distance0 && 
         leash.distance2 < leash.distance0) ||
         (leash.distance2 >= leash.distance0 && 
@@ -1755,6 +1785,9 @@ void do_leash_throttle()
     {
         truck.target_heading = truck.current_heading;
         reset_pid(&leash.steering_pid);
+        reset_filter(&leash.error_highpass);
+        reset_filter(&leash.error_lowpass);
+        reset_derivative(&leash.steering_d);
     }
 
     leash.distance2 = leash.distance;
@@ -1770,20 +1803,26 @@ void do_leash_throttle()
 // slowest min/mile
         float min_speed = rpm_to_pace(leash.rpm0);
         float pace = min_speed;
-// default to using Y for speed
+
+#ifdef LEASH_XY
+// use Y for speed
         float distance = leash.y;
 // clamp Y to minimum distance0
         if(distance < leash.distance0)
             distance = leash.distance0;
 // increase speed proportionally to distance
         pace -= leash.speed_to_distance * ((float)distance - leash.distance0);
+#else // LEASH_XY
+        pace -= leash.speed_to_distance * ((float)leash.distance - leash.distance0);
+#endif // !LEASH_XY
+
 
 // fastest min/mile allowed
         float max_speed = leash.max_speed;
 // start tapering here
-        float taper_angle0 = TO_RAD(30.0);
+        float taper_angle0 = TO_RAD(40.0);
 // maximum tapering here
-        float taper_angle1 = TO_RAD(45.0);
+        float taper_angle1 = TO_RAD(50.0);
         float angle_mag = fabs(leash.angle);
 // reduce max min/mile if angle is over a certain amount
         if(angle_mag >= taper_angle0)
@@ -3178,7 +3217,6 @@ static void imu_read_gyros(void *ptr)
             (1.0f - imu->gyro_bandwidth) + (float)gyro_z * imu->gyro_bandwidth;
 // center it
         imu->gyro_z_centered = imu->gyro_z - imu->gyro_z_center;
-        imu->gyro_valid = 1;
         
 		DISABLE_INTERRUPTS
 // accumulate heading
@@ -3362,6 +3400,7 @@ void init_watchdog()
 }
 
 
+// handle serial port input
 #ifndef USE_LEASH
 // print the menu
 void print_menu()
@@ -3385,9 +3424,106 @@ void handle_input()
 }
 #else // !USE_LEASH
 
+
+
+#define START_CODE 0xff
+#define ESC_CODE 0xfe
+#define LEASH_SIZE 5
+
 // handle leash input
 void handle_input()
 {
+    int got_packet = 0;
+
+#ifdef LEASH_PROTOCOL2
+    if(!leash.got_esc)
+    {
+        if(uart.input == START_CODE)
+        {
+            leash.offset = 0;
+            leash.got_start = 1;
+        }
+        else
+        if(uart.input == ESC_CODE)
+        {
+            leash.got_esc = 1;
+        }
+        else
+        {
+            if(leash.got_start && leash.offset < LEASH_SIZE)
+                leash.buffer[leash.offset++] = uart.input;
+        }
+    }
+    else
+    {
+        leash.got_esc = 0;
+        if(leash.got_start && leash.offset < LEASH_SIZE)
+            leash.buffer[leash.offset++] = uart.input ^ 0xff;
+    }
+
+    if(leash.offset >= LEASH_SIZE)
+    {
+        leash.length = (int16_t)(leash.buffer[0] | (leash.buffer[1] << 8));
+        leash.angle_adc = leash.buffer[2];
+        leash.encoder0_adc = leash.buffer[3];
+        leash.encoder1_adc = leash.buffer[4];
+
+
+// convert ADC to angle using lookup table
+        int table_size = sizeof(adc_to_angle) / sizeof(float);
+        int i;
+        if(leash.angle_adc >= adc_to_angle[0])
+            leash.angle = adc_to_angle[1];
+        else
+        if(leash.angle_adc <= adc_to_angle[table_size - 2])
+            leash.angle = adc_to_angle[table_size - 1];
+        else
+            for(i = 0; i < table_size - 2; i += 2)
+            {
+                float adc1 = adc_to_angle[i];
+                float angle1 = adc_to_angle[i + 1];
+                float adc2 = adc_to_angle[i + 2];
+                float angle2 = adc_to_angle[i + 3];
+                if(leash.angle_adc >= adc2)
+                {
+                    leash.angle = ((float)leash.angle_adc - adc2) *
+                        (angle1 - angle2) /
+                        (adc1 - adc2) +
+                        angle2;
+                    break;
+                }
+            }
+
+// convert ADC to angle using estimation
+//         if(leash.angle_adc >= leash.center_angle_adc)
+//             leash.angle = (float)(leash.angle_adc - leash.center_angle_adc) * 
+//                 (0 - leash.min_angle) /
+//                 (leash.center_angle_adc - leash.min_angle_adc);
+//         else
+//             leash.angle = (float)(leash.center_angle_adc - leash.angle_adc) * 
+//                 (leash.max_angle - 0) /
+//                 (leash.center_angle_adc - leash.max_angle_adc);
+
+static int debug_counter = 0;
+debug_counter++;
+if((debug_counter % 10) == 0)
+{
+//         print_text("LENGTH: ");
+//         print_number(leash.length);
+         print_text("ANGLE_ADC: ");
+         print_number(leash.angle_adc);
+         print_text("ANGLE: ");
+         print_number(TO_DEG(leash.angle));
+         print_lf();
+}
+
+        leash.got_start = 0;
+        leash.offset = 0;
+        got_packet = 1;
+    }
+
+#else // LEASH_PROTOCOL2
+
 //print_hex2(uart.input);
     if(leash.offset == 0)
     {
@@ -3412,17 +3548,6 @@ void handle_input()
         if(leash.offset >= 6)
         {
             leash.offset = 0;
-            DISABLE_INTERRUPTS
-            leash.timeout = 0;
-            ENABLE_INTERRUPTS
-
-// initialize the leash
-            if(!leash.active)
-            {
-                leash.stick_state = STEERING_MID;
-                leash.current_offset = 0;
-                leash.active = 1;
-            }
 
 // get the raw data
             leash.length = (int16_t)(leash.buffer[0] | (leash.buffer[1] << 8));
@@ -3430,34 +3555,67 @@ void handle_input()
             leash.angle /= 256;
             leash.angle = -TO_RAD(leash.angle);
             leash.angle -= leash.center;
+            got_packet = 1;
+        }
+    }
+#endif // !LEASH_PROTOCOL2
+
+
+// convert raw data to XY
+    if(got_packet)
+    {
+// arm the motors
+        DISABLE_INTERRUPTS
+        leash.timeout = 0;
+        ENABLE_INTERRUPTS
+
+        if(!leash.active)
+        {
+            leash.stick_state = STEERING_MID;
+            leash.current_offset = 0;
+            leash.active = 1;
+        }
+
+
+
+#ifdef LEASH_XY
 // compute ground distance from measured length & animal height in encoder counts
-            if(leash.length > ANIMAL_Z)
-                leash.distance = sqrt((leash.length * leash.length) - (ANIMAL_Z * ANIMAL_Z));
-            else
-                leash.distance = 0;
+        if(leash.length > ANIMAL_Z)
+            leash.distance = sqrt((leash.length * leash.length) - (ANIMAL_Z * ANIMAL_Z));
+        else
+            leash.distance = 0;
 // convert to X Y in encoder counts
-            leash.x = leash.distance * sin(leash.angle);
-            leash.y = leash.distance * cos(leash.angle);
+        leash.x = leash.distance * sin(leash.angle);
+        leash.y = leash.distance * cos(leash.angle);
+//        update_derivative(&leash.steering_d, leash.x);
+//        update_derivative(&leash.steering_d, leash.angle);
 
-//            update_derivative(&leash.steering_d, leash.angle);
-            update_derivative(&leash.steering_d, leash.x);
-
+//         print_text("LENGTH: ");
+//         print_number(leash.length);
+//         print_text("DISTANCE: ");
+//         print_float(leash.distance);
+//         print_text("ANGLE_ADC: ");
+//         print_number(leash.angle_adc);
+//         print_text("ANGLE: ");
+//         print_float(TO_DEG(leash.angle));
+//         print_text("X: ");
+//         print_float(leash.x);
+//         print_text("Y: ");
+//         print_float(leash.y);
+//         print_lf();
+#else // LEASH_XY
+        leash.distance = leash.length;
 // deglitch
-            if(leash.distance < 0) leash.distance = 0;
-
-            print_text("LEASH X: ");
-            print_float(leash.x);
-            print_text("Y: ");
-            print_float(leash.y);
-            print_lf();
-
+        if(leash.distance < 0) leash.distance = 0;
 //             print_text("DISTANCE: ");
-//             print_number(leash.distance);
+//             print_float(leash.distance);
 //             print_text("ANGLE: ");
 //             print_float(leash.angle);
 //             print_lf();
-        }
+#endif // !LEASH_XY
+
     }
+
 }
 
 #endif // USE_LEASH
@@ -3536,8 +3694,6 @@ int main(void)
 // heading error -> PWM
 
 	init_pid(&truck.heading_pid, 0, 0, 0, 0, 0, 0, 0);
-	init_filter(&truck.p_filter, 0, 1);
-	init_filter(&truck.d_filter, 0, 0);
 
 
 // RPM error -> throttle
@@ -3545,9 +3701,24 @@ int main(void)
 
 #ifdef USE_LEASH
 // some default settings
-    leash.x_offset = .5;
+    #ifdef LEASH_XY
+        leash.x_offset = .5;
+    #else
+        leash.x_offset = TO_RAD(15.0);
+    #endif
+
+// raw ADC values for the angle limits
+// have to fudge the analogs & the angles to make 45 reasonably close to 45
+//    leash.min_angle_adc = 190;
+//    leash.max_angle_adc = 65;
+//    leash.center_angle_adc = 128;
+//    leash.min_angle = TO_RAD(-70);
+//    leash.max_angle = TO_RAD(70);
+    leash.lowpass_bandwidth = 5;
+    leash.highpass_bandwidth = 98;
+
 	init_pid(&leash.steering_pid, 0, 0, 0, 0, 0, 0, 0);
-	leash.steering_d_size = 10;
+	leash.steering_d_size = TIMER_HZ / 2;
 	init_derivative(&leash.steering_d, leash.steering_d_size);
 #endif // USE_LEASH
 

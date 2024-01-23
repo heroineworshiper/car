@@ -1,5 +1,5 @@
 # the leg tester
-AVR_DIR := /root/arduino-1.8.5/hardware/tools/avr/bin/
+AVR_DIR := /root/arduino-1.8.15/hardware/tools/avr/bin/
 AVR_GCC := $(AVR_DIR)avr-gcc
 AVR_CFLAGS := -O2 -mmcu=atmega8
 AVR_CFLAGS2 := -O2 -mmcu=atmega328p

@@ -750,11 +750,18 @@ public class Truck extends Thread {
 		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_SPEED_TO_DISTANCE")[0]);
 		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_MAX_SPEED")[0]);
 		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_CENTER")[0]));
+
+// LEASH_XY mode
 		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_X_OFFSET")[0]);
-//		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_MAX_ANGLE")[0]));
+// leash polar mode
+//		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_X_OFFSET")[0]));
+
+
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_SIZE")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_I_LIMIT")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_LIMIT")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_HIGHPASS")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_LOWPASS")[0]);
 
         pid = Settings.getFileFloat("LEASH_PID");
         offset = writePid(offset, pid);

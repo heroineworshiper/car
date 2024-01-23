@@ -46,6 +46,9 @@
 
 // smart leash
 #define USE_LEASH
+// XY feedback.  Change Truck.java if you change this.
+#define LEASH_XY
+#define LEASH_PROTOCOL2
 
 #define HALLS 4
 #define MOTORS 2
@@ -157,7 +160,7 @@ typedef struct
 	int got_data;
 } bluetooth_t;
 
-
+// filter order
 #define ORDER 2
 typedef struct
 {
@@ -208,7 +211,6 @@ typedef struct
 	float abs_heading;
 	float current_heading;
 	int total_gyro;
-    int gyro_valid;
 	i2c_t i2c;
 } imu_t;
 
@@ -236,6 +238,18 @@ typedef struct
     uint8_t buffer[8];
 // offset in the packet
     int offset;
+    int got_esc;
+    int got_start;
+// raw data
+    int angle_adc;
+    int encoder0_adc;
+    int encoder1_adc;
+// parameters for the magnetic angle sensor
+    float min_angle;
+    float max_angle;
+//    int min_angle_adc;
+//    int max_angle_adc;
+//    int center_angle_adc;
 // leash angle in rads
     float angle;
 // length read from serial port
@@ -246,9 +260,13 @@ typedef struct
     int distance2;
     int timeout;
     int active;
+
+#ifdef LEASH_XY
 // X Y in encoder counts
     float x;
     float y;
+#endif // LEASH_XY
+
 
 // encoder count to start moving at
     int distance0;
@@ -260,7 +278,8 @@ typedef struct
     float max_speed;
 // center leash angle in rads
     float center;
-// X offset user can manually add or subtract from center in encoder counts
+// X offset user can manually add or subtract from center
+// in encoder counts if LEASH_XY or rads
     float x_offset;
 // number of the current offset: -1, 0, 1
     int current_offset;
@@ -272,6 +291,13 @@ typedef struct
 	int steering_d_size;
     float steering_i_limit;
     float steering_d_limit;
+
+	filter_t error_highpass;
+// 0 - 100
+//	float highpass_bandwidth;
+    filter_t error_lowpass;
+    float lowpass_bandwidth;
+    float highpass_bandwidth;
 } leash_t;
 #define LEASH_TIMEOUT TIMER_HZ
 #endif // USE_LEASH
@@ -314,12 +340,10 @@ typedef struct
 
 
 	pid_t heading_pid;
-	filter_t p_filter;
-	filter_t d_filter;
-	filter_t d2_filter;
+	filter_t error_highpass;
 // 0 - 100
-	float d_bandwidth;
-	
+	float highpass_bandwidth;
+
 	pid_t rpm_pid;
 	imu_t imu;
 

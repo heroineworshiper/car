@@ -1,6 +1,6 @@
 /*
  * Smart leash
- * Copyright (C) 2022 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2022-2024 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,17 @@
  * 
  */
 
+// Plug in the ISP programmer
 // make leash_fuse
 // make leash.hex
 // make leash_isp
+
+// Arduino ISP to leash:
+// GND - GND
+// 13 - CLK
+// 12 - MISO
+// 11 - MOSI
+// 10 - RESET
 
 
 #define F_CPU 8000000L
@@ -45,33 +53,34 @@
 #define POT_LEFT 906
 #define POT_RIGHT 88
 
-#define HALL_CENTER 512
-#define HALL_THRESHOLD 256
+#define ENCODER_CENTER 128
+#define ENCODER_THRESHOLD 32
 
 #define ENCODER_START 0
-#define HALL0_LOW 1
-#define HALL1_LOW 2
-#define HALL0_HIGH 3
-#define HALL1_HIGH 4
+#define ENCODER0_LOW 1
+#define ENCODER1_LOW 2
+#define ENCODER0_HIGH 3
+#define ENCODER1_HIGH 4
 int8_t encoder_state = ENCODER_START;
 int8_t prev_encoder = ENCODER_START;
 int16_t encoder_counts = 0;
 uint8_t debug_count = 0;
 
-uint16_t hall0_accum = 0;
-uint16_t hall1_accum = 0;
-uint16_t pot_accum = 0;
-uint16_t hall0_value = 0;
-uint16_t hall1_value = 0;
-uint16_t pot_value = 0;
-// angle * FRACTION
-int16_t pot_angle = 0;
-uint8_t hall_count = 0;
-uint8_t pot_count = 0;
-#define HALL_OVERSAMPLE 1
-#define POT_OVERSAMPLE 64
+uint16_t encoder0_accum = 0;
+uint16_t encoder1_accum = 0;
+uint16_t angle_accum = 0;
+uint8_t encoder0_adc = 0;
+uint8_t encoder1_adc = 0;
+uint8_t angle_adc = 0;
+uint8_t encoder_count = 0;
+uint8_t angle_count = 0;
+#define ENCODER_OVERSAMPLE 1
+#define POT_OVERSAMPLE 32
 uint8_t tick;
 
+// byte stuffing for UART
+#define START_CODE 0xff
+#define ESC_CODE 0xfe
 
 #define UART_SIZE 64
 uint8_t uart_buffer[UART_SIZE];
@@ -102,6 +111,16 @@ void send_uart(uint8_t *text, uint8_t size)
 		uart_used++;
 		if(uart_write_ptr >= UART_SIZE) uart_write_ptr = 0;
 	}
+}
+
+void send_uart1(uint8_t c)
+{
+    if(uart_used < UART_SIZE)
+    {
+        uart_buffer[uart_write_ptr++] = c;
+	    uart_used++;
+	    if(uart_write_ptr >= UART_SIZE) uart_write_ptr = 0;
+    }
 }
 
 void print_text(char *text)
@@ -156,6 +175,23 @@ void print_fixed(int16_t number)
 	print_text(string);
 }
 
+
+void encode_serial(uint8_t c)
+{
+    if(c == START_CODE || c == ESC_CODE)
+    {
+        send_uart1(ESC_CODE);
+        send_uart1(0xff ^ c);
+    }
+    else
+        send_uart1(c);
+}
+
+void encode_start()
+{
+    send_uart1(START_CODE);
+}
+
 void handle_serial()
 {
 	if(uart_used) 
@@ -188,38 +224,38 @@ void init_serial()
 
 void handle_encoder()
 {
-    if(hall1_value <= HALL_CENTER - HALL_THRESHOLD)
+    if(encoder1_adc <= ENCODER_CENTER - ENCODER_THRESHOLD)
     {
-        encoder_state = HALL1_LOW;
+        encoder_state = ENCODER1_LOW;
     }
     else
-    if(hall1_value >= HALL_CENTER + HALL_THRESHOLD)
+    if(encoder1_adc >= ENCODER_CENTER + ENCODER_THRESHOLD)
     {
-        encoder_state = HALL1_HIGH;
+        encoder_state = ENCODER1_HIGH;
     }
     else
-    if(hall0_value <= HALL_CENTER - HALL_THRESHOLD)
+    if(encoder0_adc <= ENCODER_CENTER - ENCODER_THRESHOLD)
     {
-        encoder_state = HALL0_LOW;
+        encoder_state = ENCODER0_LOW;
     }
     else
-    if(hall0_value >= HALL_CENTER + HALL_THRESHOLD)
+    if(encoder0_adc >= ENCODER_CENTER + ENCODER_THRESHOLD)
     {
-        encoder_state = HALL0_HIGH;
+        encoder_state = ENCODER0_HIGH;
     }
     
     if(encoder_state != prev_encoder)
     {
-        if(prev_encoder == HALL1_LOW && encoder_state == HALL0_LOW ||
-            prev_encoder == HALL0_LOW && encoder_state == HALL1_HIGH ||
-            prev_encoder == HALL1_HIGH && encoder_state == HALL0_HIGH ||
-            prev_encoder == HALL0_HIGH && encoder_state == HALL1_LOW)
+        if(prev_encoder == ENCODER1_LOW && encoder_state == ENCODER0_LOW ||
+            prev_encoder == ENCODER0_LOW && encoder_state == ENCODER1_HIGH ||
+            prev_encoder == ENCODER1_HIGH && encoder_state == ENCODER0_HIGH ||
+            prev_encoder == ENCODER0_HIGH && encoder_state == ENCODER1_LOW)
             encoder_counts++;
         else
-        if(prev_encoder == HALL0_LOW && encoder_state == HALL1_LOW ||
-            prev_encoder == HALL1_LOW && encoder_state == HALL0_HIGH ||
-            prev_encoder == HALL0_HIGH && encoder_state == HALL1_HIGH ||
-            prev_encoder == HALL1_HIGH && encoder_state == HALL0_LOW)
+        if(prev_encoder == ENCODER0_LOW && encoder_state == ENCODER1_LOW ||
+            prev_encoder == ENCODER1_LOW && encoder_state == ENCODER0_HIGH ||
+            prev_encoder == ENCODER0_HIGH && encoder_state == ENCODER1_HIGH ||
+            prev_encoder == ENCODER1_HIGH && encoder_state == ENCODER0_LOW)
             encoder_counts--;
 
         prev_encoder = encoder_state;
@@ -245,7 +281,7 @@ void main()
     ADMUX = ADMUX_BASE;
     ADCSRA = 0b10000111;
     bitSet(ADCSRA, ADSC);
-    
+
 // enable interrupts
 	sei();
 
@@ -261,24 +297,6 @@ void main()
             if(tick >= HZ / 25)
             {
                 tick = 0;
-                LED_TOGGLE
-
-// send to autopilot
-                uint8_t text[8];
-                text[0] = 0xff;
-                text[1] = 0xe5;
-                text[2] = encoder_counts & 0xff;
-                text[3] = encoder_counts >> 8;
-                text[4] = pot_angle & 0xff;
-                text[5] = pot_angle >> 8;
-                send_uart(text, 6);
-
-// lion readable output
-                print_text("DISTANCE: ");
-                print_number(encoder_counts);
-                print_text("ANGLE: ");
-                print_fixed(pot_angle);
-                print_text("\n");
             }
         }
 
@@ -294,50 +312,56 @@ void main()
             {
                 case 0:
                     ADMUX = ADMUX_BASE | 1;
-                    hall0_accum += (high << 8) | low;
+                    encoder0_accum += (high << 8) | low;
                     bitSet(ADCSRA, ADSC);
                     break;
                 case 1:
                     ADMUX = ADMUX_BASE | 2;
-                    hall1_accum += (high << 8) | low;
+                    encoder1_accum += (high << 8) | low;
                     bitSet(ADCSRA, ADSC);
                     break;
                 case 2:
                     ADMUX = ADMUX_BASE;
-                    pot_accum += (high << 8) | low;
+                    angle_accum += (high << 8) | low;
                     bitSet(ADCSRA, ADSC);
 
-                    hall_count++;
-                    pot_count++;
-                    if(pot_count >= POT_OVERSAMPLE)
+                    encoder_count++;
+                    angle_count++;
+                    if(angle_count >= POT_OVERSAMPLE)
                     {
-                        pot_value = pot_accum / POT_OVERSAMPLE;
-                        pot_accum = 0;
-                        pot_count = 0;
-                        if(pot_value < POT_CENTER)
+                        angle_adc = angle_accum / POT_OVERSAMPLE / 4;
+                        angle_accum = 0;
+                        angle_count = 0;
+
+                        if(uart_used <= 0)
                         {
-                            pot_angle = ((int32_t)POT_CENTER - pot_value) * 
-                                45 * FRACTION / 
-                                (POT_CENTER - POT_RIGHT);
+                            LED_TOGGLE
+
+// send to autopilot
+                            encode_start();
+                            encode_serial(encoder_counts & 0xff);
+                            encode_serial(encoder_counts >> 8);
+                            encode_serial(angle_adc);
+                            encode_serial(encoder0_adc);
+                            encode_serial(encoder1_adc);
+
+// lion readable output
+                            print_text("DEBUG: ");
+                            print_number(angle_adc);
+                            print_number(encoder0_adc);
+                            print_number(encoder1_adc);
+                            print_number(encoder_counts);
+                            print_text("\n");
                         }
-                        else
-                        if(pot_value > POT_CENTER)
-                        {
-                            pot_angle = ((int32_t)pot_value - POT_CENTER) *
-                                -45 * FRACTION /
-                                (POT_LEFT - POT_CENTER); 
-                        }
-                        else
-                            pot_angle = 0;
                     }
 
-                    if(hall_count >= HALL_OVERSAMPLE)
+                    if(encoder_count >= ENCODER_OVERSAMPLE)
                     {
-                        hall0_value = hall0_accum / HALL_OVERSAMPLE;
-                        hall1_value = hall1_accum / HALL_OVERSAMPLE;
-                        hall_count = 0;
-                        hall0_accum = 0;
-                        hall1_accum = 0;
+                        encoder0_adc = encoder0_accum / ENCODER_OVERSAMPLE / 4;
+                        encoder1_adc = encoder1_accum / ENCODER_OVERSAMPLE / 4;
+                        encoder_count = 0;
+                        encoder0_accum = 0;
+                        encoder1_accum = 0;
 
 
                         handle_encoder();
@@ -346,9 +370,9 @@ void main()
 //                         if(debug_count > 10)
 //                         {
 //                             debug_count = 0;
-//                         print_number(hall0_value);
-//                         print_number(hall1_value);
-//                         print_number(pot_value);
+//                         print_number(encoder0_adc);
+//                         print_number(encoder1_adc);
+//                         print_number(angle_adc);
 //                         print_text("\n");
 //                        }
                     }

@@ -115,9 +115,15 @@ front_wheel2.FCStd: latest front wheel
     .32 layer height
 
 
-leash9.FCStd: leash enclosure
-    no support except for the pot
+leash11.FCStd: compact leash enclosure
+    no support for frame
+    support for base.  Melt it off.
     .2mm layers .4mm nozzle
+    Ball bearings
+
+leash.c: leash firmware
+
+leash_test.c: leash tester
 
 light3.FCStd: nose mount for LED lightbulb
 
