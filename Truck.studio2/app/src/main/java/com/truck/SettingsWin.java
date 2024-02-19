@@ -156,7 +156,7 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
   		}
   	}
 
-	// user changed target speed
+// user changed target speed
 	@Override
 	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
 	{

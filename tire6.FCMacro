@@ -280,26 +280,40 @@ def makeTire(iRadius,
             r5 = oDiameter / 2 + tread - oThickness
             r6 = oDiameter / 2 + tread
             r7 = oRadius + wallThickness / 2
+# fillet offsets
+            angle3b = angle3 + 1.0 / (r5 - 1)
+            angle4b = angle4 - 1.0 / (r5 - 1)
+# circumference lines of the tread
             for i in range(subdivisions):
                 sketch.addGeometry(Part.LineSegment(
                     polarToXYZ(angle5 + i * (angle6 - angle5) / subdivisions, r6, 0.0),
                     polarToXYZ(angle5 + (i + 1) * (angle6 - angle5) / subdivisions, r6, 0.0)),
                     False)
                 sketch.addGeometry(Part.LineSegment(
-                    polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r5, 0.0),
-                    polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r5, 0.0)),
+                    polarToXYZ(angle3b + i * (angle4b - angle3b) / subdivisions, r5, 0.0),
+                    polarToXYZ(angle3b + (i + 1) * (angle4b - angle3b) / subdivisions, r5, 0.0)),
                     False)
                 sketch.addGeometry(Part.LineSegment(
                     polarToXYZ(angle3 + i * (angle4 - angle3) / subdivisions, r7, 0.0),
                     polarToXYZ(angle3 + (i + 1) * (angle4 - angle3) / subdivisions, r7, 0.0)),
                     False)
+# inside fillets
+            sketch.addGeometry(Part.LineSegment(
+                polarToXYZ(angle3, r5 - 1, 0.0),
+                polarToXYZ(angle3b, r5, 0.0)),
+                False)
+            sketch.addGeometry(Part.LineSegment(
+                polarToXYZ(angle4, r5 - 1, 0.0),
+                polarToXYZ(angle4b, r5, 0.0)),
+                False)
+# radial lines of the tread
             sketch.addGeometry(Part.LineSegment(
                     polarToXYZ(angle3, r7, 0.0),
-                    polarToXYZ(angle3, r5, 0.0)),
+                    polarToXYZ(angle3, r5 - 1, 0.0)),
                     False)
             sketch.addGeometry(Part.LineSegment(
                     polarToXYZ(angle4, r7, 0.0),
-                    polarToXYZ(angle4, r5, 0.0)),
+                    polarToXYZ(angle4, r5 - 1, 0.0)),
                     False)
             sketch.addGeometry(Part.LineSegment(
                     polarToXYZ(angle5, oDiameter / 2, 0.0),

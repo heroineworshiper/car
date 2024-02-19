@@ -135,11 +135,12 @@ offroad2.stl: OBSOLETE offroad rear tire for hard TPU
     left & right must be mirror images
 
 offroad3.stl: offroad rear tire for soft TPE
-    print with .8mm nozzle
+    print with .8mm nozzle 260C
     All .32mm layer height stretched to .36
-    260C
-    Set Z seam to "shortest" to overcome nozzle clogs
-    Print 1st layer at 10mm/s
+    Set Z seam to "shortest" to overcome nozzle clogs 
+        by printing the longest section of each layer 1st
+    Print Initial layer at 10mm/s
+    No bed heating or it'll warp
 
 rear_tire3.FCStd: OBSOLETE rear wheel
 
@@ -166,9 +167,8 @@ tire4.stl: front tire for soft TPE
 tire6.FCMacro: Create layer for the latest rear tire
     Extrude by the layer height .32mm, then export tire.stl
     Then run helix.c to generate a helix by creating discrete layers
+        ./helix tire.stl offroad3.stl
     tires must be mirror images or the truck will pull to 1 side
-    Printed at 260C with soft TPE.
-    .8mm nozzle.  .32 mm layer height stretched to .36 after slicing.
 
 
 
@@ -233,12 +233,15 @@ rear_light.FCStd:
     print window with clear TPU
     .4 nozzle, .2 layers 260C
 
+plot.py: 
+    plot steering filters
 
 phone4.FCStd:
     wiko 3 phone
 
-phone5.FCStd:
+phone6.FCStd:
     moto phone holster to be printed in TPU & welded with soldering iron
+    use scotch around the opening
     .4mm nozzle
     .2mm layer
 

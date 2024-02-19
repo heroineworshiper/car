@@ -93,7 +93,9 @@ public class DriveWin extends WindowBase implements OnTouchListener
 			
 			synchronized(Truck.truck)
 			{
-				Truck.throttleOut = (int)(Math2.clamp(throttle.userY * 127, -127, 127));
+				Truck.throttleOut[0] = 
+                    Truck.throttleOut[1] = 
+                    (int)(Math2.clamp(throttle.userY * 127, -127, 127));
 				Truck.steeringOut = (int)(Math2.clamp(cyclic.userX * 127, -127, 127));
 				Truck.haveControls = throttle.isActive ||
 						cyclic.isActive;

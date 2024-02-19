@@ -1,6 +1,6 @@
 /*
  * STM32 Controller for direct drive truck
- * Copyright (C) 2012-2023 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2012-2024 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -106,7 +106,7 @@
 #define GET_STATUS 0
 #define RESET_COMMAND 1
 #define NEW_CONFIG 2
-#define TEST_MOTORS_COMMAND 3
+#define CALIBRATE_MOTORS 3
 
 // packets we send to the phone
 #define STATUS_PACKET 0
@@ -124,7 +124,7 @@
 #define GYRO_CENTER_TOTAL (NAV_HZ)
 #define CURRENT_OVERSAMPLE 5000
 
-// radio timeout
+// radio, leash, & motor testing timeout
 #define TIMEOUT_RELOAD (TIMER_HZ * 1)
 #define STEERING_RELOAD (10 * PWM_HZ)
 
@@ -157,7 +157,7 @@ leash_t leash;
 int get_motor_angle(int motor, int hall);
 void init_motor_tables();
 void do_motor_table();
-void start_motor_test();
+void calibrate_motors();
 
 // created by tables.c
 const uint8_t sin_table[] = 
@@ -198,7 +198,7 @@ const uint8_t sin_table[] =
 
 #define WAVEFORM_SIZE (sizeof(sin_table) / sizeof(uint8_t))
 #define MAX_SIN 255
-#define CALCULATE_WAVEFORM(x) ((int)sin_table[x] * truck.power / MAX_SIN)
+#define CALCULATE_WAVEFORM(x, motor) ((int)sin_table[x] * truck.power[motor] / MAX_SIN)
 #define ABS(x) ((x) > 0 ? (x) : (-(x)))
 #define V_TO_MPH(v) ((v) * 10 * 3600 * 3.14 * 107 / 360 / 1609363)
 
@@ -865,13 +865,15 @@ static void handle_beacon()
 // battery voltage
 			case GET_STATUS:
 			{
-// get fully manual controls
+// get manual controls
 				if(receive_buf[8] == 1)
 				{
 					DISABLE_INTERRUPTS
-					truck.bt_throttle = receive_buf[9];
-					if(truck.bt_throttle & 0x80) truck.bt_throttle = -256 + truck.bt_throttle;
-					truck.bt_steering = receive_buf[10];
+					truck.bt_throttle[0] = receive_buf[9];
+					truck.bt_throttle[1] = receive_buf[10];
+					if(truck.bt_throttle[0] & 0x80) truck.bt_throttle[0] = -256 + truck.bt_throttle[0];
+					if(truck.bt_throttle[1] & 0x80) truck.bt_throttle[1] = -256 + truck.bt_throttle[1];
+					truck.bt_steering = receive_buf[11];
 					if(truck.bt_steering & 0x80) truck.bt_steering = -256 + truck.bt_steering;
 					truck.have_bt_controls = 1;
 					truck.bt_timeout = TIMEOUT_RELOAD;
@@ -879,13 +881,14 @@ static void handle_beacon()
 
                     TOGGLE_PIN(LED_GPIO, GREEN_LED);
 
-/*
- * TRACE2
- * print_text("bt_throttle=");
- * print_number(truck.bt_throttle);
- * print_text(" bt_steering=");
- * print_number(truck.bt_steering);
- */
+
+TRACE2
+print_text("bt_throttle=");
+print_number(truck.bt_throttle[0]);
+print_number(truck.bt_throttle[1]);
+print_text(" bt_steering=");
+print_number(truck.bt_steering);
+
 
 				}
 				else
@@ -894,7 +897,7 @@ static void handle_beacon()
 				{
 					handle_radio_packet(receive_buf + 10);
 				}
-				else
+                else
 				{
 					DISABLE_INTERRUPTS
 					truck.have_bt_controls = 0;
@@ -977,8 +980,8 @@ static void handle_beacon()
 				break;
 
 
-            case TEST_MOTORS_COMMAND:
-                start_motor_test();
+            case CALIBRATE_MOTORS:
+                calibrate_motors();
                 break;
 
 // config file
@@ -1022,7 +1025,6 @@ static void handle_beacon()
 				dump_config();
 				break;
 			}
-
 		}
 	}
 }
@@ -1150,9 +1152,9 @@ void TIM1_UP_TIM10_IRQHandler()
 		}
 
 #ifdef USE_LEASH
-        if(leash.timeout < LEASH_TIMEOUT)
+        if(leash.timeout > 0)
         {
-            leash.timeout++;
+            leash.timeout--;
         }
         else
         if(leash.active)
@@ -1414,10 +1416,10 @@ void leash_steering()
 
 // lowpass filter to avoid bouncing
     float error_lowpass = do_lowpass(&leash.error_lowpass, error);
-// highpass filter for lead compensation
+// bandpass filter for lead compensation.
     float error_highpass = do_highpass(&leash.error_highpass, error_lowpass);
 // use lowpassed error for d
-    update_derivative(&leash.steering_d, error_lowpass);
+//    update_derivative(&leash.steering_d, error_lowpass);
 //    float d = get_derivative(&leash.steering_d);
 
 
@@ -1432,18 +1434,22 @@ void leash_steering()
 		steering_feedback100 * 
 		truck.max_steering_magnitude / 
 		100;
-//     static int debug_counter = 0;
-//     debug_counter++;
-//     if((debug_counter % 10) == 0)
-//     {
-//         TRACE2
-//         print_text("error=");
-//         print_float(error);
-//         print_text("steering_feedback100=");
-//         print_float(steering_feedback100);
-//         print_text("steering_pwm=");
-//         print_number(truck.steering_pwm);
-//     }
+
+    static int debug_counter = 0;
+    debug_counter++;
+    if((debug_counter % 10) == 0)
+    {
+        TRACE2
+        print_text("lowpass=");
+        print_float(error_lowpass);
+        print_text("highpass=");
+        print_float(error_highpass);
+//        print_text("steering_feedback100=");
+//        print_float(steering_feedback100);
+//        print_text("steering_pwm=");
+//        print_number(truck.steering_pwm);
+    }
+
     truck.auto_steering = 0;
     truck.need_steering_feedback = 0;
     truck.steering_timeout = 0;
@@ -1471,8 +1477,13 @@ void handle_steering()
         throttle_active = 1;
     }
 
+// BT overrides leash
+    if(truck.have_bt_controls)
+    {
+    }
+    else
 #ifdef USE_LEASH
-// leash overrides proprietary radio for manual & auto steering
+// leash overrides proprietary radio
     if(leash.active)
     {
         leash_steering();
@@ -1669,7 +1680,8 @@ void handle_steering()
 void rpm_to_power(float target_rpm)
 {
     int throttle_base;
-    if(!truck.reverse)
+// Always matching both sides in auto throttle
+    if(!truck.reverse[0])
     {
         throttle_base = truck.throttle_base100;
     }
@@ -1683,11 +1695,12 @@ void rpm_to_power(float target_rpm)
 		-get_derivative(&truck.rpm_dv) / 1000,
 		0);
 // convert percent to PWM
-    truck.power = (throttle_base + truck.throttle_feedback) * 
+    truck.power[0] = (throttle_base + truck.throttle_feedback) * 
         MOTOR_PWM_PERIOD / 
         100;
 // don't go into braking mode or it'll oscillate
-    CLAMP(truck.power, 1, MOTOR_PWM_PERIOD);
+    CLAMP(truck.power[0], 1, MOTOR_PWM_PERIOD);
+    truck.power[1] = truck.power[0];
 }
 
 void do_auto_throttle()
@@ -1698,7 +1711,7 @@ void do_auto_throttle()
     {
 // forward RPM
         target_rpm = truck.target_rpm;
-        truck.reverse = 0;
+        truck.reverse[0] = truck.reverse[1] = 0;
 
 // adjust based on speed paddles
         if(truck.speed_offset != 0)
@@ -1715,7 +1728,7 @@ void do_auto_throttle()
     {
 // reverse RPM
         target_rpm = truck.target_reverse_rpm;
-        truck.reverse = 1;
+        truck.reverse[0] = truck.reverse[1] = 1;
     }
 
 
@@ -1736,13 +1749,13 @@ void do_manual_throttle()
     if(truck.throttle >= truck.remote_throttle_max)
     {
         truck.auto_throttle = 1;
-        truck.reverse = 0;
+        truck.reverse[0] = truck.reverse[1] = 0;
     }
     else
     if(truck.throttle <= truck.remote_throttle_min)
     {
         truck.auto_throttle = 1;
-        truck.reverse = 1;
+        truck.reverse[0] = truck.reverse[1] = 1;
     }
     else
 // manual control
@@ -1750,26 +1763,28 @@ void do_manual_throttle()
     {
 // full power for 1 cycle
 //        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
-        truck.power = MOTOR_PWM_PERIOD * 
+        truck.power[0] = MOTOR_PWM_PERIOD * 
             truck.throttle_base100 *
             (truck.throttle - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
             (truck.remote_throttle_max - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
             100;
 //        truck.auto_throttle = 1;
-        truck.reverse = 0;
+        truck.reverse[1] = truck.reverse[0] = 0;
+        truck.power[1] = truck.power[0];
     }
     else
     if(truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
     {
 // full power for 1 cycle
 //        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
-        truck.power = MOTOR_PWM_PERIOD * 
+        truck.power[0] = MOTOR_PWM_PERIOD * 
             truck.throttle_reverse_base100 *
             (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.throttle) /
             (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.remote_throttle_min) /
             100;
 //        truck.auto_throttle = 1;
-        truck.reverse = 1;
+        truck.reverse[1] = truck.reverse[0] = 1;
+        truck.power[1] = truck.power[0];
     }
 }
 
@@ -1795,7 +1810,7 @@ void do_leash_throttle()
 // distance must be above minimum to start
     if(leash.distance < leash.distance0)
     {
-        truck.power = 0;
+        truck.power[0] = truck.power[1] = 0;
     }
     else
     {
@@ -1841,7 +1856,7 @@ void do_leash_throttle()
         
         if(pace < max_speed) pace = max_speed;
         float target_rpm = pace_to_rpm(pace);
-        truck.reverse = 0;
+        truck.reverse[0] = truck.reverse[1] = 0;
         rpm_to_power(target_rpm);
 
 // static int debug_counter = 0;
@@ -1865,6 +1880,7 @@ void handle_bt_input(int throttle_magnitude)
 {
 // always manual steering
 	truck.need_steering_feedback = 0;
+
 // 	int target_throttle = truck.mid_throttle_pwm -
 // 		throttle_magnitude * 
 // 		truck.bt_throttle / 
@@ -1921,6 +1937,17 @@ void handle_bt_input(int throttle_magnitude)
 // 	}
 // 
 
+    truck.power[0] = MOTOR_PWM_PERIOD * ABS(truck.bt_throttle[0]) / 127;
+    truck.power[1] = MOTOR_PWM_PERIOD * ABS(truck.bt_throttle[1]) / 127;
+    if(truck.bt_throttle[0] >= 0)
+        truck.reverse[0] = 0;
+    else
+        truck.reverse[0] = 1;
+    if(truck.bt_throttle[1] >= 0)
+        truck.reverse[1] = 0;
+    else
+        truck.reverse[1] = 1;
+
 	truck.steering_pwm = truck.mid_steering_pwm +
 		truck.max_steering_magnitude *
 		truck.bt_steering / 
@@ -1933,12 +1960,11 @@ void handle_bt_input(int throttle_magnitude)
 // PWM for steering has to be an interrupt handler since it's on the wrong pin
 void feedback()
 {
-    if(truck.testing_motors) return;
+    if(truck.calibrating_motors) return;
 	if(truck.writing_settings) return;
 
 // -100 - 100
 	float steering_overshoot = 0;
-
 
 	if(truck.have_gyro_center &&
         !truck.calibration_mode)
@@ -2047,33 +2073,39 @@ void feedback()
 		}
 		else
 		{
-			truck.power = 0;
+			truck.power[0] = truck.power[1] = 0;
 		}
 
 
         handle_steering();
 
-
+// static int debug_counter = 0;
+// debug_counter++;
+// if((debug_counter % 10) == 0)
+// {
 // TRACE2
-// print_text("throttle_state=");
-// print_number(truck.throttle_state);
-// print_text(" truck.mid_throttle_pwm=");
-// print_float(truck.mid_throttle_pwm);
-// print_text(" truck.throttle_pwm=");
-// print_number(truck.throttle_pwm);
+// print_text(" bt_steering=");
+// print_number(truck.bt_steering);
+// print_text(" steering=");
+// print_number(truck.steering_pwm);
+// print_text(" bt_throttle=");
+// print_number(truck.bt_throttle);
+// print_text(" power=");
+// print_number(truck.power);
+// print_text(" reverse=");
+// print_number(truck.reverse);
+// }
 
-
-
-
-        truck.throttle_accum += truck.power;
-        truck.throttle_count++;
+// statistics
+        truck.throttle_accum += truck.power[0] + truck.power[1];
+        truck.throttle_count += 2;
 
 
 		write_pwm();
 	} // have_gyro_center
 	else
 	{
-        truck.power = 0;
+        truck.power[0] = truck.power[1] = 0;
 		truck.steering_pwm = truck.mid_steering_pwm;
 
 		write_pwm();
@@ -2173,148 +2205,159 @@ void write_motors()
 // drive 2 phases
 // phase relative to the commutations is always the same
 // prev_phase < 0 is the starting condition
-#define MOTOR_MACRO(phase, \
-    prev_phase, \
-    ccr1, \
-    ccr2, \
-    ccr3, \
-    en1_gpio, \
-    en1_pin, \
-    en2_gpio, \
-    en2_pin, \
-    en3_gpio, \
-    en3_pin) \
-    if(phase >= 0 && phase < 120) \
-    { \
-        if(!truck.reverse && (prev_phase < 0 || prev_phase == 240) || \
-            truck.reverse && (prev_phase < 0 || prev_phase == 120)) \
-        { \
-            prev_phase = 0; \
-            ccr1 = truck.power; \
-            ccr2 = 0; \
-            ccr3 = 0; \
-	        SET_PIN(en1_gpio, en1_pin); \
-	        SET_PIN(en2_gpio, en2_pin); \
-	        CLEAR_PIN(en3_gpio, en3_pin); \
-        } \
-/* print_text("1"); */ \
-    } \
-    else \
-    if(phase >= 120 && phase < 240) \
-    { \
-        if(!truck.reverse && (prev_phase < 0 || prev_phase == 0) || \
-            truck.reverse && (prev_phase < 0 || prev_phase == 240)) \
-        { \
-            prev_phase = 120; \
-            ccr1 = 0; \
-            ccr2 = truck.power; \
-            ccr3 = 0; \
-	        CLEAR_PIN(en1_gpio, en1_pin); \
-	        SET_PIN(en2_gpio, en2_pin); \
-	        SET_PIN(en3_gpio, en3_pin); \
-        } \
-/* print_text("2"); */ \
-    } \
-    else \
-    if(phase >= 240) \
-    { \
-        if(!truck.reverse && (prev_phase < 0 || prev_phase == 120) || \
-            truck.reverse && (prev_phase < 0 || prev_phase == 0)) \
-        { \
-            prev_phase = 240; \
-            ccr1 = 0; \
-            ccr2 = 0; \
-            ccr3 = truck.power; \
-	        SET_PIN(en1_gpio, en1_pin); \
-	        CLEAR_PIN(en2_gpio, en2_pin); \
-	        SET_PIN(en3_gpio, en3_pin); \
-        } \
-/* print_text("3"); */ \
-    }
+// #define MOTOR_MACRO(phase, \
+//     prev_phase, \
+//     ccr1, \
+//     ccr2, \
+//     ccr3, \
+//     en1_gpio, \
+//     en1_pin, \
+//     en2_gpio, \
+//     en2_pin, \
+//     en3_gpio, \
+//     en3_pin) \
+//     if(phase >= 0 && phase < 120) \
+//     { \
+//         if(!truck.reverse && (prev_phase < 0 || prev_phase == 240) || \
+//             truck.reverse && (prev_phase < 0 || prev_phase == 120)) \
+//         { \
+//             prev_phase = 0; \
+//             ccr1 = truck.power; \
+//             ccr2 = 0; \
+//             ccr3 = 0; \
+// 	        SET_PIN(en1_gpio, en1_pin); \
+// 	        SET_PIN(en2_gpio, en2_pin); \
+// 	        CLEAR_PIN(en3_gpio, en3_pin); \
+//         } \
+// /* print_text("1"); */ \
+//     } \
+//     else \
+//     if(phase >= 120 && phase < 240) \
+//     { \
+//         if(!truck.reverse && (prev_phase < 0 || prev_phase == 0) || \
+//             truck.reverse && (prev_phase < 0 || prev_phase == 240)) \
+//         { \
+//             prev_phase = 120; \
+//             ccr1 = 0; \
+//             ccr2 = truck.power; \
+//             ccr3 = 0; \
+// 	        CLEAR_PIN(en1_gpio, en1_pin); \
+// 	        SET_PIN(en2_gpio, en2_pin); \
+// 	        SET_PIN(en3_gpio, en3_pin); \
+//         } \
+// /* print_text("2"); */ \
+//     } \
+//     else \
+//     if(phase >= 240) \
+//     { \
+//         if(!truck.reverse && (prev_phase < 0 || prev_phase == 120) || \
+//             truck.reverse && (prev_phase < 0 || prev_phase == 0)) \
+//         { \
+//             prev_phase = 240; \
+//             ccr1 = 0; \
+//             ccr2 = 0; \
+//             ccr3 = truck.power; \
+// 	        SET_PIN(en1_gpio, en1_pin); \
+// 	        CLEAR_PIN(en2_gpio, en2_pin); \
+// 	        SET_PIN(en3_gpio, en3_pin); \
+//         } \
+// /* print_text("3"); */ \
+//     }
 
 
-// brake 
-    if(truck.power == 0)
+
+
+// left wheel
+    if(truck.power[0] == 0)
     {
+// brake 
 	    TIM5->CCR1 = 0;
 	    TIM5->CCR3 = 0;
 	    TIM5->CCR2 = 0;
 	    SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
 	    SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
 	    SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
-	    TIM3->CCR1 = 0;
-	    TIM3->CCR3 = 0;
-	    TIM3->CCR2 = 0;
-        SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
-        SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
-        SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
-        return;
     }
-
-
-// left wheel
-// drive all 3 phases
-//    if(!truck.auto_throttle)
-    if(1)
+    else
     {
+// drive all 3 phases
+//    if(1)
+//    {
 	    int index1 = (lphase * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 	    int index2 = (index1 + 120 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 	    int index3 = (index1 + 240 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 
 
 // reverse direction by swapping a CCR
-	    TIM5->CCR1 = CALCULATE_WAVEFORM(index1);
-	    TIM5->CCR2 = CALCULATE_WAVEFORM(index2);
-	    TIM5->CCR3 = CALCULATE_WAVEFORM(index3);
+	    TIM5->CCR1 = CALCULATE_WAVEFORM(index1, 0);
+	    TIM5->CCR2 = CALCULATE_WAVEFORM(index2, 0);
+	    TIM5->CCR3 = CALCULATE_WAVEFORM(index3, 0);
 	    SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
 	    SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
 	    SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
-    }
-    else
-    {
-        MOTOR_MACRO(lphase, \
-            truck.motors[LEFT_MOTOR].prev_phase, \
-            TIM5->CCR1, \
-            TIM5->CCR2, \
-            TIM5->CCR3, \
-            LEFT_EN1_GPIO, \
-            LEFT_EN1_PIN, \
-            LEFT_EN2_GPIO, \
-            LEFT_EN2_PIN, \
-            LEFT_EN3_GPIO, \
-            LEFT_EN3_PIN)
+//     }
+//     else
+//     {
+// drive 2 phases
+//         MOTOR_MACRO(lphase, \
+//             truck.motors[LEFT_MOTOR].prev_phase, \
+//             TIM5->CCR1, \
+//             TIM5->CCR2, \
+//             TIM5->CCR3, \
+//             LEFT_EN1_GPIO, \
+//             LEFT_EN1_PIN, \
+//             LEFT_EN2_GPIO, \
+//             LEFT_EN2_PIN, \
+//             LEFT_EN3_GPIO, \
+//             LEFT_EN3_PIN)
+//     }
     }
 
 
 // right wheel
-//    if(!truck.auto_throttle)
-    if(1)
+    if(truck.power[1] == 0)
     {
-	    int index1 = (rphase * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
-	    int index2 = (index1 + 120 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
-	    int index3 = (index1 + 240 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
-
-// reverse direction by swapping a CCR
-	    TIM3->CCR1 = CALCULATE_WAVEFORM(index1);
-	    TIM3->CCR3 = CALCULATE_WAVEFORM(index2);
-	    TIM3->CCR2 = CALCULATE_WAVEFORM(index3);
+// brake 
+	    TIM3->CCR1 = 0;
+	    TIM3->CCR3 = 0;
+	    TIM3->CCR2 = 0;
         SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
         SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
         SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
     }
     else
     {
-        MOTOR_MACRO(rphase, \
-            truck.motors[RIGHT_MOTOR].prev_phase, \
-            TIM3->CCR1, \
-            TIM3->CCR2, \
-            TIM3->CCR3, \
-            RIGHT_EN1_GPIO, \
-            RIGHT_EN1_PIN, \
-            RIGHT_EN2_GPIO, \
-            RIGHT_EN2_PIN, \
-            RIGHT_EN3_GPIO, \
-            RIGHT_EN3_PIN)
+//    if(!truck.auto_throttle)
+//    if(1)
+//    {
+// drive all 3 phases
+	    int index1 = (rphase * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
+	    int index2 = (index1 + 120 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
+	    int index3 = (index1 + 240 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
+
+// reverse direction by swapping a CCR
+	    TIM3->CCR1 = CALCULATE_WAVEFORM(index1, 1);
+	    TIM3->CCR3 = CALCULATE_WAVEFORM(index2, 1);
+	    TIM3->CCR2 = CALCULATE_WAVEFORM(index3, 1);
+        SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
+        SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
+        SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
+//     }
+//     else
+//     {
+// drive 2 phases
+//         MOTOR_MACRO(rphase, \
+//             truck.motors[RIGHT_MOTOR].prev_phase, \
+//             TIM3->CCR1, \
+//             TIM3->CCR2, \
+//             TIM3->CCR3, \
+//             RIGHT_EN1_GPIO, \
+//             RIGHT_EN1_PIN, \
+//             RIGHT_EN2_GPIO, \
+//             RIGHT_EN2_PIN, \
+//             RIGHT_EN3_GPIO, \
+//             RIGHT_EN3_PIN)
+//     }
     }
 }
 
@@ -2390,7 +2433,7 @@ void init_motors()
  	TIM_CtrlPWMOutputs(TIM3, ENABLE);
 
 
-    truck.power = 0;
+    truck.power[0] = truck.power[1] = 0;
     truck.motors[LEFT_MOTOR].phase = 0;
     truck.motors[RIGHT_MOTOR].phase = 0;
 
@@ -2540,14 +2583,14 @@ void handle_halls()
     }
 }
 
-void start_motor_test()
+void calibrate_motors()
 {
     TRACE2
-    print_text("Starting motor test\n");
-    truck.testing_motors = 1;
-    truck.power = MOTOR_PWM_PERIOD / 2;
-    truck.test_tick = truck.tick + TIMER_HZ;
-    truck.test_state = START_TEST;
+    print_text("Calibrating motors\n");
+    truck.calibrating_motors = 1;
+    truck.power[0] = truck.power[1] = MOTOR_PWM_PERIOD / 2;
+    truck.calibration_tick = truck.tick + TIMER_HZ;
+    truck.calibration_state = START_CALIBRATION;
     truck.motors[LEFT_MOTOR].ref_angle = -1;
     truck.motors[RIGHT_MOTOR].ref_angle = -1;
     truck.motors[LEFT_MOTOR].reverse = 0;
@@ -2609,7 +2652,7 @@ void handle_motors()
 
 
 // handle commutations
-    if(!truck.testing_motors &&
+    if(!truck.calibrating_motors &&
         !truck.calibration_mode &&
         truck.have_gyro_center &&
         truck.halls[LEFT_HALL].readings >= HALL_OVERSAMPLE &&
@@ -2650,7 +2693,7 @@ void handle_motors()
 //         }
 
 // tachometer
-        if(!truck.reverse)
+        if(!truck.reverse[0])
         {
 // wrapped around
             if(prev_left > 240 && left_angle < 90)
@@ -2663,38 +2706,16 @@ void handle_motors()
             {
                 left_angle -= 360;
             }
-
-
-// wrapped around
-            if(prev_right > 240 && right_angle < 90)
-            {
-                prev_right -= 360;
-            }
-            else
-// went backward (stall)
-            if(prev_right < 90 && right_angle > 240)
-            {
-                right_angle -= 360;
-            }
-
             int l_diff = left_angle - prev_left;
-            int r_diff = right_angle - prev_right;
             truck.motors[LEFT_MOTOR].v_temp += l_diff;
-            truck.motors[RIGHT_MOTOR].v_temp += r_diff;
 
 // advance phase
             if(l_diff >= 0)
             {
                 truck.motors[LEFT_MOTOR].phase = ((left_angle * 7) + phase_offset) % 360;
             }
-
-            if(r_diff >= 0)
-            {
-                truck.motors[RIGHT_MOTOR].phase = ((right_angle * 7) + phase_offset) % 360;
-            }
         }
         else
-// reverse
         {
 // wrapped around
             if(prev_left < 90 && left_angle > 240)
@@ -2707,6 +2728,46 @@ void handle_motors()
             {
                 left_angle += 360;
             }
+            
+// advance phase
+            int l_diff = left_angle - prev_left;
+            truck.motors[LEFT_MOTOR].v_temp -= l_diff;
+            if(l_diff <= 0)
+            {
+                truck.motors[LEFT_MOTOR].phase = (left_angle * 7) - phase_offset;
+                if(truck.motors[LEFT_MOTOR].phase < 0)
+                {
+                    truck.motors[LEFT_MOTOR].phase += 360;
+                }
+                truck.motors[LEFT_MOTOR].phase %= 360;
+            }
+        }
+
+        if(!truck.reverse[1])
+        {
+// wrapped around
+            if(prev_right > 240 && right_angle < 90)
+            {
+                prev_right -= 360;
+            }
+            else
+// went backward (stall)
+            if(prev_right < 90 && right_angle > 240)
+            {
+                right_angle -= 360;
+            }
+
+            int r_diff = right_angle - prev_right;
+            truck.motors[RIGHT_MOTOR].v_temp += r_diff;
+
+            if(r_diff >= 0)
+            {
+                truck.motors[RIGHT_MOTOR].phase = ((right_angle * 7) + phase_offset) % 360;
+            }
+        }
+        else
+// reverse
+        {
 
 // wrapped around
             if(prev_right < 90 && right_angle > 240)
@@ -2720,21 +2781,8 @@ void handle_motors()
                 right_angle += 360;
             }
 
-            int l_diff = left_angle - prev_left;
             int r_diff = right_angle - prev_right;
-            truck.motors[LEFT_MOTOR].v_temp -= l_diff;
             truck.motors[RIGHT_MOTOR].v_temp -= r_diff;
-            
-// advance phase
-            if(l_diff <= 0)
-            {
-                truck.motors[LEFT_MOTOR].phase = (left_angle * 7) - phase_offset;
-                if(truck.motors[LEFT_MOTOR].phase < 0)
-                {
-                    truck.motors[LEFT_MOTOR].phase += 360;
-                }
-                truck.motors[LEFT_MOTOR].phase %= 360;
-            }
 
             if(r_diff <= 0)
             {
@@ -2810,88 +2858,88 @@ void handle_motors()
 
 
 // motor calibration
-    if(truck.testing_motors)
+    if(truck.calibrating_motors)
     {
 // get motor positions
-        if(truck.tick >= truck.test_tick &&
+        if(truck.tick >= truck.calibration_tick &&
             truck.halls[LEFT_HALL].readings >= HALL_OVERSAMPLE &&
             truck.halls[LEFT_HALL + 1].readings >= HALL_OVERSAMPLE &&
             truck.halls[RIGHT_HALL].readings >= HALL_OVERSAMPLE &&
             truck.halls[RIGHT_HALL + 1].readings >= HALL_OVERSAMPLE)
         {
             get_halls();
-            switch(truck.test_state)
+            switch(truck.calibration_state)
             {
-                case START_TEST:
-                    truck.test_phase = 0;
+                case START_CALIBRATION:
+                    truck.calibration_phase = 0;
                     truck.motors[LEFT_MOTOR].phase = 0;
                     truck.motors[RIGHT_MOTOR].phase = 0;
                     write_motors();
-                    truck.test_tick = truck.tick + TIMER_HZ;
-                    truck.test_state = TEST_PASS1;
+                    truck.calibration_tick = truck.tick + TIMER_HZ;
+                    truck.calibration_state = CALIBRATION_PASS1;
                     break;
 
 // 1 revolution for the starting points
-                case TEST_PASS1:
-                    truck.test_tick = truck.tick + TIMER_HZ / 100;
+                case CALIBRATION_PASS1:
+                    truck.calibration_tick = truck.tick + TIMER_HZ / 100;
 
-                    truck.test_phase += ANGLE_STEP / 10;
-                    if(truck.test_phase >= 360 * 7)
+                    truck.calibration_phase += ANGLE_STEP / 10;
+                    if(truck.calibration_phase >= 360 * 7)
                     {
-                        truck.test_state = TEST_PASS2;
-                        truck.test_phase = 0;
-                        truck.test_read = 0;
+                        truck.calibration_state = CALIBRATION_PASS2;
+                        truck.calibration_phase = 0;
+                        truck.calibration_read = 0;
                         truck.motors[LEFT_MOTOR].phase = 0;
                         truck.motors[RIGHT_MOTOR].phase = 0;
                         write_motors();
 // wait 1 second before starting test
-                        truck.test_tick = truck.tick + TIMER_HZ;
+                        truck.calibration_tick = truck.tick + TIMER_HZ;
                     }
                     else
                     {
-                        truck.motors[LEFT_MOTOR].phase = truck.test_phase % 360;
-                        truck.motors[RIGHT_MOTOR].phase = truck.test_phase % 360;
+                        truck.motors[LEFT_MOTOR].phase = truck.calibration_phase % 360;
+                        truck.motors[RIGHT_MOTOR].phase = truck.calibration_phase % 360;
                         write_motors();
                     }
                     break;
 
 
 // build motor tables
-                case TEST_PASS2:
-                    if(truck.test_read == 1)
+                case CALIBRATION_PASS2:
+                    if(truck.calibration_read == 1)
                     {
 // capture sensor values
-                        truck.test_read = 0;
+                        truck.calibration_read = 0;
 
-                        if(truck.power > 0)
+                        if(truck.power[0] > 0)
                         {
 // print reading for last motor phase
                             TRACE2
                             print_text("MOTORS: ");
-                            print_number(truck.test_phase);
+                            print_number(truck.calibration_phase);
                             print_number(truck.halls[LEFT_HALL].value);
                             print_number(truck.halls[LEFT_HALL + 1].value);
                             print_number(truck.halls[RIGHT_HALL].value);
                             print_number(truck.halls[RIGHT_HALL + 1].value);
                             print_lf();
                             
-                            int index = truck.test_phase / ANGLE_STEP;
+                            int index = truck.calibration_phase / ANGLE_STEP;
                             motor_lines[index][0] = truck.halls[LEFT_HALL].value;
                             motor_lines[index][1] = truck.halls[LEFT_HALL + 1].value;
                             motor_lines[index][2] = truck.halls[RIGHT_HALL].value;
                             motor_lines[index][3] = truck.halls[RIGHT_HALL + 1].value;
                         }
 
-                        truck.test_phase += ANGLE_STEP / 40;
-                        if(truck.test_phase >= 360 * 7)
+                        truck.calibration_phase += ANGLE_STEP / 40;
+                        if(truck.calibration_phase >= 360 * 7)
                         {
 // done testing
                             TRACE2
                             print_text("Test done\n");
-                            truck.power = 0;
+                            truck.power[0] = truck.power[1] = 0;
                             write_motors();
-                            truck.test_state = TEST_DONE;
-                            truck.testing_motors = 0;
+                            truck.calibration_state = CALIBRATION_DONE;
+                            truck.calibrating_motors = 0;
                             
 
 // create new RAM tables
@@ -2901,27 +2949,27 @@ void handle_motors()
                         else
                         {
 // advance motor phase
-                            truck.test_tick = truck.tick + TIMER_HZ / 100;
-                            truck.motors[LEFT_MOTOR].phase = truck.test_phase % 360;
-                            truck.motors[RIGHT_MOTOR].phase = truck.test_phase % 360;
+                            truck.calibration_tick = truck.tick + TIMER_HZ / 100;
+                            truck.motors[LEFT_MOTOR].phase = truck.calibration_phase % 360;
+                            truck.motors[RIGHT_MOTOR].phase = truck.calibration_phase % 360;
                             write_motors();
                         }
                     }
                     else
                     {
-                        if((truck.test_phase % ANGLE_STEP) == 0)
+                        if((truck.calibration_phase % ANGLE_STEP) == 0)
                         {
-                            truck.test_read = 1;
+                            truck.calibration_read = 1;
 // read the sensors
-                            truck.test_tick = truck.tick + TIMER_HZ / 10;
+                            truck.calibration_tick = truck.tick + TIMER_HZ / 10;
                         }
                         else
                         {
 // rotate the motors
-                            truck.test_phase += ANGLE_STEP / 40;
-                            truck.test_tick = truck.tick + TIMER_HZ / 100;
-                            truck.motors[LEFT_MOTOR].phase = truck.test_phase % 360;
-                            truck.motors[RIGHT_MOTOR].phase = truck.test_phase % 360;
+                            truck.calibration_phase += ANGLE_STEP / 40;
+                            truck.calibration_tick = truck.tick + TIMER_HZ / 100;
+                            truck.motors[LEFT_MOTOR].phase = truck.calibration_phase % 360;
+                            truck.motors[RIGHT_MOTOR].phase = truck.calibration_phase % 360;
                             write_motors();
                         }
                     }
@@ -3414,7 +3462,7 @@ void handle_input()
 {
     if(uart.input == '1')
     {
-        start_motor_test();
+        calibrate_motors();
     }
     else
     if(uart.input == '\n')
@@ -3504,18 +3552,18 @@ void handle_input()
 //                 (leash.max_angle - 0) /
 //                 (leash.center_angle_adc - leash.max_angle_adc);
 
-static int debug_counter = 0;
-debug_counter++;
-if((debug_counter % 10) == 0)
-{
-//         print_text("LENGTH: ");
-//         print_number(leash.length);
-         print_text("ANGLE_ADC: ");
-         print_number(leash.angle_adc);
-         print_text("ANGLE: ");
-         print_number(TO_DEG(leash.angle));
-         print_lf();
-}
+// static int debug_counter = 0;
+// debug_counter++;
+// if((debug_counter % 10) == 0)
+// {
+// //         print_text("LENGTH: ");
+// //         print_number(leash.length);
+//          print_text("ANGLE_ADC: ");
+//          print_number(leash.angle_adc);
+//          print_text("ANGLE: ");
+//          print_number(TO_DEG(leash.angle));
+//          print_lf();
+// }
 
         leash.got_start = 0;
         leash.offset = 0;
@@ -3566,7 +3614,7 @@ if((debug_counter % 10) == 0)
     {
 // arm the motors
         DISABLE_INTERRUPTS
-        leash.timeout = 0;
+        leash.timeout = TIMEOUT_RELOAD;
         ENABLE_INTERRUPTS
 
         if(!leash.active)
@@ -3904,6 +3952,7 @@ int main(void)
 			truck.radio.got_packet = 0;
 			handle_radio_packet(truck.radio.packet);
 		}
+
 
         if(truck.tick != truck.feedback_tick)
         {

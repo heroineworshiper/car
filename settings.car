@@ -82,13 +82,33 @@ LEASH_SPEED_TO_DISTANCE 2.0
 # minutes/mile maximum speed
 LEASH_MAX_SPEED 8.0
 # center leash angle in deg
-LEASH_CENTER -10
-LEASH_D_SIZE 10
+LEASH_CENTER 0
+# SIDEWAYS OFFSET IN 
+# M IF LEASH_XY
+LEASH_X_OFFSET 0.4
+# DEG IF POLAR MODE
+#LEASH_X_OFFSET 15
+LEASH_D_SIZE 20
 LEASH_I_LIMIT 10
 LEASH_D_LIMIT 100
+# default
+#LEASH_HIGHPASS 97
+#LEASH_LOWPASS 5
+#            P     I      D    P2
+#LEASH_PID    150   0.2    20  200
 
-#            P     I      D        D2
-LEASH_PID    50   0.1    20        0
+# faster
+#LEASH_HIGHPASS 97
+#LEASH_LOWPASS 5
+#            P     I      D    P2
+#LEASH_PID   200   0.2    20  300
+
+# faster
+LEASH_HIGHPASS 96
+LEASH_LOWPASS 8
+#            P     I      D    P2
+LEASH_PID   200   0.2    20  250
 
 
-
+# POLAR
+#LEASH_PID   100   .1    20   50

@@ -299,7 +299,6 @@ typedef struct
     float lowpass_bandwidth;
     float highpass_bandwidth;
 } leash_t;
-#define LEASH_TIMEOUT TIMER_HZ
 #endif // USE_LEASH
 
 
@@ -326,7 +325,7 @@ typedef struct
 	int steering2;
     int speed_offset2;
 
-	int bt_throttle;
+	int bt_throttle[MOTORS];
 	int bt_steering;
 	int have_bt_controls;
 
@@ -447,10 +446,10 @@ typedef struct
 	int min_steering_magnitude;
 	int throttle_ramp_step;
 
-// common motor power 0 - MOTOR_PWM_PERIOD
-    int power;
+// motor power 0 - MOTOR_PWM_PERIOD
+    int power[MOTORS];
 // motor direction
-    int reverse;
+    int reverse[MOTORS];
 // enable RPM feedback
     int auto_throttle;
 
@@ -486,15 +485,17 @@ typedef struct
 // timer for updating statistics
 	int stat_time;
 
-#define START_TEST 0
-#define TEST_PASS1 1
-#define TEST_PASS2 2
-#define TEST_DONE 3
-    int test_state;
-    int test_read;
-    int test_phase;
-    int test_tick;
-    int testing_motors;
+#define START_CALIBRATION 0
+#define CALIBRATION_PASS1 1
+#define CALIBRATION_PASS2 2
+#define CALIBRATION_DONE 3
+    int calibration_state;
+    int calibration_read;
+    int calibration_phase;
+    int calibration_tick;
+    int calibrating_motors;
+
+
 
 	bluetooth_t bluetooth;
     hall_t halls[HALLS];

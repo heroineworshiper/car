@@ -33,6 +33,11 @@
             android:screenOrientation="landscape" >
         </activity>
         <activity
+            android:name="com.truck.SliderWin"
+            android:label="Sliders"
+            android:screenOrientation="portrait" >
+        </activity>
+        <activity
             android:name="com.truck.DriveWin2"
             android:label="Drive2"
             android:screenOrientation="portrait" >

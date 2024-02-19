@@ -10,11 +10,11 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
         android:shrinkColumns="*"
-        android:stretchColumns="*" >
+        android:stretchColumns="*">
 
         <TableRow
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" >
+            android:layout_height="wrap_content">
 
             <Button
                 android:id="@+id/send"
@@ -27,7 +27,7 @@
 
         <TableRow
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" >
+            android:layout_height="wrap_content">
 
             <Button
                 android:id="@+id/reset"
@@ -40,7 +40,7 @@
 
         <TableRow
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" >
+            android:layout_height="wrap_content">
 
             <Button
                 android:id="@+id/test_motors"
@@ -48,7 +48,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:onClick="onClick"
-                android:text="Test Motors" />
+                android:text="Calibrate Motors" />
         </TableRow>
 
         <TableRow
@@ -56,18 +56,18 @@
             android:layout_height="wrap_content">
 
             <TextView
+                android:id="@+id/pace_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="PACE:"
-                android:id="@+id/pace_text"
                 android:layout_column="0"
+                android:text="PACE:"
+                android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textSize="24dp" />
         </TableRow>
 
         <TableRow
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" >
+            android:layout_height="wrap_content">
 
         </TableRow>
 
@@ -76,13 +76,13 @@
             android:layout_height="match_parent">
 
             <SeekBar
+                android:id="@+id/pace"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/pace"
                 android:layout_column="0"
-                android:max="30"
+                android:indeterminate="false"
                 android:lines="2"
-                android:indeterminate="false" />
+                android:max="30" />
         </TableRow>
 
         <TableRow
@@ -90,9 +90,9 @@
             android:layout_height="match_parent">
 
             <Spinner
+                android:id="@+id/vehicle"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/vehicle" />
+                android:layout_height="wrap_content" />
         </TableRow>
 
         <TableRow
@@ -100,13 +100,12 @@
             android:layout_height="match_parent">
 
             <TextView
+                android:id="@+id/message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceMedium"
                 android:text="Hello World"
-                android:id="@+id/message" />
+                android:textAppearance="?android:attr/textAppearanceMedium" />
         </TableRow>
-
 
 
     </TableLayout>

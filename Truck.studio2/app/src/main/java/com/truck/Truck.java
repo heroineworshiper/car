@@ -257,7 +257,7 @@ public class Truck extends Thread {
                 break;
 
             case TEST_MOTORS_COMMAND:
-                dialog.setMessage("Really test motors?");
+                dialog.setMessage("Really calibrate motors?");
                 break;
         }
     	
@@ -272,7 +272,7 @@ public class Truck extends Thread {
                         break;
 
                     case TEST_MOTORS_COMMAND:
-                        Truck.testMotors = true;
+                        Truck.calibrateMotors = true;
                         break;
                 }
             }
@@ -326,7 +326,7 @@ public class Truck extends Thread {
 		    			needReset = false;
 	    			}
 	    			else
-	    			if(testMotors)
+	    			if(calibrateMotors)
 	    			{
 	    				// reset gyro
 	    				// size
@@ -335,7 +335,7 @@ public class Truck extends Thread {
 		    			beacon[offset++] = (byte) TEST_MOTORS_COMMAND;
 		    			beacon[offset++] = (byte) 0;
 		    			
-		    			testMotors = false;
+		    			calibrateMotors = false;
 	    			}
 	    			else
 	    			if(needConfig)
@@ -364,7 +364,7 @@ public class Truck extends Thread {
 	    			{
 // get battery voltage
 // size
-		    			Math2.write_int16(beacon, offset, 16);
+		    			Math2.write_int16(beacon, offset, 18);
 		    			offset += 2;
 // command
 		    			beacon[offset++] = (byte) GET_STATUS;
@@ -373,9 +373,11 @@ public class Truck extends Thread {
 						if(haveControls)
 						{
 							beacon[offset++] = (byte)1;
-							beacon[offset++] = (byte)throttleOut;
+							beacon[offset++] = (byte)throttleOut[0];
+							beacon[offset++] = (byte)throttleOut[1];
 							beacon[offset++] = (byte)steeringOut;
 							beacon[offset++] = (byte)(needMag ? 1 : 0);
+							beacon[offset++] = (byte)0;
 						}
 						else
 						if(haveControls2)
@@ -390,9 +392,13 @@ public class Truck extends Thread {
 									(steeringOut2 == SLOW_RIGHT ? 0 : 16) |
 									(steeringOut2 == FAST_RIGHT ? 0 : 32));
 							beacon[offset++] = (byte)0;
+							beacon[offset++] = (byte)0;
+							beacon[offset++] = (byte)0;
 						}
 						else
 						{
+							beacon[offset++] = (byte)0;
+							beacon[offset++] = (byte)0;
 							beacon[offset++] = (byte)0;
 							beacon[offset++] = (byte)0;
 							beacon[offset++] = (byte)0;
@@ -902,6 +908,8 @@ public class Truck extends Thread {
 	OutputStream ostream = null;
     InputStream istream = null;
 
+    static final int MOTORS = 2;
+
 // commands we send to the vehicle
 	static final int GET_STATUS = 0;
 	static final int RESET_COMMAND = 1;
@@ -933,14 +941,14 @@ public class Truck extends Thread {
 // 	static int vanish_x, vanish_y, bottom_x;
     
     static boolean needReset = false;
-    static boolean testMotors = false;
+    static boolean calibrateMotors = false;
     static boolean needConfig = false;
 //    static boolean needSaveConfig = false;
 	static boolean needMag = false;
 
-	// full manual controls
+// full manual controls
 // throttle to send -127 - 127
-    static int throttleOut = 0;
+    static int[] throttleOut = { 0, 0 };
 // throttle PWM received
     static int throttleIn = 0;
 	static boolean gotThrottleIn = false;
@@ -952,7 +960,7 @@ public class Truck extends Thread {
 	static boolean haveControls = false;
 
 
-	// semi automatic controls
+// semi automatic controls
 	static boolean throttleOut2 = false;
 	static int NO_STEERING = 0;
 	static int FAST_LEFT = 1;
@@ -961,8 +969,10 @@ public class Truck extends Thread {
 	static int FAST_RIGHT = 4;
 	static int steeringOut2 = NO_STEERING;
 	static boolean reverse = false;
-	// have semi automatic control values to send from the drive2 window
+// have semi automatic control values to send from the drive2 window
 	static boolean haveControls2 = false;
+
+
 
     
     long lastSentTime;

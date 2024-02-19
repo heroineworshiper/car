@@ -31,6 +31,13 @@
         <TableRow
                  android:layout_width="wrap_content" >
              <Button
+                android:id="@+id/sliders"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Sliders" />
+             <Button
                 android:id="@+id/reset_gyro"
                 android:layout_width="0dip"
                 android:layout_height="wrap_content"
@@ -51,7 +58,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:onClick="onClick"
-                android:text="Auto Drive" />
+                android:text="Auto Drive"
+                android:visibility="gone" />
 
         </TableRow>
 

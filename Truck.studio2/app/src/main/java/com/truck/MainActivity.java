@@ -85,20 +85,23 @@ public class MainActivity extends WindowBase implements OnTouchListener
 			case R.id.drive2:
 				startActivity(new Intent(this, DriveWin2.class));
 				break;
-        case R.id.settings:
-        	startActivity(new Intent(this, SettingsWin.class));
-        	break;
-        case R.id.reset_gyro:
-        	Truck.needReset = true;
-        	break;
-		case R.id.do_mag:
-			Truck.needMag = ((CheckBox)view).isChecked();
-			if(!Truck.needMag)
-			{
-				// save the settings when exiting mag calibration
-				Truck.needConfig = true;
-			}
-			break;
+			case R.id.sliders:
+				startActivity(new Intent(this, SliderWin.class));
+				break;
+            case R.id.settings:
+        	    startActivity(new Intent(this, SettingsWin.class));
+        	    break;
+            case R.id.reset_gyro:
+        	    Truck.needReset = true;
+        	    break;
+		    case R.id.do_mag:
+			    Truck.needMag = ((CheckBox)view).isChecked();
+			    if(!Truck.needMag)
+			    {
+				    // save the settings when exiting mag calibration
+				    Truck.needConfig = true;
+			    }
+			    break;
   		}
   	}
     
