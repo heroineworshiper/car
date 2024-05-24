@@ -1,6 +1,6 @@
 /*
  * REMOTE CONTROL TRANSMITTER FOR CAR
- * Copyright (C) 2020-2023 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2024 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,13 +150,11 @@ const uint8_t DATA_KEY[] =
 #define RADIO_SDN_LAT LATC4
 #define RADIO_SDN_TRIS TRISC4
 
-//    uint16_t debug;
-
 
 
 // delay to warm up the radio is 1ms  page 19
 #define RADIO_DELAY (-CLOCKSPEED / 4 / 4 / 1000)
-#define RADIO_DELAY2 (-CLOCKSPEED2 / 4 / 4 / 1000)
+//#define RADIO_DELAY2 (-CLOCKSPEED2 / 4 / 4 / 1000)
 // multiple of clockspeed
 #define BAUD 100000
 
@@ -174,60 +172,29 @@ const uint8_t DATA_KEY[] =
 // 911.5425
 // 918.4425
 
-#define TOTAL_CHANNELS 9
+#define TOTAL_CHANNELS 2
 
-// channel indexes caused more dropouts
-//#define USE_CHANNELS
-
-#ifdef USE_CHANNELS
-// Channel spacing is accurate to only .03khz
-// use freq_worksheet.ods to map from the Si4421 table to the Si4463 table.
-const uint8_t channels[] = 
-{
-    0,
-    248,
-    124,
-    62,
-    186,
-    31,
-    217,
-    93,
-    155
-};
-
-#else // USE_CHANNELS
 
 // Base frequency is accurate to .001khz.
 // configuration bits corresponding to each base frequency
 // RF_FREQ_CONTROL_INTE_8 bytes 4-7
 const uint8_t pll_values[] =
 {
-    0x3B, 0x08, 0xA3, 0xD7,
-    0x3C, 0x0F, 0x5B, 0x22,
-    0x3B, 0x0F, 0xFE, 0xF9,
-    0x3B, 0x0C, 0x50, 0xE5,
-    0x3C, 0x0B, 0xAD, 0x0E,
-    0x3B, 0x0A, 0x79, 0xDB,
-    0x3C, 0x0D, 0x84, 0x18,
-    0x3B, 0x0E, 0x27, 0xEF,
-    0x3C, 0x09, 0xD6, 0x04
+//    0x38, 0x0D, 0xEB, 0x85, // 433.0Mhz
+    0x38, 0x0E, 0x66, 0x66, // 433.5Mhz
+//    0x38, 0x0E, 0xEE, 0xEE, // 434.0Mhz
+    0x38, 0x0F, 0x77, 0x77, // 434.5Mhz
 };
 
 // RF_MODEM_AFC_LIMITER_1_3 bytes 5-6
 const uint8_t afc_values[] = 
 {
+//    0xAD, 0x80,
     0xAD, 0x80,
-    0xB0, 0x80,
-    0xAE, 0x80,
-    0xAE, 0x80,
-    0xAF, 0x80,
-    0xAE, 0x80,
-    0xAF, 0x80,
-    0xAE, 0x80,
-    0xAF, 0x80
+//    0xAD, 0x80,
+    0xAD, 0x80,
 };
 
-#endif // !USE_CHANNELS
 
 
 
@@ -810,6 +777,7 @@ void play_calibration_tone()
 }
 
 // standard offset tone for stick drift & speed
+// we now read out 1 less than the offset
 void play_offset(int8_t offset)
 {
     if(offset > 0)
@@ -818,7 +786,7 @@ void play_offset(int8_t offset)
         uint8_t j;
 // overwrite the end code
         i--;
-        for(j = 0; j < offset && i <= MAX_SONG - 3; j++)
+        for(j = 0; j < offset - 1 && i <= MAX_SONG - 3; j++)
         {
             song_buffer[i].delay = HZ * 1 / 5;
             song_buffer[i].freq_index = SONG_REST;
@@ -838,7 +806,7 @@ void play_offset(int8_t offset)
         uint8_t j;
 // overwrite the end code
         i--;
-        for(j = 0; j < -offset && i <= MAX_SONG - 3; j++)
+        for(j = 0; j < -offset - 1 && i <= MAX_SONG - 3; j++)
         {
             song_buffer[i].delay = HZ * 1 / 5;
             song_buffer[i].freq_index = SONG_REST;
@@ -1046,8 +1014,13 @@ void main()
 
             uint16_t steering_value = steering_accum / steering_count / 4;
             uint16_t throttle_value = throttle_accum / throttle_count / 4;
+
+// 7: raw mode
+// 6:5: current channel
+// 4:0: speed offset
             uint8_t code_byte = (flags2.raw_mode << 7) | 
-                (speed_offset & 0x7f);
+                (current_channel << 5) |
+                (speed_offset & 0x1f);
 
 // detect stick centers
 // LDO drifts when it starts, so this is using a fudge factor

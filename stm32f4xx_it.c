@@ -186,16 +186,16 @@ void SysTick_Handler(void)
   * @retval None
   */
 #if (defined(USE_USB) && !defined(COPTER_MODE) && !defined(STANDALONE_MODE))
-void OTG_FS_IRQHandler(void)
-{
-  USBD_OTG_ISR_Handler(&USB_OTG_dev);
-}
- 
-
-void OTG_HS_IRQHandler(void)
-{
-  USBD_OTG_ISR_Handler(&USB_OTG_dev);
-}
+// void OTG_FS_IRQHandler(void)
+// {
+//   USBD_OTG_ISR_Handler(&USB_OTG_dev);
+// }
+//  
+// 
+// void OTG_HS_IRQHandler(void)
+// {
+//   USBD_OTG_ISR_Handler(&USB_OTG_dev);
+// }
 #endif // defined(USE_USB) && !defined(COPTER_MODE)
 
 

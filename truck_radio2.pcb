@@ -1562,13 +1562,6 @@ Element["" "Standard SMT resistor, capacitor etc" "" "0603" 140.8100mm 112.1200m
 
 	)
 
-Element["" "Standard SMT resistor, capacitor etc" "" "0603" 130.3800mm 71.7500mm -23.01mil -25.74mil 0 100 ""]
-(
-	Pad[-25.59mil -4.92mil -25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "1" "1" "square"]
-	Pad[25.59mil -4.92mil 25.59mil 4.92mil 29.52mil 20.00mil 35.52mil "2" "2" "square"]
-
-	)
-
 Element["" "Pad strip" "" "Pad strip" 131.2200mm 73.7300mm 100.00mil 196.00mil 0 100 ""]
 (
 	Pad[0.0000 0.0000 0.0000 0.0000 80.00mil 30.00mil 86.00mil "1" "1" "square"]
@@ -1976,8 +1969,6 @@ Layer(5 "power")
 	Line[133.8300mm 110.7000mm 134.9700mm 109.5600mm 0.2500mm 20.00mil "clearline"]
 	Line[133.8200mm 110.7200mm 134.9800mm 109.5600mm 0.2500mm 20.00mil "clearline"]
 	Line[134.5300mm 111.1700mm 136.2800mm 109.4200mm 0.2500mm 20.00mil "clearline"]
-	Line[126.7900mm 63.2500mm 125.3900mm 63.2500mm 0.2500mm 20.00mil "clearline"]
-	Line[125.3900mm 63.2500mm 123.8600mm 2550.00mil 0.2500mm 20.00mil "clearline"]
 	Line[126.5500mm 63.7600mm 127.8900mm 63.7600mm 0.2500mm 20.00mil "clearline"]
 	Line[114.4900mm 63.3700mm 115.2900mm 63.3700mm 0.2500mm 20.00mil "clearline"]
 	Line[125.3500mm 62.0400mm 125.3500mm 59.4700mm 0.2500mm 20.00mil "clearline"]
@@ -1994,8 +1985,6 @@ Layer(5 "power")
 	Line[115.1700mm 69.9700mm 116.7100mm 68.4300mm 25.00mil 20.00mil "clearline"]
 	Line[131.5600mm 72.9100mm 131.6000mm 72.9500mm 0.2500mm 20.00mil "clearline"]
 	Line[123.2900mm 74.6800mm 123.2900mm 73.7500mm 0.2500mm 20.00mil "clearline"]
-	Line[129.7500mm 71.9700mm 129.4900mm 71.9400mm 0.2500mm 20.00mil "clearline"]
-	Line[123.5700mm 71.9500mm 129.6600mm 71.9500mm 0.2500mm 20.00mil "clearline"]
 	Line[106.1400mm 85.0000mm 105.0700mm 85.0000mm 25.00mil 20.00mil "clearline"]
 	Line[105.0700mm 85.0000mm 103.2300mm 83.1600mm 25.00mil 20.00mil "clearline"]
 	Line[103.2300mm 83.1600mm 103.2300mm 73.6200mm 25.00mil 20.00mil "clearline"]
@@ -2014,7 +2003,6 @@ Layer(5 "power")
 	Line[120.8200mm 61.3500mm 123.3200mm 61.3500mm 0.2500mm 20.00mil "clearline"]
 	Line[114.3300mm 62.7000mm 116.6600mm 62.7000mm 0.2500mm 20.00mil "clearline"]
 	Line[114.4000mm 63.3400mm 116.1700mm 63.3400mm 0.2500mm 20.00mil "clearline"]
-	Line[131.0700mm 71.8200mm 131.0700mm 69.6300mm 0.2500mm 20.00mil "clearline"]
 	Line[131.0700mm 69.6300mm 131.0500mm 69.6100mm 0.2500mm 20.00mil "clearline"]
 	Line[124.3200mm 67.2000mm 125.3700mm 67.2000mm 0.2500mm 20.00mil "clearline"]
 	Line[126.5200mm 63.7600mm 131.3700mm 63.7600mm 0.2500mm 20.00mil "clearline"]
@@ -2083,6 +2071,14 @@ Layer(5 "power")
 	Line[117.6000mm 62.0800mm 114.4700mm 62.0800mm 0.2500mm 20.00mil "clearline"]
 	Line[120.0900mm 63.7600mm 117.7400mm 61.4100mm 0.2500mm 20.00mil "clearline"]
 	Line[117.7400mm 61.4100mm 114.3700mm 61.4100mm 0.2500mm 20.00mil "clearline"]
+	Line[123.3400mm 72.1300mm 128.9200mm 72.1300mm 0.2500mm 20.00mil "clearline"]
+	Line[128.9200mm 72.1300mm 131.0500mm 70.0000mm 0.2500mm 20.00mil "clearline"]
+	Line[123.3100mm 73.6800mm 123.3100mm 77.1600mm 25.00mil 20.00mil "clearline"]
+	Line[118.3000mm 73.2400mm 118.3000mm 76.8400mm 25.00mil 20.00mil "clearline"]
+	Line[111.6500mm 74.5200mm 115.3000mm 74.5200mm 25.00mil 20.00mil "clearline"]
+	Line[115.3000mm 74.5200mm 115.8300mm 75.0500mm 25.00mil 20.00mil "clearline"]
+	Line[127.2100mm 63.2500mm 125.4600mm 63.2500mm 0.2500mm 20.00mil "clearline"]
+	Line[125.4600mm 63.2500mm 124.1800mm 64.5300mm 0.2500mm 20.00mil "clearline"]
 )
 Layer(6 "bottom")
 (
@@ -2112,7 +2108,7 @@ Layer(10 "silk")
 	Text[119.9300mm 53.3600mm 1 100 "GND" ""]
 	Text[107.4500mm 53.4100mm 1 77 "3.3V" ""]
 	Text[132.9500mm 62.5900mm 0 78 "ANTENNA" ""]
-	Text[4650.00mil 72.4300mm 0 78 "GND" ""]
+	Text[119.8200mm 72.1100mm 1 78 "GND" ""]
 	Text[127.6300mm 67.9900mm 0 78 "30Mhz" ""]
 	Text[113.7200mm 72.7900mm 0 78 "COIL" ""]
 	Text[109.9400mm 72.5300mm 0 78 "100pF" ""]
@@ -2162,7 +2158,7 @@ Layer(10 "silk")
 	Text[121.1400mm 58.7600mm 1 78 "10uF" ""]
 	Text[125.0400mm 74.6800mm 0 78 "10k" ""]
 	Text[132.6600mm 75.7800mm 0 78 "BATT 4.2V" ""]
-	Text[131.6300mm 71.2300mm 0 78 "1k" ""]
+	Text[124.0800mm 72.4000mm 0 78 "1k" ""]
 	Text[122.8600mm 93.1600mm 1 77 "BATT SWITCH" ""]
 	Text[123.4000mm 75.9500mm 0 78 "AAT3693" ""]
 	Text[122.8600mm 82.8600mm 1 78 "0.22uF" ""]
@@ -2189,7 +2185,7 @@ Layer(10 "silk")
 	Text[110.5600mm 71.2200mm 1 78 "100uF" ""]
 	Text[98.4900mm 62.3700mm 0 78 "LED+" ""]
 	Text[124.3300mm 59.0300mm 1 78 "0R" ""]
-	Text[129.7900mm 61.8800mm 1 78 "100nH" ""]
+	Text[129.7900mm 61.8800mm 1 78 "390nH" ""]
 	Text[129.9000mm 57.2600mm 0 77 "3.3V" ""]
 	Text[142.9900mm 110.2400mm 1 78 "3nH" ""]
 	Text[139.9400mm 107.4700mm 1 78 "RFX1010" ""]
@@ -2197,6 +2193,7 @@ Layer(10 "silk")
 	Text[142.2600mm 113.6400mm 0 78 "10nF" ""]
 	Text[135.9000mm 107.3200mm 0 78 "15pF" ""]
 	Text[113.9700mm 66.0000mm 0 78 "0R" ""]
-	Text[124.1600mm 73.3200mm 1 78 "0R" ""]
 	Text[100.3200mm 66.4900mm 0 78 "TX" ""]
+	Text[117.9600mm 72.7400mm 0 78 "5V" ""]
+	Text[131.1000mm 61.8800mm 1 78 "100nH" ""]
 )

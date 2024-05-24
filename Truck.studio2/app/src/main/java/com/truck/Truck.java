@@ -94,18 +94,18 @@ public class Truck extends Thread {
 		ostream = null;
 
 
-		printAlert("Trying to connect\n");
+		printAlert("Trying to connect");
 
 		BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		if (mBluetoothAdapter == null) {
-	        printAlert("No bluetooth adapter\n");
+	        printAlert("No bluetooth adapter");
 			return true;
 		}
 		
 		
 		BluetoothDevice device = null;
 		if (!mBluetoothAdapter.isEnabled()) {
-	        printAlert("Bluetooth not enabled\n");
+	        printAlert("Bluetooth not enabled");
 			return true;
 
 		}
@@ -133,7 +133,7 @@ public class Truck extends Thread {
 			
 			if(socket == null)
 			{
-				printAlert("Bluetooth device not paired\n");
+				printAlert("Bluetooth device not paired");
 
 				return true;
 			}
@@ -179,7 +179,7 @@ public class Truck extends Thread {
 				
  				socket = null;
 				Log.i("", "Truck.initializeBluetooth: connect failed ");
-	       		printAlert("Couldn't open bluetooth socket\n");
+	       		printAlert("Couldn't open bluetooth socket");
 	     	   	return true;
 	       	}
         }
@@ -191,7 +191,7 @@ public class Truck extends Thread {
 //			alert("run: couldn't get bluetooth ostream");
 			Log.i("Truck", "initializeBluetooth: ostream failed");
 			e.printStackTrace();
-	        printAlert("Couldn't get bluetooth ostream\n");
+	        printAlert("Couldn't get bluetooth ostream");
 			return true;
 		}
 
@@ -200,13 +200,13 @@ public class Truck extends Thread {
 			istream = socket.getInputStream();
 		} catch (IOException e) {
 			Log.i("Truck", "initializeBluetooth: istream failed");
-	        printAlert("Couldn't get bluetooth istream\n");
+	        printAlert("Couldn't get bluetooth istream");
 			e.printStackTrace();
 			return true;
 		}
         
     
-    	printAlert("Got bluetooth connection\n");
+    	printAlert("Got bluetooth connection");
 
 		
 		

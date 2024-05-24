@@ -14,21 +14,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a53a3e7e-1d41-4964-8f32-13993da15ef4" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/../plot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../README" beforeDir="false" afterPath="$PROJECT_DIR$/../README" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/DriveWin.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/DriveWin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/MainActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/MainActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/SettingsWin.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/SettingsWin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/Truck.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/settings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/truck/WindowBase.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/truck/WindowBase.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../arm_gcc" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_gcc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../arm_imu.c.bak" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_imu.c.bak" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_truck2.c" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../arm_truck2.h" beforeDir="false" afterPath="$PROJECT_DIR$/../arm_truck2.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.p1" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/build/default/production/cam.pre" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" beforeDir="false" afterPath="$PROJECT_DIR$/../cam_remote.X/dist/default/production/cam_remote.X.production.cmf" afterDir="false" />
@@ -52,17 +41,16 @@
       <change beforePath="$PROJECT_DIR$/../car_receive.X/dist/default/production/car_receive.X.production.hex.orig" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../car_remote.X/car.c.drift" beforeDir="false" afterPath="$PROJECT_DIR$/../car_remote.X/car.c.drift" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../leash6.FCStd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../offroad3.stl" beforeDir="false" afterPath="$PROJECT_DIR$/../offroad3.stl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../settings.car" beforeDir="false" afterPath="$PROJECT_DIR$/../settings.car" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../stm32f4" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../tire6.FCMacro" beforeDir="false" afterPath="$PROJECT_DIR$/../tire6.FCMacro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../traction.FCStd" beforeDir="false" afterPath="$PROJECT_DIR$/../traction.FCStd" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[0123456789ABCDEF]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[ZY22HPP2PV]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />

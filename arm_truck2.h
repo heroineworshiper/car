@@ -25,7 +25,7 @@
 #include "stm32f4xx_adc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
-#include "arm_math.h"
+#include "arm_math2.h"
 //#include "arm_hardi2c.h"
 #include "arm_softi2c.h"
 
@@ -317,9 +317,9 @@ typedef struct
 	int throttle;
 	int steering;
     int binary_steering;
-    int speed_offset;
+    int8_t speed_offset;
 // controller is in calibration mode
-    int calibration_mode;
+    int raw_mode;
 // last throttle value when the motor moved
 	int throttle2;
 	int steering2;

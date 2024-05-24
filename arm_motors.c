@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 #include "arm_fs.h"
-#include "arm_math.h"
+#include "arm_math2.h"
 #include "uart.h"
 //#include "arm_motors.h"
 #include "arm_truck2.h"

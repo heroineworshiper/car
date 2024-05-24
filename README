@@ -2,7 +2,7 @@
 3D printed truck
 
 
-Copyright (C) 2012-2022 Adam Williams <broadcast at earthling dot net>
+Copyright (C) 2012-2024 Adam Williams <broadcast at earthling dot net>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -174,6 +174,7 @@ tire6.FCMacro: Create layer for the latest rear tire
 
 
 truck_radio2.pcb: remote control tx/rx for 3D printed truck & the camera
+    - uses Si4421 for receive + Si4463 for transmit
 
 truck4.pcb: mane board for 3D printed truck
 
@@ -248,14 +249,10 @@ phone6.FCStd:
 
 radio_box2.FCStd:
     container for radio modules & switches.
-    use print mask to create wall & isogrid parts
-    walls contain temporary plastic stringers to aid gluing
-    print without support & with print cooling to bridge overhangs
-    rotate it to bridge overhangs
-    TODO: 
-        Tabs to aid alignment
-        hollow border
-        shift cable hole left
+    print without support
+    print latches flat & glue on
+
+
 
 tool.FCStd: socket wrench for 6-32 locknuts
 

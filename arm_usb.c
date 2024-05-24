@@ -613,7 +613,7 @@ void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 // FS core
   GPIO_Init(GPIOA, &GPIO_InitStructure);  
   
@@ -642,17 +642,19 @@ void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
   	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
   	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
  	NVIC_Init(&NVIC_InitStructure);
+//TRACE
 }
 
 void OTG_FS_IRQHandler(void)
 {
-  USBD_OTG_ISR_Handler(&USB_OTG_dev);
+//TRACE
+    USBD_OTG_ISR_Handler(&USB_OTG_dev);
 }
 
-void handle_usb()
-{
-//    USBD_OTG_ISR_Handler(&USB_OTG_dev);
-}
+// void handle_usb()
+// {
+//     USBD_OTG_ISR_Handler(&USB_OTG_dev);
+// }
 
 void init_usb()
 {

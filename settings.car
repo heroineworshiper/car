@@ -91,19 +91,7 @@ LEASH_X_OFFSET 0.4
 LEASH_D_SIZE 20
 LEASH_I_LIMIT 10
 LEASH_D_LIMIT 100
-# default
-#LEASH_HIGHPASS 97
-#LEASH_LOWPASS 5
-#            P     I      D    P2
-#LEASH_PID    150   0.2    20  200
 
-# faster
-#LEASH_HIGHPASS 97
-#LEASH_LOWPASS 5
-#            P     I      D    P2
-#LEASH_PID   200   0.2    20  300
-
-# faster
 LEASH_HIGHPASS 96
 LEASH_LOWPASS 8
 #            P     I      D    P2

@@ -1,7 +1,7 @@
 /*
  * STM32 CONTROLLER FOR CAMERA PANNER
- * Copyright (C) 2020-2023 Adam Williams <broadcast at earthling dot net>
- * 
+ * Copyright (C) 2020-2024 Adam Williams <broadcast at earthling dot net>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -28,9 +28,14 @@
 
 // This version sends UART codes to a brushless servo programmed to be 
 // a stepper motor.
+// USART1 is the servo at 115kbaud
+// USART3 is the radio at 100kbaud
+// USART6 is the debug
 
 // send a motor command to the ttyACM device:
 // echo -n -e '\xff\xd2\x80' > /dev/ttyACM0
+// echo -n -e '\xff\xd2\x00' > /dev/ttyACM0
+// echo -n -e '\xff\xd2\xff' > /dev/ttyACM0
 
 
 #include "linux.h"
@@ -138,25 +143,16 @@ const uint8_t DATA_KEY[] =
 
 #define PACKET_DATA 8
 
-// frequency hopping table.  64 frequency steps = 480khz 
-// Check temp_sensor.X & cam_remote.X for taken frequencies
-// 901-928Mhz
-#define MAX_FREQ 3839
-#define MIN_FREQ 160
-#define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
-// freq hopping.  Offset the traction controller frequencies.
-// use freq_worksheet.ods to visualize these
+// frequency hopping table.  Use freqs433.ods to calculate.
 const uint16_t channels[] = 
 {
-    MIN_FREQ + FREQ_RANGE / 16, 
-    MAX_FREQ - FREQ_RANGE / 16, 
-    MIN_FREQ + FREQ_RANGE * 4 / 8 + FREQ_RANGE / 16 - 100, // fudge the spacing
-    MIN_FREQ + FREQ_RANGE * 2 / 8 + FREQ_RANGE / 16, 
-    MIN_FREQ + FREQ_RANGE * 6 / 8 - FREQ_RANGE / 16,
-    MIN_FREQ + FREQ_RANGE * 1 / 8 + FREQ_RANGE / 16, 
-    MIN_FREQ + FREQ_RANGE * 7 / 8 - FREQ_RANGE / 16, 
-    MIN_FREQ + FREQ_RANGE * 3 / 8 + FREQ_RANGE / 16,
-    MIN_FREQ + FREQ_RANGE * 5 / 8 - FREQ_RANGE / 16, 
+//    1200, // 433Mhz/desk transmitter
+//    1300, // 433.25
+//    1400, // 433.5Mhz
+//    1500, // 433.75Mhz
+//    1600, // 434Mhz
+//    1700, // 434.25Mhz
+    1800  // 434.5Mhz
 };
 
 #define TOTAL_CHANNELS (sizeof(channels) / sizeof(uint16_t))
@@ -175,16 +171,19 @@ const uint16_t channels[] =
 #define FIFORSTREG 0xCA81
 // read continuously
 //#define FIFORSTREG              (0xCA81 | 0x0004)
-// 915MHz
-#define FREQ_BAND 0x0030
-// Center Frequency: 915.000MHz
-//#define CFSREG (0xA000 | RADIO_CHANNEL)
+
+// 915MHz page 16
+//#define FREQ_BAND 0x0030
+// 433Mhz
+#define FREQ_BAND 0x0010
+
+// frequency page 18
 #define CFSREG(chan) (0xA000 | (chan))
-// crystal load 10pF
+// crystal load 10pF page 16
 #define XTAL_LD_CAP 0x0003
+#define GENCREG (0x8000 | XTAL_LD_CAP | FREQ_BAND)
 // power management page 16
 #define PMCREG 0x8201
-#define GENCREG (0x8000 | XTAL_LD_CAP | FREQ_BAND)
 
 
 // +3/-4 Fres
@@ -372,21 +371,26 @@ void get_packet()
 // flash for RF reception
             TOGGLE_PIN(LED_GPIO, LED_PIN);
             timeout_counter = 0;
-//print_text("got chan=");
-//print_number(current_channel);
-//print_lf();
-            timelapse_code = receive_buf[0];
+
+            uint8_t code_byte = receive_buf[0];
+            timelapse_code = (code_byte & 0xf);
+            current_channel = (code_byte >> 4);
             adc_raw = receive_buf[1];
             rf_valid = 1;
             
             int time_diff = packet_tick - last_hop;
+
+
 // TRACE2
-// print_text("timelapse_code=");
-// print_number(timelapse_code);
-// print_text("adc_raw=");
-// print_number(adc_raw);
-print_text("GOT IT ");
-// ticks after last hop
+print_text("chan=");
+print_number(current_channel);
+print_text("timelapse_code=");
+print_number(timelapse_code);
+print_text("adc_raw=");
+print_number(adc_raw);
+//print_text("GOT IT ");
+// hop lag observed
+print_text("hop lag=");
 print_number(time_diff);
 print_lf();
 
@@ -400,6 +404,8 @@ print_lf();
 
 void get_key()
 {
+//TOGGLE_PIN(LED_GPIO, LED_PIN);
+//send_uart(radio_data);
     if(radio_data == PACKET_KEY[radio_counter])
     {
         if(radio_counter == 0)
@@ -487,7 +493,10 @@ void init_radio()
 //  GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 	USART_InitTypeDef USART_InitStructure;
+// cam transmitter
 	USART_InitStructure.USART_BaudRate = 100000;
+// desk transmitter
+//	USART_InitStructure.USART_BaudRate = 4000;
 
 	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
@@ -550,20 +559,6 @@ void init_radio()
 }
 
 
-
-void next_channel()
-{
-    current_channel++;
-    if(current_channel >= TOTAL_CHANNELS)
-    {
-        current_channel = 0;
-    }
-print_text("tune chan=");
-print_number(current_channel);
-print_number(channels[current_channel]);
-print_lf();
-    write_radio(CFSREG(channels[current_channel]));
-}
 
 
 
@@ -1061,8 +1056,7 @@ int main(void)
     int debug_count = 0;
 	while(1)
 	{
-		handle_uart();
-        handle_usb();
+        HANDLE_UART_OUT
 
 // transmit motor code
 	    if((USART1->SR & USART_FLAG_TC) != 0)
@@ -1265,43 +1259,6 @@ int main(void)
 
 
 
-// frequency hopping
-        if(need_hop)
-        {
-            need_hop = 0;
-            if(scanning)
-            {
-                next_hop = tick + HZ / SCAN_HZ;
-            }
-            else
-            {
-// always incremented, whether we got a packet or not
-                missed_packets++;
-// too many hops without a packet.  Go to scanning mode
-                if(missed_packets > MAX_MISSED_PACKETS)
-                {
-                    scanning = 1;
-                    next_hop = tick + HZ / SCAN_HZ;
-                }
-                else
-                {
-                    next_hop = tick + HZ / HOP_HZ;
-                }
-            }
-
-//             if(missed_packets > 1)
-//             {
-//                 print_text("missed chan=");
-//                 print_number(current_channel);
-//                 print_lf();
-//             }
-//TRACE2
-//print_text("scanning=");
-//print_number(scanning);
-//print_text("current_channel=");
-//print_number(current_channel);
-            next_channel();
-        }
 
 #ifdef USE_SPI
         if(spi_len >= 1)

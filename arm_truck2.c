@@ -442,10 +442,12 @@ uint16_t get_chksum(uint8_t *buffer, uint8_t size)
 void handle_radio_packet(unsigned char *ptr)
 {
     truck.stick_packets++;
+
 //TRACE2
+//print_number((ptr[2] & 0x60) >> 5);
 
 // packet good
-	TOGGLE_PIN(LED_GPIO, GREEN_LED);
+    TOGGLE_PIN(LED_GPIO, GREEN_LED);
 
 // protect radio_timeout
 	DISABLE_INTERRUPTS
@@ -454,8 +456,8 @@ void handle_radio_packet(unsigned char *ptr)
 
 	truck.throttle = ptr[1];
 	truck.steering = ptr[0];
-    truck.speed_offset = (ptr[2] & 0x7f);
-    truck.calibration_mode = (ptr[2] & 0x80) ? 1 : 0;
+    truck.speed_offset = (ptr[2] & 0x1f);
+    truck.raw_mode = (ptr[2] & 0x80) ? 1 : 0;
 #ifdef REVERSE_STEERING_ADC
     truck.steering = 0xff - truck.steering;
 #endif
@@ -464,8 +466,9 @@ void handle_radio_packet(unsigned char *ptr)
     truck.throttle = 0xff - truck.throttle;
 #endif
 
-    if((ptr[2] & 0x40))
-        truck.speed_offset = truck.speed_offset - 0x80;
+// extend sign bit
+    if((ptr[2] & 0x10))
+        truck.speed_offset |= 0xe0;
 
 
 // convert to a binary steering value
@@ -1701,6 +1704,21 @@ void rpm_to_power(float target_rpm)
 // don't go into braking mode or it'll oscillate
     CLAMP(truck.power[0], 1, MOTOR_PWM_PERIOD);
     truck.power[1] = truck.power[0];
+
+
+
+
+// static int debug_counter = 0;
+// debug_counter++;
+// if(!(debug_counter % 10))
+// {
+// TRACE2
+// print_float(target_rpm);
+// print_number(truck.rpm);
+// print_number(truck.power[0]);
+// }
+
+
 }
 
 void do_auto_throttle()
@@ -1737,7 +1755,8 @@ void do_auto_throttle()
 // if(!(debug_counter % 10))
 // {
 // TRACE2
-// print_number(truck.target_rpm);
+// print_number(truck.speed_offset);
+// print_float(target_rpm);
 // }
 
     rpm_to_power(target_rpm);
@@ -1967,7 +1986,7 @@ void feedback()
 	float steering_overshoot = 0;
 
 	if(truck.have_gyro_center &&
-        !truck.calibration_mode)
+        !truck.raw_mode)
 	{
 // cancel bluetooth controls
 		if(truck.have_bt_controls && truck.bt_timeout <= 0)
@@ -2653,7 +2672,7 @@ void handle_motors()
 
 // handle commutations
     if(!truck.calibrating_motors &&
-        !truck.calibration_mode &&
+        !truck.raw_mode &&
         truck.have_gyro_center &&
         truck.halls[LEFT_HALL].readings >= HALL_OVERSAMPLE &&
         truck.halls[LEFT_HALL + 1].readings >= HALL_OVERSAMPLE &&
@@ -3102,9 +3121,9 @@ void radio_get_data()
 
 // DEBUG
 // TRACE2
-// print_number(truck.radio.packet[0]);
-// print_number(truck.radio.packet[1]);
-// print_number(truck.radio.packet[2]);
+// print_hex2(truck.radio.packet[0]);
+// print_hex2(truck.radio.packet[1]);
+// print_hex2(truck.radio.packet[2]);
 
         truck.radio.got_packet = 1;
     }
@@ -3118,7 +3137,7 @@ void radio_get_debug()
     }
     else
     {
-        send_uart(&truck.radio.data, 1);
+        send_uart(truck.radio.data);
     }
 }
 
@@ -3894,11 +3913,12 @@ int main(void)
     int debug_rpm = 0;
 	while(1)
 	{
-	    if((USART6->SR & USART_FLAG_TC) != 0 &&
-		    uart.uart_offset < uart.uart_size)
-	    {
-		    USART6->DR = uart.uart_buffer[uart.uart_offset++];
-	    }
+        HANDLE_UART_OUT
+// 	    if((USART6->SR & USART_FLAG_TC) != 0 &&
+// 		    uart.uart_offset < uart.uart_size)
+// 	    {
+// 		    USART6->DR = uart.uart_buffer[uart.uart_offset++];
+// 	    }
 
 		handle_bluetooth();
 		handle_analog();

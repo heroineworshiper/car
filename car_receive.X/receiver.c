@@ -1,6 +1,6 @@
 /*
  * REMOTE CONTROL RECEIVER FOR CAR
- * Copyright (C) 2020-2021 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2020-2024 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,8 @@
 #include <xc.h>
 #include <pic18f14k50.h>
 
-
+// receiver using 433Mhz Si4421
+// no frequency hopping
 // use test_receive.c to view the output
 
 // to program a dead chip with the home made programmer
@@ -123,45 +124,36 @@ const uint8_t DATA_KEY[] =
 #define BAUD 100000
 
 
-// RADIO_CHANNEL is from 96-3903 & set by the user
-// Frequency in Mhz is 900 + 30 * RADIO_CHANNEL / 4000
+// frequency hopping table.  Use freqs433.ods to calculate.
+const uint16_t channels[] = 
+{
+//    1200, // 433Mhz/desk transmitter
+//    1300, // 433.25
+    1400, // 433.5Mhz
+//    1500, // 433.75Mhz
+//    1600, // 434Mhz
+    1700, // 434.25Mhz
+//    1800  // 434.5Mhz
+};
+
+#define TOTAL_CHANNELS (sizeof(channels) / sizeof(uint16_t))
 
 // data rate must be slow enough to service FIFOs
 // kbps = 10000 / (29 * (DRVSREG<6:0> + 1) * (1 + DRPE * 7))
 // RADIO_BAUD_CODE = 10000 / (29 * kbps) / (1 + DRPE * 7) - 1
 // RADIO_DATA_SIZE is the amount of data to read before resetting the sync code
 
-// frequency hopping table.  64 steps = 480khz
-// Check temp_sensor.X & cam_remote.X for taken frequencies
-// 901-928Mhz
-#define MAX_FREQ 3839
-#define MIN_FREQ 160
-#define FREQ_RANGE (MAX_FREQ - MIN_FREQ)
-uint16_t channels[] = 
-{
-    MIN_FREQ, 
-    MAX_FREQ, 
-    MIN_FREQ + FREQ_RANGE * 1 / 2,
-    MIN_FREQ + FREQ_RANGE * 1 / 4, 
-    MIN_FREQ + FREQ_RANGE * 3 / 4,
-    MIN_FREQ + FREQ_RANGE * 1 / 8, 
-    MIN_FREQ + FREQ_RANGE * 7 / 8, 
-    MIN_FREQ + FREQ_RANGE * 3 / 8,
-    MIN_FREQ + FREQ_RANGE * 5 / 8, 
-};
-
-#define TOTAL_CHANNELS (sizeof(channels) / sizeof(uint16_t))
-
-//#define RADIO_CHANNEL 96
 
 // scan for synchronous code
 #define FIFORSTREG 0xCA81
 // read continuously
 //#define FIFORSTREG              (0xCA81 | 0x0004)
 // 915MHz
-#define FREQ_BAND 0x0030
-// Center Frequency: 915.000MHz
-//#define CFSREG (0xA000 | RADIO_CHANNEL)
+//#define FREQ_BAND 0x0030
+// 433Mhz
+#define FREQ_BAND 0x0010
+
+// Center Frequency page 18
 #define CFSREG(chan) (0xA000 | (chan))
 // crystal load 10pF
 #define XTAL_LD_CAP 0x0003
@@ -399,31 +391,6 @@ void print_bin(uint8_t number) {}
 #endif // !DEBUG
 
 
-void next_channel()
-{
-    current_channel++;
-    if(current_channel >= TOTAL_CHANNELS)
-    {
-        current_channel = 0;
-    }
-
-print_text("TUNE CHAN=");
-print_number(current_channel);
-//print_text("CHARS=");
-//print_number(chars_received);
-//print_text("RCSTA=");
-//print_bin(RCSTA);
-print_text("\n");
-chars_received = 0;
-    if(flags.scanning)
-    {
-        radio_on();
-    }
-    else
-    {
-        write_radio(CFSREG(channels[current_channel]));
-    }
-}
 
 void serial_on()
 {
@@ -478,14 +445,8 @@ void get_data()
             flags.scanning = 0;
             missed_packets = 0;
 
-print_text("GOT CHAN=");
-print_number(current_channel);
-print_text("\n");
-// set the next hop to the start time of this packet + 1 tick - HOP_LAG
-            uint16_t next_hop = start_time + TIMER0_PERIOD - HOP_LAG;
-            uint16_t current_time = TMR0;
-            TMR0 = current_time - next_hop;
-            INTCONbits.TMR0IF = 0;
+            uint8_t code_byte = serial_data[2];
+            current_channel = ((code_byte >> 5) & 0x3);
         }
     }
 }
@@ -581,26 +542,6 @@ void interrupt isr()
 			INTCONbits.TMR0IF = 0;
             TMR0 = -TIMER0_PERIOD;
             tick++;
-
-            if(flags.scanning && tick >= DWELL_TIME)
-            {
-                tick = 0;
-                next_channel();
-            }
-            else
-            if(!flags.scanning)
-            {
-                next_channel();
-                missed_packets++;
-// too many hops without a packet.  Go to scanning mode
-                if(missed_packets > MAX_MISSED_PACKETS)
-                {
-print_text("SCANNING\n");
-                    flags.scanning = 1;
-                    tick = 0;
-                }
-            }
-
         }
 
 // serial port
@@ -610,7 +551,7 @@ print_text("SCANNING\n");
 //            LED_LAT = !LED_LAT;
             serial_in = RCREG;
             PIR1bits.RCIF = 0;
-            chars_received++;
+//            chars_received++;
             receive_state();
         }
         

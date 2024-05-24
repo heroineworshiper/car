@@ -494,7 +494,8 @@ void flush_i2c(i2c_t *i2c)
 	{
 		mdelay(1);
 		handle_i2c_nodelay(i2c);
-		handle_uart();
+//		handle_uart();
+        HANDLE_UART_OUT
 /* Reload IWDG counter */
 		IWDG->KR = KR_KEY_RELOAD;
 	}
