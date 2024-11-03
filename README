@@ -140,7 +140,7 @@ offroad3.stl: offroad rear tire for soft TPE
     Set Z seam to "shortest" to overcome nozzle clogs 
         by printing the longest section of each layer 1st
     Print Initial layer at 10mm/s
-    No bed heating or it'll warp
+    Buildtak bed with no heating or it won't adhere
 
 rear_tire3.FCStd: OBSOLETE rear wheel
 
@@ -184,10 +184,11 @@ ball_link.FCStd:
     100% infill
     80 deg support
     220C nozzle
-    right wheel link spacing: old: 43.5mm new: 39.5mm
-    left wheel link spacing: old: 42mm new: 38mm
+    link spacing on both sides: 38.5mm
+     - this grows as the wheel forks wear down
     use pliers when threading to avoid delamination
     grind a flat in the metal rod to aid the pliers
+    heat the PLA to get it to conform
 
 
 
@@ -219,6 +220,7 @@ corners.FCStd:
     top front corners with light positions
     print corner & support
     .4 nozzle, .2 layers 260C
+    Use brim to aid adhesion to glass
 
 
     
@@ -233,6 +235,7 @@ rear_light.FCStd:
     print rear corner with black TPU
     print window with clear TPU
     .4 nozzle, .2 layers 260C
+    Use brim to aid adhesion to glass
 
 plot.py: 
     plot steering filters
@@ -299,10 +302,13 @@ steering2.FCStd: steering section
     wheel mount
     servo plate
     bushing, bushing001
+     - .4 nozzle .32mm layer
      - hard TPU
-    
+    wheel mount003
+        wheel forks need to be heated with metal rods to 
+        accurately conform the holes
 
-    TODO: make shield removable for accessing the ball links
+    TODO: make shield screw on for accessing the ball links
 
 
 

@@ -1,6 +1,6 @@
 /*
  * Phone app for direct drive truck
- * Copyright (C) 2012-2023 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2012-2024 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -689,12 +689,6 @@ public class Truck extends Thread {
 		beacon[offset++] = (byte) 1;
 
 
-		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_FWD")[0]);
-		beacon[offset++] = (byte) (Settings.getFileFloat("MIN_THROTTLE_REV")[0]);
-
-		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_BASE")[0]);
-		beacon[offset++] = (byte) (Settings.getFileFloat("THROTTLE_REVERSE_BASE")[0]);
-
 // servo PWM
 		beacon[offset++] = (byte) (Settings.getFileFloat("MID_STEERING")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("MAX_STEERING")[0]);
@@ -709,11 +703,11 @@ public class Truck extends Thread {
 		beacon[offset++] = (byte)(Settings.getFileFloat("D_BANDWIDTH")[0]);
 
 // remote control ADC
-        beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_CENTER")[0]);
+//        beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_CENTER")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_DEADBAND")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_MAX")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("STEERING_ADC_MIN")[0]);
-        beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_CENTER")[0]);
+//        beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_CENTER")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_DEADBAND")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_MAX")[0]);
         beacon[offset++] = (byte)(Settings.getFileFloat("THROTTLE_ADC_MIN")[0]);
@@ -759,8 +753,6 @@ public class Truck extends Thread {
 
 // LEASH_XY mode
 		offset = Math2.write_float32(beacon, offset, Settings.getFileFloat("LEASH_X_OFFSET")[0]);
-// leash polar mode
-//		offset = Math2.write_float32(beacon, offset, (float)Math2.toRad(Settings.getFileFloat("LEASH_X_OFFSET")[0]));
 
 
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_SIZE")[0]);
@@ -768,8 +760,11 @@ public class Truck extends Thread {
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_D_LIMIT")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_HIGHPASS")[0]);
 		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_LOWPASS")[0]);
+		beacon[offset++] = (byte) (Settings.getFileFloat("LEASH_LOWPASS2")[0]);
 
         pid = Settings.getFileFloat("LEASH_PID");
+        offset = writePid(offset, pid);
+        pid = Settings.getFileFloat("BRAKE_PID");
         offset = writePid(offset, pid);
         return offset;
     }

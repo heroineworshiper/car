@@ -163,8 +163,8 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 
 
-// delay to warm up the radio is 1ms  page 19
-#define RADIO_DELAY (-CLOCKSPEED / 4 / 4 / 1000)
+// 4ms delay for transmitting a packet
+#define RADIO_DELAY (-CLOCKSPEED / 4 / 4 / 250)
 // multiple of clockspeed
 #define BAUD 100000
 
@@ -435,6 +435,8 @@ uint8_t blink_counter = 0;
 // hall effect accumulator
 uint32_t adc_accum;
 uint32_t adc_count;
+uint8_t adc_value;
+uint8_t code_byte;
 // computed at startup
 int8_t adc_offset = 0;
 uint8_t current_channel = 0;
@@ -714,43 +716,119 @@ void init_radio()
         ptr += len;
     }
 
-// Any more power kills the SPI
+// overrides
+
+// Full power kills the SPI
+// Starts getting unstable above 15 dBm with the chip antenna
     const uint8_t pa_mode[] = { 0x11, 0x22, 0x04, 0x00, 0x08, 
-        20, // power level page 35
+//        20, // 30 = 12dBm 45mA page 35
+//            // 20 = 7dBm 45mA
+        0x7f, // full power with auto sleep
         0x00, 0x9E };
     si4463_command(pa_mode, sizeof(pa_mode));
     si4463_cts();
 
-// GFSK
-    const uint8_t mod_type[] = { 0x11, 0x20, 0x0C, 0x00, 0x2B, 0x00, 0x07, 0x1E, 0x84, 0x80, 0x09, 0xC9, 0xC3, 0x80, 0x00, 0x2D };
+// 2FSK, 100 kbit with TX FIFO as modulation source
+    const uint8_t mod_type[] = { 0x11, 0x20, 0x0C, 0x00, 0x22, 0x00, 0x07, 0x0F, 0x42, 0x40, 0x01, 0xC9, 0xC3, 0x80, 0x00, 0x2D };
     si4463_command(mod_type, sizeof(mod_type));
     si4463_cts();
 
 // custom frequency
     uint8_t rf_freq_control_inte_8[] = { RF_FREQ_CONTROL_INTE_8 };
-    uint8_t rf_modem_afc_limiter_1_3[] = { RF_MODEM_AFC_LIMITER_1_3 };
     rf_freq_control_inte_8[4] = pll_values[current_channel * 4 + 0];
     rf_freq_control_inte_8[5] = pll_values[current_channel * 4 + 1];
     rf_freq_control_inte_8[6] = pll_values[current_channel * 4 + 2];
     rf_freq_control_inte_8[7] = pll_values[current_channel * 4 + 3];
-    rf_modem_afc_limiter_1_3[5] = afc_values[current_channel * 2 + 0];
-    rf_modem_afc_limiter_1_3[6] = afc_values[current_channel * 2 + 1];
     si4463_command(rf_freq_control_inte_8, sizeof(rf_freq_control_inte_8));
     si4463_cts();
+
+    uint8_t rf_modem_afc_limiter_1_3[] = { RF_MODEM_AFC_LIMITER_1_3 };
+    rf_modem_afc_limiter_1_3[5] = afc_values[current_channel * 2 + 0];
+    rf_modem_afc_limiter_1_3[6] = afc_values[current_channel * 2 + 1];
     si4463_command(rf_modem_afc_limiter_1_3, sizeof(rf_modem_afc_limiter_1_3));
     si4463_cts();
 }
 
+// pack bits for synthetic RS232
+uint8_t bits_buffer[2 * (4 + sizeof(PACKET_KEY) + 8)];
+uint8_t total_bytes = 0;
+uint8_t bits_temp = 0;
+uint8_t total_bits = 0;
+void pack_bits(uint8_t data, uint8_t n)
+{
+    while(n > 0)
+    {
+        bits_temp <<= 1;
+// least significant bit 1st
+        bits_temp |= (data & 0x1);
+        data >>= 1;
+        n--;
+        total_bits++;
+        if(total_bits >= 8)
+        {
+            bits_buffer[total_bytes] = bits_temp;
+            total_bits = 0;
+            total_bytes++;
+        }
+    }
+}
+void reset_bits()
+{
+    total_bits = 0;
+    total_bytes = 0;
+    bits_temp = 0;
+}
+void pack_rs232(uint8_t data)
+{
+    pack_bits(0, 1); // start bit
+    pack_bits(data, 8); // data
+    pack_bits(0xff, 1); // stop bit
+}
+
 void radio_on()
 {
-    const uint8_t tx_command[] = { 0x31, 0, 0, 0, 0 };
+
+// create RS232 bitstream
+    reset_bits();
+// Fill TX FIFO command
+    bits_buffer[total_bytes++] = 0x66;
+    pack_rs232(0xff);
+    pack_rs232(0xff);
+    pack_rs232(0xff);
+    pack_rs232(0xff);
+
+    uint8_t i;
+
+    for(i = 0; i < sizeof(PACKET_KEY); i++)
+    {
+        pack_rs232(PACKET_KEY[i]);
+    }
+    pack_rs232(code_byte ^ DATA_KEY[0]);
+    pack_rs232(adc_value ^ DATA_KEY[1]);
+
+    pack_rs232(code_byte ^ DATA_KEY[2]);
+    pack_rs232(adc_value ^ DATA_KEY[3]);
+
+    pack_rs232(code_byte ^ DATA_KEY[4]);
+    pack_rs232(adc_value ^ DATA_KEY[5]);
+
+    pack_rs232(code_byte ^ DATA_KEY[6]);
+    pack_rs232(adc_value ^ DATA_KEY[7]);
+    pack_bits(0xff, 8);
+    
+
+    si4463_command(bits_buffer, total_bytes);
+
+// SPI is dead in full power so transmit & go to sleep automatically
+    uint8_t tx_command[] = { 0x31, 0, 0x10, 0, 0 };
+    tx_command[4] = total_bytes;
     si4463_command(tx_command, sizeof(tx_command));
 
 // enable serial port 10mA
-    RCSTA = 0b10000000;
-    TXSTA = 0b00100100;
+//     RCSTA = 0b10000000;
+//     TXSTA = 0b00100100;
 
-// warm up.  1:4 prescaler for 32Mhz clock
+// fixed delay before capturing ADC.  1:4 prescaler for 32Mhz clock
 // DEBUG
 //LED_LAT = 0;
     T1CON = 0b10100001;
@@ -764,21 +842,21 @@ void radio_on()
 //LED_LAT = 1;
 }
 
-void radio_off()
-{
-// disable serial port 10mA
-    TXSTA = 0b00000100;
-    RCSTA = 0b00000000;
-
-
-    const uint8_t command[] =
-    {
-        0x34,
-        0x01, // sleep state.  regs page 40.  Application note page 25
-    };
-    si4463_command(command, sizeof(command));
-
-}
+// void radio_off()
+// {
+// // disable serial port 10mA
+//     TXSTA = 0b00000100;
+//     RCSTA = 0b00000000;
+// 
+// 
+//     const uint8_t command[] =
+//     {
+//         0x34,
+//         0x01, // sleep state.  regs page 40.  Application note page 25
+//     };
+//     si4463_command(command, sizeof(command));
+// 
+// }
 
 
 // called every tick
@@ -1088,7 +1166,6 @@ void main()
 
 
 
-    uint8_t adc_value = 0;
     while(1)
     {
         if(flags.send_packet)
@@ -1106,35 +1183,34 @@ void main()
 // DEBUG
 //LED_LAT = 0;
 // transmit packet
+                adc_value = adc_accum / adc_count / 4;
+                adc_value -= adc_offset;
+                code_byte = timelapse_mode | (current_channel << 4);
                 radio_on();
 
 // delay for amplifier & framing errors
-                write_serial(0xff);
-                write_serial(0xff);
-                write_serial(0xff);
-                write_serial(0xff);
-
-                adc_value = adc_accum / adc_count / 4;
-                adc_value -= adc_offset;
-                uint8_t code_byte = timelapse_mode |
-                    (current_channel << 4);
-
-                uint8_t i;
-                for(i = 0; i < sizeof(PACKET_KEY); i++)
-                {
-                    write_serial(PACKET_KEY[i]);
-                }
-                write_serial(code_byte ^ DATA_KEY[0]);
-                write_serial(adc_value ^ DATA_KEY[1]);
-
-                write_serial(code_byte ^ DATA_KEY[2]);
-                write_serial(adc_value ^ DATA_KEY[3]);
-
-                write_serial(code_byte ^ DATA_KEY[4]);
-                write_serial(adc_value ^ DATA_KEY[5]);
-
-                write_serial(code_byte ^ DATA_KEY[6]);
-                write_serial(adc_value ^ DATA_KEY[7]);
+//                 write_serial(0xff);
+//                 write_serial(0xff);
+//                 write_serial(0xff);
+//                 write_serial(0xff);
+// 
+// 
+//                 uint8_t i;
+//                 for(i = 0; i < sizeof(PACKET_KEY); i++)
+//                 {
+//                     write_serial(PACKET_KEY[i]);
+//                 }
+//                 write_serial(code_byte ^ DATA_KEY[0]);
+//                 write_serial(adc_value ^ DATA_KEY[1]);
+// 
+//                 write_serial(code_byte ^ DATA_KEY[2]);
+//                 write_serial(adc_value ^ DATA_KEY[3]);
+// 
+//                 write_serial(code_byte ^ DATA_KEY[4]);
+//                 write_serial(adc_value ^ DATA_KEY[5]);
+// 
+//                 write_serial(code_byte ^ DATA_KEY[6]);
+//                 write_serial(adc_value ^ DATA_KEY[7]);
 
 // DEBUG
 //                 write_serial(tick);
@@ -1146,8 +1222,8 @@ void main()
 //                 write_serial(tick);
 //                 write_serial(blink_counter);
 
-                flush_serial();
-                radio_off();
+//                flush_serial();
+//                radio_off();
 // DEBUG
 //LED_LAT = 1;
 

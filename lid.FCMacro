@@ -1,0 +1,59 @@
+# create isogrids for the lid
+
+
+
+import libisogrid
+import importlib
+importlib.reload(libisogrid)
+import math
+
+
+BORDER = 1.0
+
+
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(360.0, 
+        105.0, 
+        21,
+        5,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-180, 11, -20),
+        App.Rotation(App.Vector(0, 0, 1), 0))
+
+# end
+if False:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(88.0, 
+        105.0, 
+        5,
+        5,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-171, 11, -20),
+        App.Rotation(App.Vector(0, 0, 1), 0))
+
+# middle
+if True:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(52.0, 
+        105.0, 
+        3,
+        5,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(13.5, 11, -20),
+        App.Rotation(App.Vector(0, 0, 1), 0))

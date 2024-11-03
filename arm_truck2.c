@@ -118,6 +118,8 @@
 #define SLOW_RIGHT 3
 #define FAST_RIGHT 4
 
+// remote ADC
+#define ADC_MID 128
 
 #define BATTERY_OVERSAMPLE 10000
 #define GYRO_OVERSAMPLE 64
@@ -473,7 +475,7 @@ void handle_radio_packet(unsigned char *ptr)
 
 // convert to a binary steering value
     truck.binary_steering = STEERING_MID;
-    if(truck.steering > truck.remote_steering_mid + truck.remote_steering_deadband)
+    if(truck.steering > ADC_MID + truck.remote_steering_deadband)
     {
         if(truck.steering >= truck.remote_steering_max)
         {
@@ -485,7 +487,7 @@ void handle_radio_packet(unsigned char *ptr)
         }
     }
     else
-    if(truck.steering < truck.remote_steering_mid - truck.remote_steering_deadband)
+    if(truck.steering < ADC_MID - truck.remote_steering_deadband)
     {
         if(truck.steering <= truck.remote_steering_min)
         {
@@ -575,16 +577,6 @@ void dump_config()
 	print_text("\nmin_steering100=");
 	print_number(truck.min_steering100);
 
-	print_text("\nthrottle_base100=");
-	print_number(truck.throttle_base100);
-	print_text("\nthrottle_reverse_base100=");
-	print_number(truck.throttle_reverse_base100);
-	print_text("\nmin_throttle_fwd100=");
-	print_number(truck.min_throttle_fwd100);
-	print_text("\nmin_throttle_reverse100=");
-	print_number(truck.min_throttle_reverse100);
-
-
 	print_text("\nrpm_dv_size=");
 	print_number(truck.rpm_dv_size);
 	print_text("\ngyro_center_max=");
@@ -598,16 +590,12 @@ void dump_config()
 	print_text("\nhighpass_bandwidth=");
 	print_number(truck.highpass_bandwidth);
 
-	print_text("\nremote_steering_mid=");
-	print_number(truck.remote_steering_mid);
 	print_text("\nremote_steering_deadband=");
 	print_number(truck.remote_steering_deadband);
 	print_text("\nremote_steering_max=");
 	print_number(truck.remote_steering_max);
 	print_text("\nremote_steering_min=");
 	print_number(truck.remote_steering_min);
-	print_text("\nremote_throttle_mid=");
-	print_number(truck.remote_throttle_mid);
 	print_text("\nremote_throttle_deadband=");
 	print_number(truck.remote_throttle_deadband);
 	print_text("\nremote_throttle_max=");
@@ -670,12 +658,16 @@ void dump_config()
     print_float(leash.steering_i_limit);
     print_text("\nleash_d_limit=");
     print_float(leash.steering_d_limit);
-    print_text("\nleash_highpass_bandwidth=");
-    print_float(leash.highpass_bandwidth);
     print_text("\nleash_lowpass_bandwidth=");
     print_float(leash.lowpass_bandwidth);
+    print_text("\nleash_lowpass_bandwidth2=");
+    print_float(leash.lowpass_bandwidth2);
+    print_text("\nleash_highpass_bandwidth=");
+    print_float(leash.highpass_bandwidth);
     print_text("\nleash PID=");
     dump_pid(&leash.steering_pid);
+    print_text("\nbrake PID=");
+    dump_pid(&leash.brake_pid);
 #endif // USE_LEASH
 
     print_lf();
@@ -684,11 +676,6 @@ void dump_config()
 int read_config_packet(const unsigned char *buffer)
 {
 	int offset = 0;
-
-    truck.min_throttle_fwd100 = buffer[offset++];
-    truck.min_throttle_reverse100 = buffer[offset++];
-    truck.throttle_base100 = buffer[offset++];
-    truck.throttle_reverse_base100 = buffer[offset++];
 
 	truck.mid_steering100 = buffer[offset++];
 	truck.max_steering100 = buffer[offset++];
@@ -701,11 +688,9 @@ int read_config_packet(const unsigned char *buffer)
 	truck.imu.gyro_bandwidth = (float)buffer[offset++] / 0xff;
 	truck.highpass_bandwidth = (float)buffer[offset++];
 
-	truck.remote_steering_mid = buffer[offset++];
 	truck.remote_steering_deadband = buffer[offset++];
 	truck.remote_steering_max = buffer[offset++];
 	truck.remote_steering_min = buffer[offset++];
-	truck.remote_throttle_mid = buffer[offset++];
 	truck.remote_throttle_deadband = buffer[offset++];
 	truck.remote_throttle_max = buffer[offset++];
 	truck.remote_throttle_min = buffer[offset++];
@@ -762,22 +747,26 @@ int read_config_packet(const unsigned char *buffer)
 	leash.steering_d_limit = buffer[offset++];
     leash.highpass_bandwidth = buffer[offset++];
     leash.lowpass_bandwidth = buffer[offset++];
+    leash.lowpass_bandwidth2 = buffer[offset++];
 
     
     offset = read_pid(&leash.steering_pid, buffer, offset);
+    offset = read_pid(&leash.brake_pid, buffer, offset);
     resize_derivative(&leash.steering_d, leash.steering_d_size);
     leash.steering_pid.i_limit = leash.steering_i_limit;
     leash.steering_pid.d_limit = leash.steering_d_limit;
     reset_pid(&leash.steering_pid);
     reset_filter(&leash.error_highpass);
     reset_filter(&leash.error_lowpass);
+    reset_filter(&leash.error_lowpass2);
 
 
-#endif // USE_LEASH
 
 	init_filter(&truck.error_highpass, 0, truck.highpass_bandwidth / 100);
 	init_filter(&leash.error_highpass, 0, leash.highpass_bandwidth / 100);
 	init_filter(&leash.error_lowpass, 0, leash.lowpass_bandwidth / 100);
+	init_filter(&leash.error_lowpass2, 0, leash.lowpass_bandwidth2 / 100);
+#endif // USE_LEASH
 
 TRACE2
 print_text("size of config packet=");
@@ -1010,8 +999,8 @@ print_number(truck.bt_steering);
 					truck.writing_settings = 1;
 
 // wiggle the wheels & flash the LED if not driving
-                    if(truck.throttle <= truck.remote_throttle_mid + truck.remote_throttle_deadband &&
-                        truck.throttle >= truck.remote_throttle_mid - truck.remote_throttle_deadband)
+                    if(truck.throttle <= ADC_MID + truck.remote_throttle_deadband &&
+                        truck.throttle >= ADC_MID - truck.remote_throttle_deadband)
                     {
                         wiggle();
                     }
@@ -1019,6 +1008,8 @@ print_number(truck.bt_steering);
 					truck.writing_settings = 0;
                     truck.motors[LEFT_MOTOR].ref_angle = -1;
                     truck.motors[RIGHT_MOTOR].ref_angle = -1;
+                    truck.motors[LEFT_MOTOR].brake_angle = -1;
+                    truck.motors[RIGHT_MOTOR].brake_angle = -1;
                     truck.motors[LEFT_MOTOR].reverse = 0;
                     truck.motors[RIGHT_MOTOR].reverse = 0;
 // solid red
@@ -1403,27 +1394,20 @@ void leash_steering()
 // make X encoder count similar to the range of angles
 #define X_SCALER 32
     float error = (leash.x - center) / X_SCALER;
-// d using X
-//    float d = get_derivative(&leash.steering_d) / X_SCALER;
 #else // LEASH_XY
     float center = leash.x_offset * leash.current_offset;
     float error = leash.angle - center;
-//    float d = get_derivative(&leash.steering_d);
 #endif // !LEASH_XY
 
 // d using gyro
     float d = -(float)truck.imu.gyro_z_centered / truck.angle_to_gyro;
-// d using angle
-//    float d = get_derivative(&leash.steering_d);
 
 
 // lowpass filter to avoid bouncing
     float error_lowpass = do_lowpass(&leash.error_lowpass, error);
 // bandpass filter for lead compensation.
-    float error_highpass = do_highpass(&leash.error_highpass, error_lowpass);
-// use lowpassed error for d
-//    update_derivative(&leash.steering_d, error_lowpass);
-//    float d = get_derivative(&leash.steering_d);
+    float error_lowpass2 = do_lowpass(&leash.error_lowpass2, error);
+    float error_highpass = do_highpass(&leash.error_highpass, error_lowpass2);
 
 
 // feedback
@@ -1438,20 +1422,20 @@ void leash_steering()
 		truck.max_steering_magnitude / 
 		100;
 
-    static int debug_counter = 0;
-    debug_counter++;
-    if((debug_counter % 10) == 0)
-    {
-        TRACE2
-        print_text("lowpass=");
-        print_float(error_lowpass);
-        print_text("highpass=");
-        print_float(error_highpass);
-//        print_text("steering_feedback100=");
-//        print_float(steering_feedback100);
-//        print_text("steering_pwm=");
-//        print_number(truck.steering_pwm);
-    }
+//     static int debug_counter = 0;
+//     debug_counter++;
+//     if((debug_counter % 10) == 0)
+//     {
+//         TRACE2
+//         print_text("lowpass=");
+//         print_float(error_lowpass);
+//         print_text("highpass=");
+//         print_float(error_highpass);
+// //        print_text("steering_feedback100=");
+// //        print_float(steering_feedback100);
+// //        print_text("steering_pwm=");
+// //        print_number(truck.steering_pwm);
+//     }
 
     truck.auto_steering = 0;
     truck.need_steering_feedback = 0;
@@ -1474,8 +1458,8 @@ void handle_steering()
     else
 #endif
 // proprietary radio
-    if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband ||
-        truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
+    if(truck.throttle > ADC_MID + truck.remote_throttle_deadband ||
+        truck.throttle < ADC_MID - truck.remote_throttle_deadband)
     {
         throttle_active = 1;
     }
@@ -1496,7 +1480,7 @@ void handle_steering()
 // manual steering with proprietary radio
     if(!throttle_active || !truck.auto_steering)
     {
-        if(truck.steering > truck.remote_steering_mid + truck.remote_steering_deadband)
+        if(truck.steering > ADC_MID + truck.remote_steering_deadband)
         {
 // manual stick left
             if(truck.steering >= truck.remote_steering_max)
@@ -1517,7 +1501,7 @@ void handle_steering()
             truck.steering_timeout = 0;
         }
         else
-        if(truck.steering < truck.remote_steering_mid - truck.remote_steering_deadband)
+        if(truck.steering < ADC_MID - truck.remote_steering_deadband)
         {
 // manual stick right
             if(truck.steering <= truck.remote_steering_min)
@@ -1682,25 +1666,15 @@ void handle_steering()
 
 void rpm_to_power(float target_rpm)
 {
-    int throttle_base;
-// Always matching both sides in auto throttle
-    if(!truck.reverse[0])
-    {
-        throttle_base = truck.throttle_base100;
-    }
-    else
-    {
-        throttle_base = truck.throttle_reverse_base100;
-    }
-
 	truck.throttle_feedback = do_pid(&truck.rpm_pid,
 		(float)(target_rpm - truck.rpm) / 1000,
 		-get_derivative(&truck.rpm_dv) / 1000,
 		0);
 // convert percent to PWM
-    truck.power[0] = (throttle_base + truck.throttle_feedback) * 
+    truck.power[0] = (100 + truck.throttle_feedback) * 
         MOTOR_PWM_PERIOD / 
         100;
+// TODO: braking mode for auto throttle
 // don't go into braking mode or it'll oscillate
     CLAMP(truck.power[0], 1, MOTOR_PWM_PERIOD);
     truck.power[1] = truck.power[0];
@@ -1725,7 +1699,7 @@ void do_auto_throttle()
 {
 // convert stick to RPM
     float target_rpm = 0;
-    if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband)
+    if(truck.throttle > ADC_MID + truck.remote_throttle_deadband)
     {
 // forward RPM
         target_rpm = truck.target_rpm;
@@ -1742,7 +1716,7 @@ void do_auto_throttle()
         }
     }
     else
-    if(truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
+    if(truck.throttle < ADC_MID - truck.remote_throttle_deadband)
     {
 // reverse RPM
         target_rpm = truck.target_reverse_rpm;
@@ -1778,30 +1752,26 @@ void do_manual_throttle()
     }
     else
 // manual control
-    if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband)
+    if(truck.throttle > ADC_MID + truck.remote_throttle_deadband)
     {
 // full power for 1 cycle
-//        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
         truck.power[0] = MOTOR_PWM_PERIOD * 
-            truck.throttle_base100 *
-            (truck.throttle - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
-            (truck.remote_throttle_max - truck.remote_throttle_mid - truck.remote_throttle_deadband) /
+            100 *
+            (truck.throttle - ADC_MID - truck.remote_throttle_deadband) /
+            (truck.remote_throttle_max - ADC_MID - truck.remote_throttle_deadband) /
             100;
-//        truck.auto_throttle = 1;
         truck.reverse[1] = truck.reverse[0] = 0;
         truck.power[1] = truck.power[0];
     }
     else
-    if(truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
+    if(truck.throttle < ADC_MID - truck.remote_throttle_deadband)
     {
 // full power for 1 cycle
-//        truck.power = MOTOR_PWM_PERIOD * truck.throttle_base100 / 100;
         truck.power[0] = MOTOR_PWM_PERIOD * 
-            truck.throttle_reverse_base100 *
-            (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.throttle) /
-            (truck.remote_throttle_mid - truck.remote_throttle_deadband - truck.remote_throttle_min) /
+            100 *
+            (ADC_MID - truck.remote_throttle_deadband - truck.throttle) /
+            (ADC_MID - truck.remote_throttle_deadband - truck.remote_throttle_min) /
             100;
-//        truck.auto_throttle = 1;
         truck.reverse[1] = truck.reverse[0] = 1;
         truck.power[1] = truck.power[0];
     }
@@ -1811,7 +1781,7 @@ void do_manual_throttle()
 #ifdef USE_LEASH
 void do_leash_throttle()
 {
-// store new heading if leash changed between stop & start
+// store new heading if leash went between stop & start
     if((leash.distance >= leash.distance0 && 
         leash.distance2 < leash.distance0) ||
         (leash.distance2 >= leash.distance0 && 
@@ -1821,6 +1791,7 @@ void do_leash_throttle()
         reset_pid(&leash.steering_pid);
         reset_filter(&leash.error_highpass);
         reset_filter(&leash.error_lowpass);
+        reset_filter(&leash.error_lowpass2);
         reset_derivative(&leash.steering_d);
     }
 
@@ -1829,10 +1800,81 @@ void do_leash_throttle()
 // distance must be above minimum to start
     if(leash.distance < leash.distance0)
     {
+// braking mode
+#ifdef USE_BRAKE
+// update the reference angles
+        if(truck.motors[LEFT_MOTOR].brake_angle < 0 || 
+            truck.motors[RIGHT_MOTOR].brake_angle < 0)
+        {
+            truck.motors[LEFT_MOTOR].brake_angle = truck.motors[LEFT_MOTOR].angle;
+            truck.motors[RIGHT_MOTOR].brake_angle = truck.motors[RIGHT_MOTOR].angle;
+        }
+
+        if(truck.motors[LEFT_MOTOR].brake_angle >= 0 &&
+            truck.motors[RIGHT_MOTOR].brake_angle >= 0)
+        {
+            int i;
+// deg
+            float change[MOTORS];
+            for(i = 0; i < MOTORS; i++)
+            {
+                change[i] = get_angle_change_deg(truck.motors[i].brake_angle,
+                    truck.motors[i].angle);
+
+// drag reference angle forward
+                if(change[i] > 90)
+                {
+                    truck.motors[i].brake_angle += change[i] - 90;
+                    truck.motors[i].brake_angle %= 360;
+                    change[i] = 90;
+                }
+                else
+                if(change[i] < -90)
+                {
+                    truck.motors[i].brake_angle += change[i] + 90;
+                    if(truck.motors[i].brake_angle < 0) 
+                        truck.motors[i].brake_angle += 360;
+                    truck.motors[i].brake_angle %= 360;
+                    change[i] = -90;
+                }
+
+                if(change[i] > 0)
+                    truck.reverse[i] = truck.reverse[1] = 1;
+                else
+                    truck.reverse[i] = truck.reverse[1] = 0;
+// only 1 PID controller for both motors, so P only & no reset
+                float brake_feedback = do_pid(&leash.brake_pid,
+                    fabs(change[i]) / 90,
+                    0,
+                    0);
+                truck.power[i] = brake_feedback * 
+                    MOTOR_PWM_PERIOD / 
+                    100;
+            }
+
+static int debug_counter = 0;
+debug_counter++;
+if(!(debug_counter % 10))
+{
+TRACE2
+print_number(truck.motors[LEFT_MOTOR].angle);
+print_number(truck.motors[LEFT_MOTOR].brake_angle);
+print_float(change[LEFT_MOTOR]);
+}
+
+        }
+#else // USE_BRAKE
+
         truck.power[0] = truck.power[1] = 0;
+#endif // !USE_BRAKE
+
     }
     else
     {
+// leash moving
+        truck.motors[LEFT_MOTOR].brake_angle = -1;
+        truck.motors[RIGHT_MOTOR].brake_angle = -1;
+
 // convert leash distance to a pace
 // slowest min/mile
         float min_speed = rpm_to_pace(leash.rpm0);
@@ -1997,23 +2039,23 @@ void feedback()
 // cancel radio controls
 		if(truck.radio_timeout <= 0)
 		{
-			truck.throttle = truck.remote_throttle_mid;
-			truck.steering = truck.remote_steering_mid;
+			truck.throttle = ADC_MID;
+			truck.steering = ADC_MID;
 		}
 
 // cut in throttle
-        if(truck.throttle >= truck.remote_throttle_mid - truck.remote_throttle_deadband &&
-            truck.throttle <= truck.remote_throttle_mid + truck.remote_throttle_deadband)
+        if(truck.throttle >= ADC_MID - truck.remote_throttle_deadband &&
+            truck.throttle <= ADC_MID + truck.remote_throttle_deadband)
         {
 // back to direct voltage control
             truck.auto_throttle = 0;
         }
 
 // Change in throttle direction
- 		if((truck.throttle2 < truck.remote_throttle_mid - truck.remote_throttle_deadband && 
-            truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband) ||
- 			(truck.throttle2 > truck.remote_throttle_mid + truck.remote_throttle_deadband && 
-            truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband))
+ 		if((truck.throttle2 < ADC_MID - truck.remote_throttle_deadband && 
+            truck.throttle > ADC_MID + truck.remote_throttle_deadband) ||
+ 			(truck.throttle2 > ADC_MID + truck.remote_throttle_deadband && 
+            truck.throttle < ADC_MID - truck.remote_throttle_deadband))
  		{
 // heading is reset after a timeout or steering command after stopping
             truck.current_heading = 0;
@@ -2028,18 +2070,18 @@ void feedback()
  		}
 
 // replace previous throttle value if the motor moves
-  		if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband ||
-            truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
+  		if(truck.throttle > ADC_MID + truck.remote_throttle_deadband ||
+            truck.throttle < ADC_MID - truck.remote_throttle_deadband)
         {
             truck.throttle2 = truck.throttle;
         }
 
         
 // Store the new heading if steering reversed or stopped
- 		if((truck.steering2 < truck.remote_steering_mid - truck.remote_steering_deadband && 
-            truck.steering >= truck.remote_steering_mid - truck.remote_steering_deadband) ||
- 			(truck.steering2 > truck.remote_steering_mid + truck.remote_steering_deadband && 
-            truck.steering <= truck.remote_steering_mid + truck.remote_steering_deadband))
+ 		if((truck.steering2 < ADC_MID - truck.remote_steering_deadband && 
+            truck.steering >= ADC_MID - truck.remote_steering_deadband) ||
+ 			(truck.steering2 > ADC_MID + truck.remote_steering_deadband && 
+            truck.steering <= ADC_MID + truck.remote_steering_deadband))
  		{
             truck.target_heading = truck.current_heading;
 	        truck.steering2 = truck.steering;
@@ -2075,8 +2117,8 @@ void feedback()
         else
 #endif
 // stick controller
-		if(truck.throttle > truck.remote_throttle_mid + truck.remote_throttle_deadband ||
-            truck.throttle < truck.remote_throttle_mid - truck.remote_throttle_deadband)
+		if(truck.throttle > ADC_MID + truck.remote_throttle_deadband ||
+            truck.throttle < ADC_MID - truck.remote_throttle_deadband)
 		{
 			truck.steering_timeout = STEERING_RELOAD;
 
@@ -2390,6 +2432,7 @@ void init_motors()
     {
         truck.motors[i].prev_phase = -1;
         truck.motors[i].ref_angle = -1;
+        truck.motors[i].brake_angle = -1;
     }
 
     init_motor_tables();
@@ -2612,6 +2655,8 @@ void calibrate_motors()
     truck.calibration_state = START_CALIBRATION;
     truck.motors[LEFT_MOTOR].ref_angle = -1;
     truck.motors[RIGHT_MOTOR].ref_angle = -1;
+    truck.motors[LEFT_MOTOR].brake_angle = -1;
+    truck.motors[RIGHT_MOTOR].brake_angle = -1;
     truck.motors[LEFT_MOTOR].reverse = 0;
     truck.motors[RIGHT_MOTOR].reverse = 0;
 }
@@ -2641,10 +2686,7 @@ void update_direction(motor_t *motor, int angle)
 // in degrees 
 #define ROTATION_THRESH (360 / 8)
 // get change in degrees
-    int change = angle - motor->ref_angle;
-    if(change > 180) change -= 360;
-    else
-    if(change < -180) change += 360;
+    int change = (int)get_angle_change_deg(motor->ref_angle, angle);
 
     if(ABS(change) >= ROTATION_THRESH)
     {
@@ -3561,15 +3603,6 @@ void handle_input()
                 }
             }
 
-// convert ADC to angle using estimation
-//         if(leash.angle_adc >= leash.center_angle_adc)
-//             leash.angle = (float)(leash.angle_adc - leash.center_angle_adc) * 
-//                 (0 - leash.min_angle) /
-//                 (leash.center_angle_adc - leash.min_angle_adc);
-//         else
-//             leash.angle = (float)(leash.center_angle_adc - leash.angle_adc) * 
-//                 (leash.max_angle - 0) /
-//                 (leash.center_angle_adc - leash.max_angle_adc);
 
 // static int debug_counter = 0;
 // debug_counter++;
@@ -3638,6 +3671,9 @@ void handle_input()
 
         if(!leash.active)
         {
+// reset some bits
+            truck.motors[LEFT_MOTOR].brake_angle = -1;
+            truck.motors[RIGHT_MOTOR].brake_angle = -1;
             leash.stick_state = STEERING_MID;
             leash.current_offset = 0;
             leash.active = 1;
@@ -3727,12 +3763,10 @@ int main(void)
     truck.min_steering100 = 25;
 
     
-    truck.remote_steering_mid = 122;
     truck.remote_steering_deadband = 2;
     truck.remote_steering_max = 255;
     truck.remote_steering_min = 3;
     
-    truck.remote_throttle_mid = 130;
     truck.remote_throttle_deadband = 5;
     truck.remote_throttle_max = 254;
     truck.remote_throttle_min = 4;
@@ -3782,9 +3816,11 @@ int main(void)
 //    leash.min_angle = TO_RAD(-70);
 //    leash.max_angle = TO_RAD(70);
     leash.lowpass_bandwidth = 5;
+    leash.lowpass_bandwidth2 = 5;
     leash.highpass_bandwidth = 98;
 
 	init_pid(&leash.steering_pid, 0, 0, 0, 0, 0, 0, 0);
+	init_pid(&leash.brake_pid, 0, 0, 0, 0, 0, 0, 0);
 	leash.steering_d_size = TIMER_HZ / 2;
 	init_derivative(&leash.steering_d, leash.steering_d_size);
 #endif // USE_LEASH

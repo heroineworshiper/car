@@ -53,6 +53,11 @@ class Filter:
         return self.result
 
 
+class NotchFilter:
+    def __init__(self, center, width, period):
+        
+
+
 # test filter
 test_lowpass = Filter(.05)
 test_highpass = Filter(.97)
@@ -67,15 +72,22 @@ def test_function(v):
 #    return result
 
 # leash filter
-leash_lowpass = Filter(.02)
-leash_highpass = Filter(.98)
-#leash_lowpass = Filter(.05)
-#leash_highpass = Filter(.97)
+leash_p = 230
+#leash_p = 0
+leash_p2 = 1000
+leash_lowpass = Filter(.08)
+leash_lowpass2 = Filter(.1)
+leash_highpass = Filter(.9)
+#leash_p = 200
+#leash_p2 = 250
+#leash_lowpass = Filter(.08)
+#leash_highpass = Filter(.96)
 def leash_function(v):
     low = leash_lowpass.lowpass(v)
-    high = leash_highpass.highpass(low)
-    result = low * 100 + high * 250
-#    result = low * 150 + high * 200
+#    high = leash_highpass.highpass(low)
+    low2 = leash_lowpass2.lowpass(v)
+    high = leash_highpass.highpass(low2)
+    result = low * leash_p + high * leash_p2
     return result
 
 # steering filter
@@ -110,12 +122,14 @@ def compute_power(freq):
     max = 0
     for i in range(samples):
         input = math.sin(i / SAMPLERATE * 2 * math.pi * freq)
-        output = steering_function(input)
+#        output = steering_function(input)
+        output = leash_function(input)
         abs_output = abs(output)
 # drop 1st period & get maximum of remaneing samples
         if i >= SAMPLERATE / freq and abs_output > max:
             max = abs_output
-    return math.log10(max)
+#    return math.log10(max)
+    return max
 
 
 #compute_power(0)
@@ -146,7 +160,7 @@ for x in range(0, GRAPH_W, STEP):
 print("max=%f min=%f" % (max, min))
 
 win = tk.Tk()
-win.title("My GUI")
+win.title("Leash response")
 win.geometry(str(WINDOW_W) + "x" + str(WINDOW_H) + "+0+0")
 canvas = tk.Canvas(win, bg='white', highlightthickness=0)
 # fill white
@@ -179,16 +193,31 @@ for i in range(len(PRINT_FREQS)):
         fill='black')
 
 # power marks
-for i in range(len(PRINT_POWERS)):
-    y = GRAPH_Y + GRAPH_H - power_to_y(PRINT_POWERS[i])
+#for i in range(len(PRINT_POWERS)):
+#    y = GRAPH_Y + GRAPH_H - power_to_y(PRINT_POWERS[i])
+#    canvas.create_line(GRAPH_X, 
+#        y, 
+#        GRAPH_X + GRAPH_W, 
+#        y, 
+#        fill='grey', 
+#        width=1)
+#    the_text = "%.1f" % (PRINT_POWERS[i] * (max - min) + min)
+#    canvas.create_text(15, 
+#        y, 
+#        text=the_text,
+#        font=("Helvetica 8"),
+#        fill='black')
+
+for i in range(11):
+    y = GRAPH_Y + GRAPH_H - i * GRAPH_H / 10
     canvas.create_line(GRAPH_X, 
         y, 
         GRAPH_X + GRAPH_W, 
         y, 
         fill='grey', 
         width=1)
-    the_text = "%.1f" % (PRINT_POWERS[i] * max)
-    canvas.create_text(10, 
+    the_text = "%.0f" % (i * (max - min) / 10 + min)
+    canvas.create_text(15, 
         y, 
         text=the_text,
         font=("Helvetica 8"),

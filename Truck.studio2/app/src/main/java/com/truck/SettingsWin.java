@@ -2,6 +2,8 @@ package com.truck;
 
 import com.truck.R;
 import java.util.Formatter;
+
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -152,6 +154,9 @@ public class SettingsWin  extends WindowBase implements SeekBar.OnSeekBarChangeL
         case R.id.test_motors:
             Truck.confirm(this, Truck.TEST_MOTORS_COMMAND);
 //        	Truck.testMotors = true;
+        	break;
+        case R.id.plot_filter:
+            startActivity(new Intent(this, PlotFilter.class));
         	break;
   		}
   	}

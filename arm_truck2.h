@@ -49,6 +49,8 @@
 // XY feedback.  Change Truck.java if you change this.
 #define LEASH_XY
 #define LEASH_PROTOCOL2
+// enable braking in leash mode
+#define USE_BRAKE
 
 #define HALLS 4
 #define MOTORS 2
@@ -222,6 +224,8 @@ typedef struct
     int angle;
 // last angle for computing direction in absolute degrees
     int ref_angle;
+// target angle for braking in absolute degrees
+    int brake_angle;
 // last direction detected
     int reverse;
 // driven position in degrees in the current pole
@@ -244,12 +248,6 @@ typedef struct
     int angle_adc;
     int encoder0_adc;
     int encoder1_adc;
-// parameters for the magnetic angle sensor
-//    float min_angle;
-//    float max_angle;
-//    int min_angle_adc;
-//    int max_angle_adc;
-//    int center_angle_adc;
 // leash angle in rads
     float angle;
 // length read from serial port
@@ -285,7 +283,7 @@ typedef struct
     int current_offset;
 // last binary steering value for adjusting offset
     int stick_state;
-// the PID controller
+// the PID controllers
 	pid_t steering_pid;
 	derivative_t steering_d;
 	int steering_d_size;
@@ -293,11 +291,13 @@ typedef struct
     float steering_d_limit;
 
 	filter_t error_highpass;
-// 0 - 100
-//	float highpass_bandwidth;
     filter_t error_lowpass;
+    filter_t error_lowpass2;
+// 0 - 100
     float lowpass_bandwidth;
+    float lowpass_bandwidth2;
     float highpass_bandwidth;
+    pid_t brake_pid;
 } leash_t;
 #endif // USE_LEASH
 
@@ -403,20 +403,14 @@ typedef struct
 	int mid_steering100;
 // minimum stick induced steering 0 - 100
     int min_steering100;
-// maximum stick induced throttle 0 - 100
-    int throttle_base100;
-    int throttle_reverse_base100;
-// minimum stick induced throttle 0 - 100
-	int min_throttle_fwd100; // NEW
-	int min_throttle_reverse100; // NEW
 
 // remote control ranges
-    int remote_steering_mid;
+//    int remote_steering_mid;
     int remote_steering_deadband;
     int remote_steering_max;
     int remote_steering_min;
     
-    int remote_throttle_mid;
+//    int remote_throttle_mid;
     int remote_throttle_deadband;
     int remote_throttle_max;
     int remote_throttle_min;

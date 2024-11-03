@@ -55,6 +55,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
 
+            <Button
+                android:id="@+id/plot_filter"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="Plot filter" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
             <TextView
                 android:id="@+id/pace_text"
                 android:layout_width="wrap_content"

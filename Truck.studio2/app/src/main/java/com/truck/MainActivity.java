@@ -133,12 +133,12 @@ public class MainActivity extends WindowBase implements OnTouchListener
 				int positions2[] = new int[]
 				{
 						Settings.screenW * 1 / 2,
-						Settings.screenW * 1 / 2,
+						Settings.screenW * 2 / 3,
 				};
 
 				readouts.add(batteryAnalog = new SmallReadout(x, y, 1));
                 batteryAnalog.value_color = Color.GREEN;
-				batteryAnalog.setPositions(positions);
+				batteryAnalog.setPositions(positions2);
 				batteryAnalog.setTitle("BATTERY ADC:");
 				y += batteryAnalog.getH(paint);
 				
