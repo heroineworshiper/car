@@ -115,6 +115,8 @@ front_wheel2.FCStd: latest front wheel
     .32 layer height
 
 
+glasses.FCStd: rear view glasses for testing leash mode
+
 leash11.FCStd: compact leash enclosure
     no support for frame
     support for base.  Melt it off.

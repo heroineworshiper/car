@@ -1154,7 +1154,7 @@ void TIM1_UP_TIM10_IRQHandler()
         if(leash.active)
         {
 // reset the offset after deactivating it
-            leash.current_offset = 0;
+//            leash.current_offset = 0;
             leash.active = 0;
         }
 #endif // USE_LEASH
@@ -3675,7 +3675,7 @@ void handle_input()
             truck.motors[LEFT_MOTOR].brake_angle = -1;
             truck.motors[RIGHT_MOTOR].brake_angle = -1;
             leash.stick_state = STEERING_MID;
-            leash.current_offset = 0;
+//            leash.current_offset = 0;
             leash.active = 1;
         }
 
