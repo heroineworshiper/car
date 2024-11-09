@@ -989,6 +989,8 @@ print_number(truck.bt_steering);
 
 				if(need_save)
 				{
+// don't reset the leash offset when the next leash packet comes in
+                    leash.keep_offset = 1;
                     int bytes_rounded = bytes + (4 - (bytes % 4));
 					save_file(SETTINGS_MAGIC,
                         receive_buf + offset,
@@ -1782,18 +1784,21 @@ void do_manual_throttle()
 void do_leash_throttle()
 {
 // store new heading if leash went between stop & start
-    if((leash.distance >= leash.distance0 && 
-        leash.distance2 < leash.distance0) ||
-        (leash.distance2 >= leash.distance0 && 
-        leash.distance < leash.distance0))
-    {
-        truck.target_heading = truck.current_heading;
-        reset_pid(&leash.steering_pid);
-        reset_filter(&leash.error_highpass);
-        reset_filter(&leash.error_lowpass);
-        reset_filter(&leash.error_lowpass2);
-        reset_derivative(&leash.steering_d);
-    }
+// this might have been intended to center it when it was stopped, but it
+// ended up just creating a glitch.  
+// An angle of some kind is always being calculated.
+//     if((leash.distance >= leash.distance0 && 
+//         leash.distance2 < leash.distance0) ||
+//         (leash.distance2 >= leash.distance0 && 
+//         leash.distance < leash.distance0))
+//     {
+//         truck.target_heading = truck.current_heading;
+//         reset_pid(&leash.steering_pid);
+//         reset_filter(&leash.error_highpass);
+//         reset_filter(&leash.error_lowpass);
+//         reset_filter(&leash.error_lowpass2);
+//         reset_derivative(&leash.steering_d);
+//     }
 
     leash.distance2 = leash.distance;
 
@@ -3675,10 +3680,12 @@ void handle_input()
             truck.motors[LEFT_MOTOR].brake_angle = -1;
             truck.motors[RIGHT_MOTOR].brake_angle = -1;
             leash.stick_state = STEERING_MID;
-//            leash.current_offset = 0;
+// reset the offset after activating it
+            if(!leash.keep_offset) leash.current_offset = 0;
             leash.active = 1;
         }
 
+        leash.keep_offset = 0;
 
 
 #ifdef LEASH_XY

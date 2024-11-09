@@ -281,6 +281,8 @@ typedef struct
     float x_offset;
 // number of the current offset: -1, 0, 1
     int current_offset;
+// don't reset after a config update
+    int keep_offset;
 // last binary steering value for adjusting offset
     int stick_state;
 // the PID controllers

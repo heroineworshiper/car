@@ -116,6 +116,7 @@ front_wheel2.FCStd: latest front wheel
 
 
 glasses.FCStd: rear view glasses for testing leash mode
+    .32mm layers .4 nozzle
 
 leash11.FCStd: compact leash enclosure
     no support for frame
