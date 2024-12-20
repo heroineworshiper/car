@@ -1695,7 +1695,6 @@ Layer(5 "power")
 	Line[103.2800mm 70.3900mm 104.6500mm 70.3900mm 10.00mil 20.00mil "clearline"]
 	Line[110.0800mm 69.1200mm 107.8701mm 69.1200mm 10.00mil 20.00mil "clearline"]
 	Line[109.6600mm 70.4300mm 109.6600mm 71.1800mm 10.00mil 20.00mil "clearline"]
-	Line[107.8700mm 69.1400mm 105.9498mm 71.0602mm 10.00mil 20.00mil "clearline"]
 	Line[106.0300mm 71.0600mm 104.9200mm 71.0600mm 10.00mil 20.00mil "clearline"]
 	Line[104.7500mm 69.1500mm 102.4158mm 69.1478mm 10.00mil 20.00mil "clearline"]
 	Line[109.4700mm 70.4000mm 113.1900mm 70.4001mm 10.00mil 20.00mil "clearline"]
@@ -2175,6 +2174,7 @@ Layer(5 "power")
 	Line[110.7300mm 59.4100mm 108.4200mm 59.4100mm 25.00mil 20.00mil "clearline"]
 	Line[109.2700mm 65.5200mm 109.2700mm 2400.00mil 25.00mil 20.00mil "clearline"]
 	Line[109.2700mm 2400.00mil 108.7000mm 60.3900mm 25.00mil 20.00mil "clearline"]
+	Line[107.7600mm 69.1200mm 105.8398mm 71.0402mm 30.00mil 20.00mil "clearline"]
 )
 Layer(6 "bottom")
 (

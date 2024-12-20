@@ -69,6 +69,7 @@ antler3.FCStd: antlers
     Print in halves.  Glue a half to a tab to make a right angle.
     Then glue the other half to the right angle.
 
+antler5.FCStd: container attachments for antlers
 
 a1323.pcb: hall effect sensor board for motor sensor
 
@@ -200,7 +201,7 @@ bumper.FCStd:
     print in TPU
 
 
-container3.FCStd:
+container4.FCStd:
     print masks have to be booleaned with panels in Blender
     Must tweek boolean so all bits appear
     Handle doesn't attach right on the print mask seam.  It attaches 1/2 a triangle behind it.
@@ -260,6 +261,9 @@ radio_box2.FCStd:
 
 
 
+speaker.FCStd: speaker holder
+    .4mm .32 layers
+
 tool.FCStd: socket wrench for 6-32 locknuts
 
 tool2.FCStd: socket wrench for 4-40 locknuts
@@ -296,7 +300,7 @@ traction.FCStd: traction section
 steering.FCMacro:
     create objects for steering
 
-steering2.FCStd: steering section
+steering2.FCStd: steering section with 10 deg caster
     print with 0.8mm nozzle 
     .32mm layer height
     shield
@@ -313,6 +317,7 @@ steering2.FCStd: steering section
 
     TODO: make shield screw on for accessing the ball links
 
+steering3.FCStd: steering with 20 deg caster
 
 
 
@@ -420,17 +425,6 @@ gopro_case2.FCStd: case for a gopro 7
     print with support everywhere, lesser overhangs facing up
     skirt adhesion
     .2mm layers .4mm nozzle
-
-
-
-
-gopro_to_wood.FCStd: case for mounting a gopro 7 behind a sheet of wood
-    print case union with print mask
-    print case cut with print mask
-    print with support everywhere, lesser overhangs facing up
-    skirt adhesion
-
-gopro4_to_wood.FCStd: case for mounting a gopro 4 behind a sheet of wood
 
 
 gopro.FCStd
