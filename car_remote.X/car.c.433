@@ -355,13 +355,13 @@ typedef union
 #define DURATION (HZ / 25)
 const song_t increase_tone[] =
 {
-    { DURATION, _G1 },
-    { DURATION, _A1 },
-    { DURATION, _B1 },
     { DURATION, _C2 },
+    { DURATION, _Db2 },
     { DURATION, _D2 },
+    { DURATION, _Eb2 },
     { DURATION, _E2 },
     { DURATION, _F2 },
+    { DURATION, _Gb2 },
     { DURATION, _G2 },
     { 0, SONG_END },
 };
@@ -370,33 +370,33 @@ const song_t increase_tone[] =
 const song_t decrease_tone[] =
 {
     { DURATION, _G2 },
+    { DURATION, _Gb2 },
     { DURATION, _F2 },
     { DURATION, _E2 },
+    { DURATION, _Eb2 },
     { DURATION, _D2 },
+    { DURATION, _Db2 },
     { DURATION, _C2 },
-    { DURATION, _B1 },
-    { DURATION, _A1 },
-    { DURATION, _G1 },
     { 0, SONG_END },
 };
 
 const song_t flat_tone[] =
 {
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
-    { DURATION, _G1 },
+    { DURATION, _C2 },
     { DURATION, _G2 },
     { 0, SONG_END },
 };
@@ -412,13 +412,13 @@ const song_t steering_sound[] =
 
 const song_t calibration_tone[] =
 {
+    { DURATION * 5, _G2 },
+    { DURATION * 5, _Gb2 },
     { DURATION * 5, _G1 },
-    { DURATION * 5, _Gb1 },
-    { DURATION * 5, _G0 },
-    { DURATION * 5, _Db1 },
-    { DURATION * 5, _D1 },
-    { DURATION * 5, _Gb1 },
-    { DURATION * 5, _D1 },
+    { DURATION * 5, _Db2 },
+    { DURATION * 5, _D2 },
+    { DURATION * 5, _Gb2 },
+    { DURATION * 5, _D2 },
     { 0, SONG_END }
 };
 
@@ -899,7 +899,7 @@ void play_offset(int8_t offset)
 //            song_buffer[i].freq_index = _C1;
             i++;
             song_buffer[i].delay = delay;
-            song_buffer[i].freq_index = _G1;
+            song_buffer[i].freq_index = _C2;
             i++;
         }
 
