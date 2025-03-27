@@ -1,6 +1,6 @@
 /*
  * Smart leash
- * Copyright (C) 2022-2024 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2022-2025 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
  */
 
 // Plug in the ISP programmer
-// make leash_fuse
 // make leash.hex
+// make leash_fuse
 // make leash_isp
 
 // Arduino ISP to leash:
@@ -45,16 +45,13 @@
 #define LED_ON PORTB &= ~(1 << PORTB5);
 #define LED_OFF PORTB |= (1 << PORTB5);
 #define LED_TOGGLE PORTB ^= (1 << PORTB5);
+#define LED_DOWNSAMPLE 15
 
 #define BAUD 115200L
 
-#define POT_CENTER 512
-// 45 deg values
-#define POT_LEFT 906
-#define POT_RIGHT 88
-
 #define ENCODER_CENTER 128
-#define ENCODER_THRESHOLD 32
+#define ENCODER_THRESHOLD 8
+#define ON_THRESHOLD 100
 
 #define ENCODER_START 0
 #define ENCODER0_LOW 1
@@ -66,17 +63,22 @@ int8_t prev_encoder = ENCODER_START;
 int16_t encoder_counts = 0;
 uint8_t debug_count = 0;
 
+uint16_t enable_accum = 0;
 uint16_t encoder0_accum = 0;
 uint16_t encoder1_accum = 0;
 uint16_t angle_accum = 0;
+uint8_t enable_adc = 0;
 uint8_t encoder0_adc = 0;
 uint8_t encoder1_adc = 0;
 uint8_t angle_adc = 0;
 uint8_t encoder_count = 0;
 uint8_t angle_count = 0;
+uint8_t enable_count = 0;
 #define ENCODER_OVERSAMPLE 1
 #define POT_OVERSAMPLE 32
+#define ENABLE_OVERSAMPLE 32
 uint8_t tick;
+uint8_t led_count = 0;
 
 // byte stuffing for UART
 #define START_CODE 0xff
@@ -280,6 +282,8 @@ void main()
 #define ADMUX_BASE 0b01000000
     ADMUX = ADMUX_BASE;
     ADCSRA = 0b10000111;
+// disable digital inputs
+    DIDR0 = 0b00001111;
     bitSet(ADCSRA, ADSC);
 
 // enable interrupts
@@ -319,41 +323,7 @@ void main()
                     ADMUX = ADMUX_BASE | 2;
                     encoder1_accum += (high << 8) | low;
                     bitSet(ADCSRA, ADSC);
-                    break;
-                case 2:
-                    ADMUX = ADMUX_BASE;
-                    angle_accum += (high << 8) | low;
-                    bitSet(ADCSRA, ADSC);
-
                     encoder_count++;
-                    angle_count++;
-                    if(angle_count >= POT_OVERSAMPLE)
-                    {
-                        angle_adc = angle_accum / POT_OVERSAMPLE / 4;
-                        angle_accum = 0;
-                        angle_count = 0;
-
-                        if(uart_used <= 0)
-                        {
-                            LED_TOGGLE
-
-// send to autopilot
-                            encode_start();
-                            encode_serial(encoder_counts & 0xff);
-                            encode_serial(encoder_counts >> 8);
-                            encode_serial(angle_adc);
-                            encode_serial(encoder0_adc);
-                            encode_serial(encoder1_adc);
-
-// lion readable output
-                            print_text("DEBUG: ");
-                            print_number(angle_adc);
-                            print_number(encoder0_adc);
-                            print_number(encoder1_adc);
-                            print_number(encoder_counts);
-                            print_text("\n");
-                        }
-                    }
 
                     if(encoder_count >= ENCODER_OVERSAMPLE)
                     {
@@ -377,9 +347,74 @@ void main()
 //                        }
                     }
                     break;
+                case 2:
+                    ADMUX = ADMUX_BASE | 3;
+                    angle_accum += (high << 8) | low;
+                    bitSet(ADCSRA, ADSC);
+
+                    angle_count++;
+                    if(angle_count >= POT_OVERSAMPLE)
+                    {
+// scale it to maximize resolution
+                        angle_accum -= 32 * 512;
+                        angle_accum /= POT_OVERSAMPLE;
+                        angle_accum += 128;
+                        angle_adc = angle_accum;
+//                        angle_adc = angle_accum / POT_OVERSAMPLE / 4;
+                        angle_accum = 0;
+                        angle_count = 0;
+
+// send to autopilot
+                        if(enable_adc >= ON_THRESHOLD)
+                        {
+                            LED_TOGGLE
+
+                            encode_start();
+                            encode_serial(encoder_counts & 0xff);
+                            encode_serial(encoder_counts >> 8);
+                            encode_serial(angle_adc);
+                            encode_serial(encoder0_adc);
+                            encode_serial(encoder1_adc);
+                        }
+                        else
+                        {
+// standby
+                            encoder_counts = 0;
+                            led_count++;
+                            if(led_count >= LED_DOWNSAMPLE)
+                            {
+                                led_count = 0;
+                                LED_TOGGLE
+                            }
+                        }
+                    }
+                    break;
+
+                case 3:
+                    ADMUX = ADMUX_BASE;
+                    enable_accum += (high << 8) | low;
+                    bitSet(ADCSRA, ADSC);
+                    enable_count++;
+
+                    if(enable_count >= ENABLE_OVERSAMPLE)
+                    {
+                        enable_adc = enable_accum / ENABLE_OVERSAMPLE / 4;
+                        enable_accum = 0;
+                        enable_count = 0;
+
+// lion readable output
+                        print_text("DEBUG: ");
+                        print_number(enable_adc);
+                        print_number(angle_adc);
+                        print_number(encoder0_adc);
+                        print_number(encoder1_adc);
+                        print_number(encoder_counts);
+                        print_text("\n");
+                    }
+                    break;
             }
         }
-    }   
+    }
 }
 
 

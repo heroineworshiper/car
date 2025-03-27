@@ -344,16 +344,16 @@ public class Truck extends Thread {
 		                offset += 2;
 		                // command
 		                beacon[offset++] = (byte) NEW_CONFIG;
-                        if(Settings.vehicle == Settings.TRUCK ||
-                            Settings.vehicle == Settings.TRUCKCAM)
-                        {
-                            offset = sendTruckConfig(offset);
-                        }
-                        else
-                        if(Settings.vehicle == Settings.CAR)
-                        {
+//                         if(Settings.vehicle == Settings.TRUCK ||
+//                             Settings.vehicle == Settings.TRUCKCAM)
+//                         {
+//                             offset = sendTruckConfig(offset);
+//                         }
+//                         else
+//                        if(Settings.vehicle == Settings.CAR)
+//                        {
                             offset = sendCarConfig(offset);
-                        }
+//                        }
 
 // write the size including the CRC
 						Math2.write_int16(beacon, 4, offset + 2);
@@ -685,7 +685,7 @@ public class Truck extends Thread {
     {
         // wheel diameter in mm
 		float diameter = Settings.getFileFloat("DIAMETER")[0];
-	    // send config
+// save config to flash
 		beacon[offset++] = (byte) 1;
 
 

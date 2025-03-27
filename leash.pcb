@@ -1091,6 +1091,9 @@ Layer(5 "power")
 	Line[68.0000mm 46.4500mm 70.9000mm 46.4500mm 25.00mil 20.00mil "clearline"]
 	Line[69.6500mm 46.4500mm 69.6500mm 45.5000mm 25.00mil 20.00mil "clearline"]
 	Line[69.6500mm 45.5000mm 70.1500mm 45.0000mm 25.00mil 20.00mil "clearline"]
+	Line[62.5000mm 38.9000mm 59.7500mm 38.9000mm 40.00mil 20.00mil "clearline"]
+	Line[64.2500mm 39.3000mm 63.9000mm 38.9500mm 10.00mil 20.00mil "clearline"]
+	Line[63.9000mm 38.9500mm 62.2500mm 38.9500mm 10.00mil 20.00mil "clearline"]
 )
 Layer(6 "bottom")
 (
@@ -1123,13 +1126,14 @@ Layer(10 "silk")
 	Text[66.7000mm 57.3000mm 1 98 "MISO" "clearline"]
 	Text[64.0000mm 57.2500mm 1 98 "MOSI" "clearline"]
 	Text[78.4000mm 49.6500mm 0 98 "5V" "clearline"]
-	Text[78.3500mm 39.4500mm 0 98 "HALL" "clearline"]
+	Text[78.3500mm 39.4500mm 0 98 "ENCODER" "clearline"]
 	Text[78.2000mm 52.2500mm 0 98 "5V" "clearline"]
-	Text[78.3000mm 42.0000mm 0 98 "HALL" "clearline"]
+	Text[78.3000mm 42.0000mm 0 98 "ENCODER" "clearline"]
 	Text[78.2000mm 47.0000mm 0 98 "GND" "clearline"]
 	Text[78.1500mm 1750.00mil 0 98 "GND" "clearline"]
 	Text[48.9000mm 39.4500mm 0 98 "UART RX" "clearline"]
-	Text[78.3500mm 36.8000mm 0 98 "POT" "clearline"]
+	Text[78.3500mm 36.8000mm 0 98 "ANGLE" "clearline"]
 	Text[51.7000mm 41.8500mm 0 98 "GND" "clearline"]
 	Text[61.3000mm 47.5000mm 0 98 "XTAL" "clearline"]
+	Text[71.4500mm 36.2500mm 1 98 "ENABLE" "clearline"]
 )

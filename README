@@ -120,10 +120,12 @@ glasses.FCStd: rear view glasses for testing leash mode
     .32mm layers .4 nozzle
 
 leash11.FCStd: compact leash enclosure
-    no support for frame
+    no support for string hole
     support for base.  Melt it off.
     .2mm layers .4mm nozzle
     Ball bearings
+    Use 5mV/G hall effect sensors
+    Keep components near the axle to reduce inertia.
 
 leash.c: leash firmware
 
@@ -211,10 +213,9 @@ container4.FCStd:
     Ideally would use .32 on later layers.
 
     TODO: Create fiducials for aligning handle.
-        New mounting holes for antlers.
         2nd row of front mounting holes for nose.
-        Isogrid on the inside
-
+        paper or foam gasket too fill gaps under container
+        flat barrier under container
 
 
 container.FCMacro:
@@ -332,6 +333,7 @@ rear_wheel.FCStd: OBSOLETE motor wheel coupling
 
 
 motor4.FCStd: motor mount
+    Use 2.5mV/G hall effect sensors
     The following use .8mm nozzle, .32 layer height, 100% infill
     SHROUD - support with 80deg overhang
     tpu out of TPU
@@ -354,6 +356,7 @@ car_remote.FCMacro:
     create objects for car_remote & cam_remote
 
 car_remote3.FCStd: remote control for vehicle
+    Use 2.5mV/G hall effect sensors
     disable support for the top & bottom
     use support only for the joysticks
     no ironing
@@ -377,8 +380,6 @@ car_remote3.FCStd: remote control for vehicle
         with wide part facing bed
     sock top/bottom: must clean the inside before welding
 
-    TODO: restore sock spacing for body tape
-        reduce power button protector to 1mm
 
 
 
