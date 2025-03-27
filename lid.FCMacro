@@ -43,7 +43,7 @@ if False:
         App.Rotation(App.Vector(0, 0, 1), 0))
 
 # middle
-if True:
+if False:
     extrudeTris, extrudeSubs = libisogrid.makeGrid(52.0, 
         105.0, 
         3,
@@ -57,3 +57,25 @@ if True:
     extrudeTris.Placement = App.Placement(
         App.Vector(13.5, 11, -20),
         App.Rotation(App.Vector(0, 0, 1), 0))
+
+
+if True:
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(152.0, 
+        105.0, 
+        10,
+        5,
+        [ BORDER, BORDER ],
+        [ BORDER, BORDER ],
+        0,
+        0,
+        .6,
+        BORDER)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-173, 11, -20),
+        App.Rotation(App.Vector(0, 0, 1), 0))
+
+
+
+
+
+
