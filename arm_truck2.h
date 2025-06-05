@@ -89,7 +89,7 @@ extern uint16_t motor_lines[LINES][4];
 #define PACKET_SIZE 8
 
 // timer for packet flashing
-#define LED_DELAY2 2
+//#define LED_DELAY2 2
 // red LED when high
 #define RED_LED GPIO_Pin_14
 // green LED when high

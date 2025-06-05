@@ -96,7 +96,7 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 // delay between packets
 #define TIMER0_VALUE (CLOCKSPEED / 4 / 32 / HZ)
 
-// samples per packet
+// samples per packet.  Limited by accum data type
 #define ADC_PER_PACKET 32
 
 
@@ -442,10 +442,11 @@ uint16_t steering_accum = 0;
 uint16_t steering_count = 0;
 uint16_t throttle_accum = 0;
 uint16_t throttle_count = 0;
-uint16_t steering_value;
-uint16_t throttle_value;
+// must be signed for CLAMP to work
+int16_t steering_value;
+int16_t throttle_value;
 uint8_t code_byte;
-uint8_t prev_steering = 0;
+//uint8_t prev_steering = 0;
 int8_t speed_offset = 0;
 // stick drifts 0-255
 int16_t throttle_offset = 0;
@@ -1112,9 +1113,9 @@ void main()
 // LDO drifts when it starts, so this is using a fudge factor
             if(flags2.calibrating && !flags2.raw_mode)
             {
-#define LDO_FUDGE 1
-                throttle_offset = 128 - throttle_value - LDO_FUDGE;
-                steering_offset = 128 - steering_value - LDO_FUDGE;
+#define LDO_FUDGE (int16_t)1
+                throttle_offset = (int16_t)128 - throttle_value - LDO_FUDGE;
+                steering_offset = (int16_t)128 - steering_value - LDO_FUDGE;
                 flags2.calibrating = 0;
             }
 

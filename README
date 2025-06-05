@@ -60,6 +60,8 @@ truck3.pcb: last layout for the tamiya board
 =============================================================================
 3D printed truck
 
+The current camera mounting gear is manely part of truckcam
+
 arm_truck2.c, arm_truck2.h: the 3D printed truck firmware
 
 settings.car: settings file that goes in /sdcard/truck/
@@ -227,7 +229,7 @@ corners.FCStd:
     .4 nozzle, .2 layers 260C
     Use brim to aid adhesion to glass
 
-
+lid.FCStd: container lid for waterproofing, cooling  
     
 
 handle.FCStd:
@@ -505,8 +507,8 @@ cam_remote2.FCStd:
 
 
 
-gopro_rightangle.FCStd
-    cf collar - print 2 for the bearing in place of the inner shroud slice & 2 for the handle
+gopro_rightangle.FCStd: OBSOLETE handle end pieces
+    cf collar - print 2 for the handle
         100% infill
 
     solid right angle coupling between 2 carbon fiber rods
@@ -516,7 +518,7 @@ gopro_rightangle.FCStd
     attachment + attachment mirror are required
 
 
-gopro_motor.FCStd:
+gopro_motor.FCStd: OBSOLETE
     coupling of CF to direct drive motor for panning without a gearbox
     must print with
         4 * "inner shroud slice"
@@ -532,7 +534,7 @@ servo/:
     http://www.olliw.eu/2012/owsilprog/#firmware
 
 
-shroud.FCStd:
+shroud.FCStd: OBSOLETE
     the shroud for a direct drive panning motor
     tube segment was created with 
     ./tube shroud.stl 30 60 0 16

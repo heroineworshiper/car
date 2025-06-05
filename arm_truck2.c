@@ -132,6 +132,7 @@
 
 // timer for LED flashing
 #define LED_DELAY (NAV_HZ / 2)
+#define LED_DELAY2 (NAV_HZ / 4)
 
 #define CLOCKSPEED 168000000
 #define SERVO_PWM_PERIOD (CLOCKSPEED / 2 / PWM_HZ)
@@ -697,6 +698,14 @@ int read_config_packet(const unsigned char *buffer)
 
 	truck.gyro_center_max = READ_UINT16(buffer, offset);
 	truck.max_gyro_drift = (float)READ_UINT16(buffer, offset) / 256;
+
+// HACK
+    if(truck.rpm_dv_size == 0)
+    {
+        TRACE2
+        print_text("*** Corrupt config file");
+    }
+
 	truck.angle_to_gyro = READ_INT16(buffer, offset);
 	truck.imu.gyro_bandwidth = (float)buffer[offset++] / 0xff;
 	truck.highpass_bandwidth = (float)buffer[offset++];
@@ -797,6 +806,7 @@ void load_config()
 	uint32_t address = next_address(SETTINGS_MAGIC);
 	if(address != 0xffffffff)
     {
+// skip header
         address += 8;
         const unsigned char *buffer = (unsigned char*)address;
 		read_config_packet(buffer);
@@ -993,12 +1003,14 @@ print_number(truck.bt_steering);
 			case NEW_CONFIG:
 			{
 				int offset = 8;
-// receive_buf is overwritten if this routine takes too long
+// receive_buf is overwritten if this routine takes too long so we copy it
+	            unsigned char *receive_buf2 = truck.bluetooth.receive_buf2;
+                memcpy(receive_buf2, receive_buf, receive_size);
 
-				int bytes = read_config_packet(receive_buf + offset);
-				int need_save = receive_buf[7];
+				int bytes = read_config_packet(receive_buf2 + offset);
+				int need_save = receive_buf2[7];
 //TRACE2
-//print_buffer(truck.bluetooth.receive_buf, truck.bluetooth.receive_size);
+//print_buffer(truck.bluetooth.receive_buf2, truck.bluetooth.receive_size);
 
 				if(need_save)
 				{
@@ -1006,7 +1018,7 @@ print_number(truck.bt_steering);
                     leash.keep_offset = 1;
                     int bytes_rounded = bytes + (4 - (bytes % 4));
 					save_file(SETTINGS_MAGIC,
-                        receive_buf + offset,
+                        receive_buf2 + offset,
 						bytes_rounded);
 
 					CLEAR_PIN(LED_GPIO, RED_LED);
@@ -3284,7 +3296,14 @@ static void imu_read_gyros(void *ptr)
     if(!truck.have_gyro_center)
     {
         truck.led_counter++;
-        if(truck.led_counter >= LED_DELAY)
+        int led_count = LED_DELAY;
+
+// corrupt config
+        if(truck.gyro_center_max == 0)
+            led_count = LED_DELAY2;
+        
+
+        if(truck.led_counter >= led_count)
         {
             TOGGLE_PIN(LED_GPIO, RED_LED);
 	        truck.led_counter = 0;
@@ -3297,11 +3316,14 @@ static void imu_read_gyros(void *ptr)
 		imu->gyro_center_count++;
         if(imu->gyro_z_max - imu->gyro_z_min > truck.gyro_center_max)
         {
-			TRACE2
-			print_text("range too big last_value=");
-            print_number(gyro_z);
-            print_text("range=");
-            print_number(imu->gyro_z_max - imu->gyro_z_min);
+            if(truck.gyro_center_max > 0)
+            {
+			    TRACE2
+			    print_text("range too big last_value=");
+                print_number(gyro_z);
+                print_text("range=");
+                print_number(imu->gyro_z_max - imu->gyro_z_min);
+            }
             imu->gyro_center_count = 0;
             imu->gyro_z_accum = 0;
             imu->gyro_z_min = 65535;
