@@ -1,6 +1,6 @@
 /*
  * STM32 Controller for direct drive truck
- * Copyright (C) 2012-2020 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2012-2025 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -265,7 +265,8 @@ typedef struct
     float y;
 #endif // LEASH_XY
 
-
+    int do_reverse;
+    int prev_reverse;
 // encoder count to start moving at
     int distance0;
 // starting speed in RPM

@@ -1,6 +1,6 @@
 /*
  * STM32 Controller for direct drive truck
- * Copyright (C) 2012-2024 Adam Williams <broadcast at earthling dot net>
+ * Copyright (C) 2012-2025 Adam Williams <broadcast at earthling dot net>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1413,7 +1413,7 @@ void init_analog()
 #ifdef USE_LEASH
 // return 1 if leash was used
 // fires at TIMER_HZ
-void leash_steering()
+void do_leash_steering()
 {
 #ifdef LEASH_XY
 // apply user offset to center X
@@ -1439,15 +1439,29 @@ void leash_steering()
 
 // feedback
 // direct leash to servo
-    float steering_feedback100 = -do_pid(&leash.steering_pid,
-		    error_lowpass,
-		    d,
-		    error_highpass);
+    float steering_feedback100 = 0;
+    
+    if(!leash.do_reverse)
+    {
+        steering_feedback100 = -do_pid(&leash.steering_pid,
+		        error_lowpass,
+		        d,
+		        error_highpass);
 
-    truck.steering_pwm = truck.mid_steering_pwm -
-		steering_feedback100 * 
-		truck.max_steering_magnitude / 
-		100;
+        truck.steering_pwm = truck.mid_steering_pwm -
+		    steering_feedback100 * 
+		    truck.max_steering_magnitude / 
+		    100;
+    }
+    else
+    {
+// reverse leash mode
+        if(leash.angle > 0)
+            truck.steering_pwm = truck.mid_steering_pwm - truck.min_steering_magnitude;
+        else
+            truck.steering_pwm = truck.mid_steering_pwm + truck.min_steering_magnitude;
+    }
+    
 
 //     static int debug_counter = 0;
 //     debug_counter++;
@@ -1500,7 +1514,7 @@ void handle_steering()
 // leash overrides proprietary radio
     if(leash.active)
     {
-        leash_steering();
+        do_leash_steering();
     }
     else
 #endif // USE_LEASH
@@ -1826,9 +1840,19 @@ void do_leash_throttle()
 //     }
 
     leash.distance2 = leash.distance;
+// start tapering here
+    float taper_angle0 = TO_RAD(40.0);
+// maximum tapering here
+//        float taper_angle1 = TO_RAD(50.0);
+// reverse here
+    float reverse_angle = TO_RAD(50.0);
+    float angle_mag = fabs(leash.angle);
 
-// distance must be above minimum to start
-    if(leash.distance < leash.distance0)
+// distance & angle must be within limits to start
+    if((leash.prev_reverse && 
+            angle_mag < reverse_angle && 
+            angle_mag >= taper_angle0) ||
+        leash.distance < leash.distance0)
     {
 // braking mode
 #ifdef USE_BRAKE
@@ -1925,29 +1949,38 @@ print_float(change[LEFT_MOTOR]);
 
 // fastest min/mile allowed
         float max_speed = leash.max_speed;
-// start tapering here
-        float taper_angle0 = TO_RAD(40.0);
-// maximum tapering here
-        float taper_angle1 = TO_RAD(50.0);
-        float angle_mag = fabs(leash.angle);
-// reduce max min/mile if angle is over a certain amount
-        if(angle_mag >= taper_angle0)
+        leash.do_reverse = 0;
+// reverse if angle is over a certain amount
+        if(angle_mag >= reverse_angle)
         {
-            if(angle_mag >= taper_angle1)
-            {
-                max_speed = min_speed;
-            }
-            else
-            {
-                max_speed += (angle_mag - taper_angle0) / 
-                    (taper_angle1 - taper_angle0) *
-                    (min_speed - max_speed);
-            }
+            max_speed = min_speed;
+            leash.do_reverse = 1;
+            leash.prev_reverse = 1;
         }
-        
+        else
+// reduce maximum pace if angle is over the taper amount
+        if(angle_mag >= taper_angle0 &&
+            !leash.prev_reverse)
+        {
+//             if(angle_mag >= taper_angle1)
+//             {
+                    max_speed = min_speed;
+//             }
+//             else
+//             {
+//                 max_speed += (angle_mag - taper_angle0) / 
+//                     (taper_angle1 - taper_angle0) *
+//                     (min_speed - max_speed);
+//             }
+        }
+        else
+// escape from reverse mode if angle is below the taper amount
+            leash.prev_reverse = 0;
+
+// limit pace
         if(pace < max_speed) pace = max_speed;
         float target_rpm = pace_to_rpm(pace);
-        truck.reverse[0] = truck.reverse[1] = 0;
+        truck.reverse[0] = truck.reverse[1] = leash.do_reverse;
         rpm_to_power(target_rpm);
 
 // static int debug_counter = 0;
