@@ -1481,6 +1481,7 @@ void do_leash_steering()
     truck.auto_steering = 0;
     truck.need_steering_feedback = 0;
     truck.steering_timeout = 0;
+    if(leash.reverse_timeout > 0) leash.reverse_timeout--;
 }
 #endif // USE_LEASH
 
@@ -1849,7 +1850,7 @@ void do_leash_throttle()
     float angle_mag = fabs(leash.angle);
 
 // distance & angle must be within limits to start
-    if((leash.prev_reverse && 
+    if((leash.reverse_timeout > 0 && 
             angle_mag < reverse_angle && 
             angle_mag >= taper_angle0) ||
         leash.distance < leash.distance0)
@@ -1955,12 +1956,12 @@ print_float(change[LEFT_MOTOR]);
         {
             max_speed = min_speed;
             leash.do_reverse = 1;
-            leash.prev_reverse = 1;
+            leash.reverse_timeout = REVERSE_TIMEOUT;
         }
         else
 // reduce maximum pace if angle is over the taper amount
         if(angle_mag >= taper_angle0 &&
-            !leash.prev_reverse)
+            leash.reverse_timeout <= 0)
         {
 //             if(angle_mag >= taper_angle1)
 //             {
@@ -1973,9 +1974,6 @@ print_float(change[LEFT_MOTOR]);
 //                     (min_speed - max_speed);
 //             }
         }
-        else
-// escape from reverse mode if angle is below the taper amount
-            leash.prev_reverse = 0;
 
 // limit pace
         if(pace < max_speed) pace = max_speed;

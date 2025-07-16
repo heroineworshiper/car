@@ -266,7 +266,8 @@ typedef struct
 #endif // LEASH_XY
 
     int do_reverse;
-    int prev_reverse;
+#define REVERSE_TIMEOUT TIMER_HZ
+    int reverse_timeout;
 // encoder count to start moving at
     int distance0;
 // starting speed in RPM
