@@ -1455,11 +1455,13 @@ void do_leash_steering()
     }
     else
     {
-// reverse leash mode
-        if(leash.angle > 0)
-            truck.steering_pwm = truck.mid_steering_pwm - truck.min_steering_magnitude;
-        else
-            truck.steering_pwm = truck.mid_steering_pwm + truck.min_steering_magnitude;
+// turn in reverse leash mode
+//         if(leash.angle > 0)
+//             truck.steering_pwm = truck.mid_steering_pwm - truck.min_steering_magnitude;
+//         else
+//             truck.steering_pwm = truck.mid_steering_pwm + truck.min_steering_magnitude;
+// center in reverse leash mode
+            truck.steering_pwm = truck.mid_steering_pwm;
     }
     
 
