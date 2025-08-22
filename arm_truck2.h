@@ -266,6 +266,7 @@ typedef struct
 #endif // LEASH_XY
 
     int do_reverse;
+// keep the leash from oscillating from going in & out of reverse
 #define REVERSE_TIMEOUT TIMER_HZ
     int reverse_timeout;
 // encoder count to start moving at
@@ -275,7 +276,7 @@ typedef struct
 // minutes per mile per encoder count
     float speed_to_distance;
 // minutes per mile maximum speed
-    float max_speed;
+    float max_pace;
 // center leash angle in rads
     float center;
 // X offset user can manually add or subtract from center

@@ -657,7 +657,7 @@ void dump_config()
 	print_text("\nleash.pace to distance=");
 	print_float(leash.speed_to_distance);
 	print_text("\nleash.max pace=");
-	print_float(leash.max_speed);
+	print_float(leash.max_pace);
 	print_text("\nleash.center=");
 	print_float(TO_DEG(leash.center));
 	print_text("\nleash.x_offset=");
@@ -760,7 +760,7 @@ int read_config_packet(const unsigned char *buffer)
     leash.distance0 = buffer[offset++];
     leash.rpm0 = READ_FLOAT32(buffer, offset);
     leash.speed_to_distance = READ_FLOAT32(buffer, offset);
-    leash.max_speed = READ_FLOAT32(buffer, offset);
+    leash.max_pace = READ_FLOAT32(buffer, offset);
     leash.center = READ_FLOAT32(buffer, offset);
     leash.x_offset = READ_FLOAT32(buffer, offset);
 //    leash.max_angle = READ_FLOAT32(buffer, offset);
@@ -1341,73 +1341,6 @@ void init_analog()
 
 }
 
-// steering input with power
-// void auto_steering_input(float *steering_overshoot)
-// {
-// 
-// // deadband
-//     if(truck.steering <= truck.remote_steering_mid + truck.remote_steering_deadband &&
-//         truck.steering >= truck.remote_steering_mid - truck.remote_steering_deadband)
-//     {
-// // Next steering press engages heading hold
-// 		truck.auto_steering = 1;
-// 		truck.need_steering_feedback = 1;
-//     }
-//     else
-//     if(truck.steering > truck.remote_steering_mid + truck.remote_steering_deadband)
-//     {
-// // proportional right
-// 		if(!truck.auto_steering ||
-// 			truck.reverse)
-// 		{
-// // continue manual steering from before throttle press
-//             truck.steering_pwm = truck.mid_steering_pwm +
-//                 (truck.steering - truck.remote_steering_mid - truck.remote_steering_deadband) *
-//                 truck.max_steering_magnitude /
-//                 (truck.remote_steering_max - truck.remote_steering_mid - truck.remote_steering_deadband);
-//             *steering_overshoot = 0;
-// 			truck.need_steering_feedback = 0;
-// 		}
-// 		else
-// 		{
-// // step target heading
-//             float step = truck.min_steering_step +
-//                 (truck.steering - truck.remote_steering_mid - truck.remote_steering_deadband) *
-//                 (truck.max_steering_step - truck.min_steering_step) /
-//                 (truck.remote_steering_max - truck.remote_steering_mid - truck.remote_steering_deadband);
-//             truck.target_heading += step;
-// 			truck.target_heading = fix_angle(truck.target_heading);
-// 			truck.need_steering_feedback = 1;
-//         }
-//     }
-//     else
-//     if(truck.steering < truck.remote_steering_mid - truck.remote_steering_deadband)
-//     {
-// // proportional left
-// 		if(!truck.auto_steering ||
-// 			truck.reverse)
-// 		{
-// // continue manual steering from before throttle press
-//             truck.steering_pwm = truck.mid_steering_pwm -
-//                 (truck.remote_steering_mid - truck.remote_steering_deadband - truck.steering) *
-//                 truck.max_steering_magnitude /
-//                 (truck.remote_steering_mid - truck.remote_steering_deadband - truck.remote_steering_min);
-//             *steering_overshoot = 0;
-// 			truck.need_steering_feedback = 0;
-//         }
-//         else
-//         {
-// // step target heading
-//             float step = truck.min_steering_step +
-//                 (truck.remote_steering_mid - truck.remote_steering_deadband - truck.steering) *
-//                 (truck.max_steering_step - truck.min_steering_step) /
-//                 (truck.remote_steering_mid - truck.remote_steering_deadband - truck.remote_steering_min);
-//             truck.target_heading -= step;
-//             truck.target_heading = fix_angle(truck.target_heading);
-//             truck.need_steering_feedback = 1;
-//         }
-//     }
-// }
 
 
 #ifdef USE_LEASH
@@ -1452,6 +1385,9 @@ void do_leash_steering()
 		    steering_feedback100 * 
 		    truck.max_steering_magnitude / 
 		    100;
+        truck.auto_steering = 0;
+        truck.need_steering_feedback = 0;
+        truck.steering_timeout = 0;
     }
     else
     {
@@ -1461,9 +1397,12 @@ void do_leash_steering()
 //         else
 //             truck.steering_pwm = truck.mid_steering_pwm + truck.min_steering_magnitude;
 // center in reverse leash mode
-            truck.steering_pwm = truck.mid_steering_pwm;
+//            truck.steering_pwm = truck.mid_steering_pwm;
+// heading hold in reverse
+        truck.auto_steering = 1;
+        truck.need_steering_feedback = 1;
     }
-    
+
 
 //     static int debug_counter = 0;
 //     debug_counter++;
@@ -1480,9 +1419,6 @@ void do_leash_steering()
 // //        print_number(truck.steering_pwm);
 //     }
 
-    truck.auto_steering = 0;
-    truck.need_steering_feedback = 0;
-    truck.steering_timeout = 0;
     if(leash.reverse_timeout > 0) leash.reverse_timeout--;
 }
 #endif // USE_LEASH
@@ -1490,6 +1426,7 @@ void do_leash_steering()
 void handle_steering()
 {
     int throttle_active = 0;
+// not currently used.  Previously set in FAST_LEFT, FAST_RIGHT
     float steering_overshoot = 0;
 
 #ifdef USE_LEASH
@@ -1934,8 +1871,8 @@ print_float(change[LEFT_MOTOR]);
 
 // convert leash distance to a pace
 // slowest min/mile
-        float min_speed = rpm_to_pace(leash.rpm0);
-        float pace = min_speed;
+        float min_pace = rpm_to_pace(leash.rpm0);
+        float pace = min_pace;
 
 #ifdef LEASH_XY
 // use Y for speed
@@ -1951,12 +1888,12 @@ print_float(change[LEFT_MOTOR]);
 
 
 // fastest min/mile allowed
-        float max_speed = leash.max_speed;
+        float max_pace = leash.max_pace;
         leash.do_reverse = 0;
 // reverse if angle is over a certain amount
         if(angle_mag >= reverse_angle)
         {
-            max_speed = min_speed;
+            max_pace = min_pace;
             leash.do_reverse = 1;
             leash.reverse_timeout = REVERSE_TIMEOUT;
         }
@@ -1967,18 +1904,18 @@ print_float(change[LEFT_MOTOR]);
         {
 //             if(angle_mag >= taper_angle1)
 //             {
-                    max_speed = min_speed;
+                    max_pace = min_pace;
 //             }
 //             else
 //             {
-//                 max_speed += (angle_mag - taper_angle0) / 
+//                 max_pace += (angle_mag - taper_angle0) / 
 //                     (taper_angle1 - taper_angle0) *
-//                     (min_speed - max_speed);
+//                     (min_pace - max_pace);
 //             }
         }
 
 // limit pace
-        if(pace < max_speed) pace = max_speed;
+        if(pace < max_pace) pace = max_pace;
         float target_rpm = pace_to_rpm(pace);
         truck.reverse[0] = truck.reverse[1] = leash.do_reverse;
         rpm_to_power(target_rpm);
