@@ -1,8 +1,7 @@
-
 3D printed truck
 
 
-Copyright (C) 2012-2024 Adam Williams <broadcast at earthling dot net>
+Copyright (C) 2012-2025 Adam Williams <broadcast at earthling dot net>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,31 +25,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
 What you'll find here:
-
-
-arm_car.c: 2 wheel robot driven by direct drive, sensored brushless motors
-
-arm_cc1101.c: 433Mhz radio library for the ARM
-
-arm_truck.c, arm_truck.h: the lunchbox firmware
-
-arm_xbee.c: xbee library for the ARM
-
-car.s: vehicle firmware for the G buggy
-
-car_remote.s: orginal assembly language remote for CC1101 & XBee
-
-car_remote.X: 3D printed vehicle remote control
-
-car_receive.X: 3D printed vehicle receiver
-
-car_remote.X.bak: failed remote for the XBee with frequency hopping
-
-freq_hops.ods: frequency hopping plot to aid in spreading the frequencies
-
-fuse.X: a software fuse
-
-truck3.pcb: last layout for the tamiya board
 
 
 
@@ -178,7 +152,8 @@ tire6.FCMacro: Create layer for the latest rear tire
         ./helix tire.stl offroad3.stl
     tires must be mirror images or the truck will pull to 1 side
 
-
+trailer9.FCStd: Towed drogue for aiding video composition.
+    .8 nozzle .32 layers
 
 
 truck_radio2.pcb: remote control tx/rx for 3D printed truck & the camera
@@ -559,7 +534,35 @@ Maximum windings: 25 turns * 26AWG
 RPM = C constant * V voltage * A wire cross section
 
 
+========================================================================
+OBSOLETE files:
 
+arm_car.c: 2 wheel robot driven by direct drive, sensored brushless motors
+
+arm_cc1101.c: 433Mhz radio library for the ARM
+
+arm_truck.c, arm_truck.h: the lunchbox firmware
+
+arm_xbee.c: xbee library for the ARM
+
+car.s: vehicle firmware for the G buggy
+
+car_remote.s: orginal assembly language remote for CC1101 & XBee
+
+car_remote.X: 3D printed vehicle remote control
+
+car_receive.X: 3D printed vehicle receiver
+
+car_remote.X.bak: failed remote for the XBee with frequency hopping
+
+freq_hops.ods: frequency hopping plot to aid in spreading the frequencies
+
+fuse.X: a software fuse for testing motors
+
+truck3.pcb: last layout for the tamiya board
+
+uwb.X, dw3000.pcb, dw3220.fp, uwb_test.c: failed UWB experiment with the
+DW3221
 
 
 
