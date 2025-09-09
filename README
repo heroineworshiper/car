@@ -77,7 +77,7 @@ tire2.FCMacro: OBSOLETE generate procedural tire.
     20mm print speed
     no retraction
 
-front_tire3.FCStd: front tire for soft TPE
+front_tire4.FCStd: front tire for soft TPE
     Import STL into blender
     Rename the object "Tire"
     Run helix.py to make it a helix
@@ -175,9 +175,9 @@ ball_link.FCStd:
 
 
 
-bumper.FCStd:
+bumper2.FCStd:
     bumper for the front of the angle rods
-    print in TPU
+    print in TPU, .8 nozzle, .32 layers
 
 
 container4.FCStd:
@@ -273,6 +273,8 @@ traction.FCStd: traction section
         round all wire passages
 
 
+Truck.studio2: the phone app
+    Installing it requires creating /sdcard/truck & copying settings.car to it
 
 
 steering.FCMacro:
