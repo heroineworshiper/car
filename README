@@ -59,7 +59,7 @@ heat sink/angle rod
 imu4.pcb: IMU for 3D printed truck
 
 
-cring.FCStd: failed retaining ring for the motors.  Not used anymore.
+cring.FCStd: OBSOLETE failed retaining ring for the motors.
     .4mm nozzle
     .2mm layer height out of PETG
     no cooling fan
@@ -166,13 +166,13 @@ ball_link.FCStd:
     ball link
     100% infill
     80 deg support
-    220C nozzle
+    220C nozzle 0C bed to improve part cooling
     link spacing on both sides: 38.5mm
      - this grows as the wheel forks wear down
     use pliers when threading to avoid delamination
     grind a flat in the metal rod to aid the pliers
-    heat the PLA to get it to conform
-
+    heat the PLA & shape it with tweezers to get it to conform
+    TODO: expand the opening & use heat to close it
 
 
 bumper2.FCStd:
@@ -212,12 +212,10 @@ handle.FCStd:
     print bearing + collars for camera pole or a wide collar without camera pole
     
           
-rear_light.FCStd:
-    enclosure for rear lights
-    print rear corner with black TPU
-    print window with clear TPU
-    .4 nozzle, .2 layers 260C
-    Use brim to aid adhesion to glass
+rear_light2.FCStd:
+    bumper for rear lights
+    aluminum heat sink hangs off 2 screws
+    .4 nozzle, .2 layers 260C TPU
 
 plot.py: 
     plot steering filters
@@ -280,24 +278,22 @@ Truck.studio2: the phone app
 steering.FCMacro:
     create objects for steering
 
-steering2.FCStd: steering section with 10 deg caster
+steering2.FCStd: OBSOLETE steering section with 10 deg caster
+
+
+steering3.FCStd: steering with 20 deg caster
     print with 0.8mm nozzle 
     .32mm layer height
-    shield
+    shield2
     vertical part
      - print sideways
-    wheel mount
-    servo plate
+     - ream holes with 3mm bit
+    wheel mount003
+    servo plate008
     bushing, bushing001
      - .4 nozzle .32mm layer
      - hard TPU
     wheel mount003
-        wheel forks need to be heated with metal rods to 
-        accurately conform the holes
-
-    TODO: make shield screw on for accessing the ball links
-
-steering3.FCStd: steering with 20 deg caster
 
 
 
@@ -315,19 +311,21 @@ motor4.FCStd: motor mount
     Use 2.5mV/G hall effect sensors
     The following use .8mm nozzle, .32 layer height, 100% infill
     SHROUD - support with 80deg overhang
-    tpu out of TPU
-    clamp * 4
+        - not mirror images
+    SOCK out of TPU
+    CLAMPS out of PLA
     MOTOR PLATE - no support, PETG
 
-    The following use .4mm nozzle, .2mm layer
     SENSOR PLATE
         100% infill
+        .4mm nozzle, .2mm layer
     MAGNET HOLDER
         PETG
-        support to base
-        .4mm nozzle 
+        no support, 100% infill
+        .4mm nozzle .32mm layer
+        Heat to thread set crew & fit magnet
     GASKET:
-        PLA to avoid static .4mm nozzle .2mm layer
+        TPU .4mm nozzle .32mm layer
 
 
 
@@ -335,6 +333,7 @@ car_remote.FCMacro:
     create objects for car_remote & cam_remote
 
 car_remote3.FCStd: remote control for vehicle
+    mirror image to give antenna more clearance
     Use 2.5mV/G hall effect sensors
     disable support for the top & bottom
     use support only for the joysticks
@@ -402,6 +401,7 @@ clamshell.FCMacro:
     create walls for cam_remote, car_remote OBSOLETE
 
 gopro_case2.FCStd: case for a gopro 7
+    collars, interfaces for CF rod
     print with support everywhere, lesser overhangs facing up
     skirt adhesion
     .2mm layers .4mm nozzle

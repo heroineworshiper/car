@@ -49,8 +49,6 @@
 // XY feedback.  Change Truck.java if you change this.
 #define LEASH_XY
 #define LEASH_PROTOCOL2
-// enable braking in leash mode
-#define USE_BRAKE
 
 #define HALLS 4
 #define MOTORS 2
@@ -234,6 +232,13 @@ typedef struct
 // angular velocity in degrees/second
     int v;
     int v_temp;
+// 0 - powered + braking
+// 2 - powered + freewheel
+// 1 - unpowered + breaking
+// 3 - unpowered + freewheel
+    int mode;
+#define FREEWHEEL_BIT 0x2
+#define UNPOWERED_BIT 0x1
 } motor_t;
 
 #ifdef USE_LEASH

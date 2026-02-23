@@ -16,3 +16,10 @@ typescript
 *.o
 *.cap
 /car_receive.X/dist/default/
+/uwb.X/nbproject/private/
+/uwb.X/build/default/
+/uwb.X/dist/default/
+/fan.X/nbproject/private/
+/leds.X/nbproject/private/
+/leds.X/build/default/
+/leds.X/dist/default/

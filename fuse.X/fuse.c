@@ -454,7 +454,7 @@ void main() {
     RCSTA = 0x90;
 	BAUDCTL = 0x08;
 	SPBRG = 17; // 115200 baud
-    
+
     PIR1bits.RCIF = 0;
     PIE1bits.RCIE = 1;
     

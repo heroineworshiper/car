@@ -1011,7 +1011,7 @@ void handle_speed_decrease()
 
 void main()
 {
-// high clockspeed
+// max clockspeed for PLL
     OSCCON = 0b11100000;
 
 

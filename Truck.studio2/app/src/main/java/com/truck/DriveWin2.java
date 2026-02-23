@@ -19,7 +19,7 @@ import android.view.View.OnTouchListener;
 import android.widget.TextView;
 
 
-// semi autonomous controller
+// semi autonomous controller that didn't work reliably enough
 
 public class DriveWin2 extends WindowBase implements OnTouchListener
 {

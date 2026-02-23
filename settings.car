@@ -14,7 +14,8 @@ DEBUG 0
 # wheel diameter in mm
 DIAMETER 108
 
-# reverse pace in auto throttle
+# Pace in auto reverse throttle.  Also maximum pace for reverse leash.
+# Should be the maximum reverse speed before instability.
 TARGET_REVERSE_PACE 15.00
 
 # Center PWM position 0 - 100
@@ -51,6 +52,14 @@ PID_DOWNSAMPLE 1
 STEERING_STEP 20
 MAX_STEERING_STEP 90.0
 STEERING_OVERSHOOT 30
+
+# 0 - powered + braking
+# 2 - powered + freewheel
+# 1 - unpowered + breaking
+# 3 - unpowered + freewheel
+MOTOR_MODEL 0
+MOTOR_MODER 0
+
 BATTERY_ANALOG 980
 BATTERY_V0 8.67
 

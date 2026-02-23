@@ -641,6 +641,15 @@ void dump_config()
 	print_text("\nsteering_overshoot=");
 	print_float(TO_DEG(truck.steering_overshoot));
 
+    int i;
+    for(i = 0; i < MOTORS; i++)
+    {
+        print_text("\nmotor mode");
+        print_number(i);
+        print_text("=");
+        print_number(truck.motors[i].mode);
+    }
+
 	print_text("\nSTEERING PID=");
 	dump_pid(&truck.heading_pid);
 
@@ -732,11 +741,16 @@ int read_config_packet(const unsigned char *buffer)
 	truck.min_steering_step = READ_FLOAT32(buffer, offset);
 	truck.max_steering_step = READ_FLOAT32(buffer, offset);
 	truck.steering_overshoot = READ_FLOAT32(buffer, offset);
-	
-	
+    int i;
+    for(i = 0; i < MOTORS; i++)
+    {
+        truck.motors[i].mode = buffer[offset++];
+    }
+
+
 	offset = read_pid(&truck.heading_pid, buffer, offset);
 	offset = read_pid(&truck.rpm_pid, buffer, offset);
-	
+
 
 	resize_derivative(&truck.rpm_dv, truck.rpm_dv_size);
 
@@ -1795,7 +1809,6 @@ void do_leash_throttle()
         leash.distance < leash.distance0)
     {
 // braking mode
-#ifdef USE_BRAKE
 // update the reference angles
         if(truck.motors[LEFT_MOTOR].brake_angle < 0 || 
             truck.motors[RIGHT_MOTOR].brake_angle < 0)
@@ -1836,14 +1849,18 @@ void do_leash_throttle()
                     truck.reverse[i] = truck.reverse[1] = 1;
                 else
                     truck.reverse[i] = truck.reverse[1] = 0;
-// only 1 PID controller for both motors, so P only & no reset
-                float brake_feedback = do_pid(&leash.brake_pid,
-                    fabs(change[i]) / 90,
-                    0,
-                    0);
-                truck.power[i] = brake_feedback * 
-                    MOTOR_PWM_PERIOD / 
-                    100;
+// only 1 set of PID constants for both motors, with P only & no need to reset
+                if(!(truck.motors[i].mode & FREEWHEEL_BIT))
+                {
+                    float brake_feedback = do_pid(&leash.brake_pid,
+                        fabs(change[i]) / 90,
+                        0,
+                        0);
+
+                    truck.power[i] = brake_feedback * 
+                        MOTOR_PWM_PERIOD / 
+                        100;
+                }
             }
 
 static int debug_counter = 0;
@@ -1857,11 +1874,14 @@ print_float(change[LEFT_MOTOR]);
 }
 
         }
-#else // USE_BRAKE
 
-        truck.power[0] = truck.power[1] = 0;
-#endif // !USE_BRAKE
-
+// disable braking based on mode
+        int i;
+        for(i = 0; i < MOTORS; i++)
+        {
+            if(truck.motors[i].mode & FREEWHEEL_BIT)
+                truck.power[i] = 0;
+        }
     }
     else
     {
@@ -1893,7 +1913,10 @@ print_float(change[LEFT_MOTOR]);
 // reverse if angle is over a certain amount
         if(angle_mag >= reverse_angle)
         {
-            max_pace = min_pace;
+//            max_pace = min_pace;
+// want a faster pace since we're going straight
+// so try the target reverse speed
+            max_pace = rpm_to_pace(truck.target_reverse_rpm);
             leash.do_reverse = 1;
             leash.reverse_timeout = REVERSE_TIMEOUT;
         }
@@ -1904,7 +1927,7 @@ print_float(change[LEFT_MOTOR]);
         {
 //             if(angle_mag >= taper_angle1)
 //             {
-                    max_pace = min_pace;
+                max_pace = min_pace;
 //             }
 //             else
 //             {
@@ -2326,18 +2349,44 @@ void write_motors()
 //     }
 
 
+// leash mode overrides UNPOWERED_BIT
+    int leash_braking[MOTORS];
+    int leash_freewheel[MOTORS];
+    int i;
+    for(i = 0; i < MOTORS; i++)
+    {
+// powered braking when leash commands stop
+        leash_braking[i] = (leash.active && 
+            truck.motors[LEFT_MOTOR].brake_angle >= 0 &&
+            truck.motors[RIGHT_MOTOR].brake_angle >= 0 &&
+            !(truck.motors[i].mode & FREEWHEEL_BIT));
+// freewheel when leash commands movement
+        leash_freewheel[i] = leash.active &&
+            (truck.motors[i].mode & UNPOWERED_BIT);
+    }
 
 
 // left wheel
-    if(truck.power[0] == 0)
+    if(truck.power[LEFT_MOTOR] == 0 ||
+        ((truck.motors[LEFT_MOTOR].mode & UNPOWERED_BIT) && 
+        !leash_braking[LEFT_MOTOR]))
     {
 // brake 
 	    TIM5->CCR1 = 0;
 	    TIM5->CCR3 = 0;
 	    TIM5->CCR2 = 0;
-	    SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
-	    SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
-	    SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
+        if((truck.motors[LEFT_MOTOR].mode & FREEWHEEL_BIT) || leash_freewheel[LEFT_MOTOR])
+        {
+	        CLEAR_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
+	        CLEAR_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
+	        CLEAR_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
+        }
+        else
+        {
+	        SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
+	        SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
+	        SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
+        }
     }
     else
     {
@@ -2350,9 +2399,9 @@ void write_motors()
 
 
 // reverse direction by swapping a CCR
-	    TIM5->CCR1 = CALCULATE_WAVEFORM(index1, 0);
-	    TIM5->CCR2 = CALCULATE_WAVEFORM(index2, 0);
-	    TIM5->CCR3 = CALCULATE_WAVEFORM(index3, 0);
+	    TIM5->CCR1 = CALCULATE_WAVEFORM(index1, LEFT_MOTOR);
+	    TIM5->CCR2 = CALCULATE_WAVEFORM(index2, LEFT_MOTOR);
+	    TIM5->CCR3 = CALCULATE_WAVEFORM(index3, LEFT_MOTOR);
 	    SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
 	    SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
 	    SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
@@ -2376,15 +2425,26 @@ void write_motors()
 
 
 // right wheel
-    if(truck.power[1] == 0)
+    if(truck.power[RIGHT_MOTOR] == 0 ||
+        ((truck.motors[RIGHT_MOTOR].mode & UNPOWERED_BIT) && 
+        !leash_braking[RIGHT_MOTOR]))
     {
 // brake 
 	    TIM3->CCR1 = 0;
 	    TIM3->CCR3 = 0;
 	    TIM3->CCR2 = 0;
-        SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
-        SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
-        SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
+        if((truck.motors[RIGHT_MOTOR].mode & FREEWHEEL_BIT) || leash_freewheel[RIGHT_MOTOR])
+        {
+	        CLEAR_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
+	        CLEAR_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
+	        CLEAR_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
+        }
+        else
+        {
+            SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
+            SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
+            SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
+        }
     }
     else
     {
@@ -2397,9 +2457,9 @@ void write_motors()
 	    int index3 = (index1 + 240 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 
 // reverse direction by swapping a CCR
-	    TIM3->CCR1 = CALCULATE_WAVEFORM(index1, 1);
-	    TIM3->CCR3 = CALCULATE_WAVEFORM(index2, 1);
-	    TIM3->CCR2 = CALCULATE_WAVEFORM(index3, 1);
+	    TIM3->CCR1 = CALCULATE_WAVEFORM(index1, RIGHT_MOTOR);
+	    TIM3->CCR3 = CALCULATE_WAVEFORM(index2, RIGHT_MOTOR);
+	    TIM3->CCR2 = CALCULATE_WAVEFORM(index3, RIGHT_MOTOR);
         SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
         SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
         SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
