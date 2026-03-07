@@ -45,7 +45,6 @@
 extern truck_t truck;
 
 // memory resident copies for field calibration
-#define MAX_TABLE_SIZE 64
 uint16_t hall0_table_ptr[MAX_TABLE_SIZE];
 uint16_t hall1_table_ptr[MAX_TABLE_SIZE];
 uint16_t hall2_table_ptr[MAX_TABLE_SIZE];
@@ -234,7 +233,7 @@ void init_motor_tables()
 
 // memory resident table creation
 // copied from motor_table.c
-uint16_t motor_lines[LINES][4];
+uint16_t motor_lines[MAX_TABLE_SIZE][4];
 
 
 // copy unique values in ascending order
@@ -245,11 +244,11 @@ int sort_sensors(uint16_t *output, int column)
     int total = 0;
 
 
-    for(i = 0; i < LINES; i++)
+    for(i = 0; i < MAX_TABLE_SIZE; i++)
     {
         int got_it = 0;
         int lowest = 65536;
-        for(j = 0; j < LINES; j++)
+        for(j = 0; j < MAX_TABLE_SIZE; j++)
         {
             int value = motor_lines[j][column];
             if(value > last_value &&
@@ -306,7 +305,7 @@ void tabulate_sensors(uint8_t *motor_table_ptr,
 // search for nearest sensor values
             int angle = -1;
             int nearest_distance = -1;
-            for(k = 0; k < LINES; k++)
+            for(k = 0; k < MAX_TABLE_SIZE; k++)
             {
                 int distance = hypot(motor_lines[k][hall0] - want_hall0,
                     motor_lines[k][hall1] - want_hall1);
@@ -321,7 +320,7 @@ void tabulate_sensors(uint8_t *motor_table_ptr,
 // print_text("dst=");
 // print_number(dst);
 // TRACE
-            motor_table_ptr[dst++] = angle / 40;
+            motor_table_ptr[dst++] = angle / ANGLE_STEP;
 //TRACE
         }
     }

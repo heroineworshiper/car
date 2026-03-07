@@ -2790,8 +2790,6 @@ void handle_motors()
         int right_angle = get_motor_angle(RIGHT_MOTOR, RIGHT_HALL);
         int prev_left = truck.motors[LEFT_MOTOR].angle;
         int prev_right = truck.motors[RIGHT_MOTOR].angle;
-// how far ahead the magnets should pull
-        int phase_offset = 90;
 
         truck.motors[LEFT_MOTOR].angle = left_angle;
         truck.motors[RIGHT_MOTOR].angle = right_angle;
@@ -2833,7 +2831,7 @@ void handle_motors()
 // advance phase
             if(l_diff >= 0)
             {
-                truck.motors[LEFT_MOTOR].phase = ((left_angle * 7) + phase_offset) % 360;
+                truck.motors[LEFT_MOTOR].phase = ((left_angle * 7) + PHASE_OFFSET) % 360;
             }
         }
         else
@@ -2855,7 +2853,7 @@ void handle_motors()
             truck.motors[LEFT_MOTOR].v_temp -= l_diff;
             if(l_diff <= 0)
             {
-                truck.motors[LEFT_MOTOR].phase = (left_angle * 7) - phase_offset;
+                truck.motors[LEFT_MOTOR].phase = (left_angle * 7) - PHASE_OFFSET;
                 if(truck.motors[LEFT_MOTOR].phase < 0)
                 {
                     truck.motors[LEFT_MOTOR].phase += 360;
@@ -2883,7 +2881,7 @@ void handle_motors()
 
             if(r_diff >= 0)
             {
-                truck.motors[RIGHT_MOTOR].phase = ((right_angle * 7) + phase_offset) % 360;
+                truck.motors[RIGHT_MOTOR].phase = ((right_angle * 7) + PHASE_OFFSET) % 360;
             }
         }
         else
@@ -2907,7 +2905,7 @@ void handle_motors()
 
             if(r_diff <= 0)
             {
-                truck.motors[RIGHT_MOTOR].phase = (right_angle * 7) - phase_offset;
+                truck.motors[RIGHT_MOTOR].phase = (right_angle * 7) - PHASE_OFFSET;
                 if(truck.motors[RIGHT_MOTOR].phase < 0)
                 {
                     truck.motors[RIGHT_MOTOR].phase += 360;
@@ -2993,36 +2991,39 @@ void handle_motors()
             {
                 case START_CALIBRATION:
                     truck.calibration_phase = 0;
+                    truck.calibration_read = 0;
                     truck.motors[LEFT_MOTOR].phase = 0;
                     truck.motors[RIGHT_MOTOR].phase = 0;
                     write_motors();
-                    truck.calibration_tick = truck.tick + TIMER_HZ;
-                    truck.calibration_state = CALIBRATION_PASS1;
+                    truck.calibration_tick = truck.tick + TIMER_HZ * 2;
+//                    truck.calibration_state = CALIBRATION_PASS1;
+                    truck.calibration_state = CALIBRATION_PASS2;
                     break;
 
 // 1 revolution for the starting points
-                case CALIBRATION_PASS1:
-                    truck.calibration_tick = truck.tick + TIMER_HZ / 100;
-
-                    truck.calibration_phase += ANGLE_STEP / 10;
-                    if(truck.calibration_phase >= 360 * 7)
-                    {
-                        truck.calibration_state = CALIBRATION_PASS2;
-                        truck.calibration_phase = 0;
-                        truck.calibration_read = 0;
-                        truck.motors[LEFT_MOTOR].phase = 0;
-                        truck.motors[RIGHT_MOTOR].phase = 0;
-                        write_motors();
-// wait 1 second before starting test
-                        truck.calibration_tick = truck.tick + TIMER_HZ;
-                    }
-                    else
-                    {
-                        truck.motors[LEFT_MOTOR].phase = truck.calibration_phase % 360;
-                        truck.motors[RIGHT_MOTOR].phase = truck.calibration_phase % 360;
-                        write_motors();
-                    }
-                    break;
+// 3/2026: not necessary
+//                 case CALIBRATION_PASS1:
+//                     truck.calibration_tick = truck.tick + TIMER_HZ / 100;
+// 
+//                     truck.calibration_phase += 5;
+//                     if(truck.calibration_phase >= 360 * 7)
+//                     {
+//                         truck.calibration_state = CALIBRATION_PASS2;
+//                         truck.calibration_phase = 0;
+//                         truck.calibration_read = 0;
+//                         truck.motors[LEFT_MOTOR].phase = 0;
+//                         truck.motors[RIGHT_MOTOR].phase = 0;
+//                         write_motors();
+// // wait 1 second before starting test
+//                         truck.calibration_tick = truck.tick + TIMER_HZ;
+//                     }
+//                     else
+//                     {
+//                         truck.motors[LEFT_MOTOR].phase = truck.calibration_phase % 360;
+//                         truck.motors[RIGHT_MOTOR].phase = truck.calibration_phase % 360;
+//                         write_motors();
+//                     }
+//                     break;
 
 
 // build motor tables
@@ -3051,7 +3052,7 @@ void handle_motors()
                             motor_lines[index][3] = truck.halls[RIGHT_HALL + 1].value;
                         }
 
-                        truck.calibration_phase += ANGLE_STEP / 40;
+                        truck.calibration_phase += 1;
                         if(truck.calibration_phase >= 360 * 7)
                         {
 // done testing
@@ -3087,7 +3088,7 @@ void handle_motors()
                         else
                         {
 // rotate the motors
-                            truck.calibration_phase += ANGLE_STEP / 40;
+                            truck.calibration_phase += 1;
                             truck.calibration_tick = truck.tick + TIMER_HZ / 100;
                             truck.motors[LEFT_MOTOR].phase = truck.calibration_phase % 360;
                             truck.motors[RIGHT_MOTOR].phase = truck.calibration_phase % 360;

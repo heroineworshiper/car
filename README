@@ -230,7 +230,7 @@ phone6.FCStd:
     .2mm layer
 
 
-radio_box2.FCStd:
+radio_box3.FCStd:
     container for radio modules & switches.
     print without support
     print latches flat & glue on

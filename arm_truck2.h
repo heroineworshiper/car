@@ -77,11 +77,15 @@
 // motors
 #define MOTOR_PWM_PERIOD 409
 #define HALL_OVERSAMPLE 2
-#define ANGLE_STEP 40
+// angle table resolution
+#define ANGLE_STEP 90
+// how far ahead the current is
+// Multiple of ANGLE_STEP
+#define PHASE_OFFSET 90
 
 // memory resident table creation
-#define LINES (360 * 7 / ANGLE_STEP)
-extern uint16_t motor_lines[LINES][4];
+#define MAX_TABLE_SIZE (360 * 7 / ANGLE_STEP + 1)
+extern uint16_t motor_lines[MAX_TABLE_SIZE][4];
 
 
 #define PACKET_SIZE 8
