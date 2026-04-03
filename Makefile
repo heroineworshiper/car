@@ -258,7 +258,12 @@ ARM_TRUCK2_OBJS := \
 ARM_CAM_OBJS := \
 	arm_cam.o \
         arm_fs_.o \
-        arm_usb.o
+        arm_usb.o \
+        ../stm32stuff/stm32f4xx_spi.o
+
+ARM_RECEIVER_OBJS := \
+	arm_receiver.o \
+        ../stm32stuff/stm32f4xx_spi.o
 
 PI_OBJS := \
 	vision.o
@@ -379,7 +384,15 @@ cam.bin: $(ARM_CAM_OBJS) $(ARM_OBJS) $(USB_OBJS)
 		-T../stm32stuff/main.ld
 	$(OBJCOPY) -O binary cam.elf cam.bin
 
-$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_TRUCK2_OBJS) $(ARM_CAR_OBJS) $(ARM_CAM_OBJS) $(USB_OBJS):
+receiver.bin: $(ARM_RECEIVER_OBJS) $(ARM_OBJS) $(USB_OBJS)
+	$(GCC_ARM) -o receiver.elf \
+		$(ARM_RECEIVER_OBJS) \
+		$(ARM_OBJS) \
+		$(ARM_LFLAGS) \
+		-T../stm32stuff/main.ld
+	$(OBJCOPY) -O binary receiver.elf receiver.bin
+
+$(ARM_OBJS) $(ARM_TRUCK_OBJS) $(ARM_TRUCK2_OBJS) $(ARM_CAR_OBJS) $(ARM_CAM_OBJS) $(ARM_RECEIVER_OBJS) $(USB_OBJS):
 	`cat arm_gcc` -c $< -o $*.o
 
 car: car.hex car_remote.s
@@ -579,6 +592,7 @@ oscilloscope: oscilloscope.c
 ../stm32stuff/stm32f4xx_dcmi.o:  ../stm32stuff/stm32f4xx_dcmi.c
 ../stm32stuff/stm32f4xx_dma.o:   ../stm32stuff/stm32f4xx_dma.c
 ../stm32stuff/stm32f4xx_i2c.o:   ../stm32stuff/stm32f4xx_i2c.c
+../stm32stuff/stm32f4xx_spi.o:   ../stm32stuff/stm32f4xx_spi.c
 stm32f4xx_it.o:    stm32f4xx_it.c
 ../stm32stuff/stm32f4xx_iwdg.o:  ../stm32stuff/stm32f4xx_iwdg.c
 ../stm32stuff/stm32f4xx_tim.o:   ../stm32stuff/stm32f4xx_tim.c
@@ -590,9 +604,10 @@ stm32f4xx_exti.o: stm32f4xx_exti.c
 arm_cam.o: 			     arm_cam.c
 arm_car.o: 			     arm_car.c
 arm_fs.o:                            arm_fs.c
-arm_fs_.o:                            arm_fs.c
+arm_fs_.o:                           arm_fs.c
 arm_motors.o:                        arm_motors.c
 arm_nav.o:                           arm_nav.c
+arm_receiver.o: 		     arm_receiver.c
 arm_truck.o: 			     arm_truck.c
 arm_truck2.o: 			     arm_truck2.c
 arm_usb.o:                           arm_usb.c

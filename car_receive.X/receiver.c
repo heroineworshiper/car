@@ -179,9 +179,10 @@ const uint16_t channels[] =
 #define DRVSREG (0xC600 | DRPE | RADIO_BAUD_CODE)
 
 
+// digital filter bandwidth.  page 19
 // Page 37 of the SI4421 datasheet gives optimum bandwidth values
-// but the lowest that works is 200khz
-//#define RXCREG 0x9481     // BW 200KHz, LNA gain 0dB, RSSI -97dBm
+// Best results observed at 400khz.  Applied regardless of BBFCREG value.
+//#define RXCREG 0x9480     // BW 200KHz, LNA gain 0dB, RSSI -103dBm
 //#define RXCREG 0x9440     // BW 340KHz, LNA gain 0dB, RSSI -103dBm
 #define RXCREG 0x9420       // BW 400KHz, LNA gain 0dB, RSSI -103dBm
 
@@ -190,8 +191,9 @@ const uint16_t channels[] =
 #define STSREG 0x0000
 #define RXFIFOREG 0xb000
 
-// analog filter for raw mode
-#define BBFCREG                 0xc23c
+// Baseband filter type.  page 20
+#define BBFCREG                 0xc23c // analog filter
+//#define BBFCREG                 0xc22c // digital filter
 
 
 

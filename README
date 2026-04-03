@@ -308,7 +308,7 @@ rear_wheel.FCStd: OBSOLETE motor wheel coupling
 
 
 motor4.FCStd: motor mount
-    Use 2.5mV/G hall effect sensors
+    Use 2.5mV/G hall effect sensors.
     The following use .8mm nozzle, .32 layer height, 100% infill
     SHROUD - support with 80deg overhang
         - not mirror images
@@ -349,8 +349,8 @@ car_remote3.FCStd: remote control for vehicle
         no support
         print with outside facing the bed
     steering pivot, throttle pivot:
-        don't export magnets
         use support from magnet holder to bed
+        Z seem on thicker walls
     steering lever, throttle lever:
         use support from short side of hinge to bed
     covers for power, increase speed, decrease speed:

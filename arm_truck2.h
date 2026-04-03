@@ -55,8 +55,8 @@
 
 #define LEFT_MOTOR 0
 #define RIGHT_MOTOR 1
-#define LEFT_HALL 0
-#define RIGHT_HALL 2
+#define LEFT_SENSOR 0
+#define RIGHT_SENSOR 2
  
 
 // gyro update rate
@@ -78,8 +78,10 @@
 #define MOTOR_PWM_PERIOD 409
 #define HALL_OVERSAMPLE 2
 // angle table resolution
-#define ANGLE_STEP 90
-// how far ahead the current is
+// must be less than PHASE_OFFSET & a multiple of it for optimum efficiency
+// The efficiency change is visible in a no load test.
+#define ANGLE_STEP 45
+// how far ahead of the detected phase the current is
 // Multiple of ANGLE_STEP
 #define PHASE_OFFSET 90
 

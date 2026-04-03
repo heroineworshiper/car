@@ -82,7 +82,7 @@ int get_hall_index(int value, const uint16_t *table, int table_size)
 
 
 // get angle of motors in degrees
-int get_motor_angle(int motor, int hall)
+int get_motor_angle(int motor, int sensor)
 {
     int row, column;
     int rows, columns;
@@ -90,8 +90,8 @@ int get_motor_angle(int motor, int hall)
     const uint16_t *column_table;
     const uint8_t *motor_table;
 
-    int hall0 = truck.halls[hall + 0].value;
-    int hall1 = truck.halls[hall + 1].value;
+    int voltage0 = truck.halls[sensor + 0].value;
+    int voltage1 = truck.halls[sensor + 1].value;
 
     switch(motor)
     {
@@ -111,8 +111,8 @@ int get_motor_angle(int motor, int hall)
             break;
     }
     
-    row = get_hall_index(hall0, row_table, rows);
-    column = get_hall_index(hall1, column_table, columns);
+    row = get_hall_index(voltage0, row_table, rows);
+    column = get_hall_index(voltage1, column_table, columns);
 
     int angle = motor_table[row * columns + column];
     return angle * ANGLE_STEP / 7;

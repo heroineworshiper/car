@@ -157,7 +157,7 @@ int capture_i2c = 0;
 truck_t truck;
 leash_t leash;
 
-int get_motor_angle(int motor, int hall);
+int get_motor_angle(int motor, int sensor);
 void init_motor_tables();
 void do_motor_table();
 void calibrate_motors();
@@ -2507,7 +2507,7 @@ void init_motors()
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_TIM3);
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_TIM3);
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource0, GPIO_AF_TIM3);
-	
+
 	GPIO_InitTypeDef  GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Pin = 
         GPIO_Pin_0 | 
@@ -2668,10 +2668,10 @@ void handle_halls()
         if(truck.current_hall == 0)
         {
             truck.current_hall = 1;
-            truck.halls[LEFT_HALL].accum += ADC1->DR;
-            truck.halls[LEFT_HALL].readings++;
-            truck.halls[RIGHT_HALL].accum += ADC2->DR;
-            truck.halls[RIGHT_HALL].readings++;
+            truck.halls[LEFT_SENSOR].accum += ADC1->DR;
+            truck.halls[LEFT_SENSOR].readings++;
+            truck.halls[RIGHT_SENSOR].accum += ADC2->DR;
+            truck.halls[RIGHT_SENSOR].readings++;
 // change channels
             ADC_RegularChannelConfig(ADC1, 
 		        ADC_Channel_5, 
@@ -2685,10 +2685,10 @@ void handle_halls()
         else
         {
             truck.current_hall = 0;
-            truck.halls[LEFT_HALL + 1].accum += ADC1->DR;
-            truck.halls[LEFT_HALL + 1].readings++;
-            truck.halls[RIGHT_HALL + 1].accum += ADC2->DR;
-            truck.halls[RIGHT_HALL + 1].readings++;
+            truck.halls[LEFT_SENSOR + 1].accum += ADC1->DR;
+            truck.halls[LEFT_SENSOR + 1].readings++;
+            truck.halls[RIGHT_SENSOR + 1].accum += ADC2->DR;
+            truck.halls[RIGHT_SENSOR + 1].readings++;
 // change channels
             ADC_RegularChannelConfig(ADC1, 
 		        ADC_Channel_4, 
@@ -2776,18 +2776,18 @@ void handle_motors()
     if(!truck.calibrating_motors &&
         !truck.raw_mode &&
         truck.have_gyro_center &&
-        truck.halls[LEFT_HALL].readings >= HALL_OVERSAMPLE &&
-        truck.halls[LEFT_HALL + 1].readings >= HALL_OVERSAMPLE &&
-        truck.halls[RIGHT_HALL].readings >= HALL_OVERSAMPLE &&
-        truck.halls[RIGHT_HALL + 1].readings >= HALL_OVERSAMPLE)
+        truck.halls[LEFT_SENSOR].readings >= HALL_OVERSAMPLE &&
+        truck.halls[LEFT_SENSOR + 1].readings >= HALL_OVERSAMPLE &&
+        truck.halls[RIGHT_SENSOR].readings >= HALL_OVERSAMPLE &&
+        truck.halls[RIGHT_SENSOR + 1].readings >= HALL_OVERSAMPLE)
     {
         DISABLE_INTERRUPTS
         get_halls();
         ENABLE_INTERRUPTS
 
 
-        int left_angle = get_motor_angle(LEFT_MOTOR, LEFT_HALL);
-        int right_angle = get_motor_angle(RIGHT_MOTOR, RIGHT_HALL);
+        int left_angle = get_motor_angle(LEFT_MOTOR, LEFT_SENSOR);
+        int right_angle = get_motor_angle(RIGHT_MOTOR, RIGHT_SENSOR);
         int prev_left = truck.motors[LEFT_MOTOR].angle;
         int prev_right = truck.motors[RIGHT_MOTOR].angle;
 
@@ -2981,10 +2981,10 @@ void handle_motors()
     {
 // get motor positions
         if(truck.tick >= truck.calibration_tick &&
-            truck.halls[LEFT_HALL].readings >= HALL_OVERSAMPLE &&
-            truck.halls[LEFT_HALL + 1].readings >= HALL_OVERSAMPLE &&
-            truck.halls[RIGHT_HALL].readings >= HALL_OVERSAMPLE &&
-            truck.halls[RIGHT_HALL + 1].readings >= HALL_OVERSAMPLE)
+            truck.halls[LEFT_SENSOR].readings >= HALL_OVERSAMPLE &&
+            truck.halls[LEFT_SENSOR + 1].readings >= HALL_OVERSAMPLE &&
+            truck.halls[RIGHT_SENSOR].readings >= HALL_OVERSAMPLE &&
+            truck.halls[RIGHT_SENSOR + 1].readings >= HALL_OVERSAMPLE)
         {
             get_halls();
             switch(truck.calibration_state)
@@ -3039,17 +3039,17 @@ void handle_motors()
                             TRACE2
                             print_text("MOTORS: ");
                             print_number(truck.calibration_phase);
-                            print_number(truck.halls[LEFT_HALL].value);
-                            print_number(truck.halls[LEFT_HALL + 1].value);
-                            print_number(truck.halls[RIGHT_HALL].value);
-                            print_number(truck.halls[RIGHT_HALL + 1].value);
+                            print_number(truck.halls[LEFT_SENSOR].value);
+                            print_number(truck.halls[LEFT_SENSOR + 1].value);
+                            print_number(truck.halls[RIGHT_SENSOR].value);
+                            print_number(truck.halls[RIGHT_SENSOR + 1].value);
                             print_lf();
                             
                             int index = truck.calibration_phase / ANGLE_STEP;
-                            motor_lines[index][0] = truck.halls[LEFT_HALL].value;
-                            motor_lines[index][1] = truck.halls[LEFT_HALL + 1].value;
-                            motor_lines[index][2] = truck.halls[RIGHT_HALL].value;
-                            motor_lines[index][3] = truck.halls[RIGHT_HALL + 1].value;
+                            motor_lines[index][0] = truck.halls[LEFT_SENSOR].value;
+                            motor_lines[index][1] = truck.halls[LEFT_SENSOR + 1].value;
+                            motor_lines[index][2] = truck.halls[RIGHT_SENSOR].value;
+                            motor_lines[index][3] = truck.halls[RIGHT_SENSOR + 1].value;
                         }
 
                         truck.calibration_phase += 1;

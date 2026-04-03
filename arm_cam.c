@@ -62,6 +62,9 @@
 //#define USE_SPI
 #define USE_USB
 
+// oversample radio
+#define USE_OVERSAMPLE
+
 // reverse direction
 #define SIGN -1
 
@@ -123,14 +126,6 @@ volatile int usb_valid = 0;
 #endif
 
 
-
-// frequency hopping rate
-#define HOP_HZ 25
-// rate when scanning
-#define SCAN_HZ 5
-// time before next packet we should hop (10ms)
-#define HOP_LAG (HZ / 100)
-
 const uint8_t PACKET_KEY[] = 
 {
     0x5e, 0x1b, 0xdb, 0xc8, 0x98, 0xa1, 0x5e, 0x90
@@ -142,6 +137,35 @@ const uint8_t DATA_KEY[] =
 };
 
 #define PACKET_DATA 8
+
+#ifdef USE_OVERSAMPLE
+#include "stm32f4xx_dma.h"
+#include "stm32f4xx_spi.h"
+
+#define SPI_SPEED 800000
+#define SPI_BUFSIZE 2048
+#define DMA_STREAM DMA1_Stream3
+uint8_t dma_buffer[SPI_BUFSIZE];
+// read position
+int dma_pointer = 0;
+// number of 1 bits in a byte
+uint8_t bitcount[256];
+uint16_t sample_buffer;
+int current_level = 0;
+int level_counter = 0;
+
+int debug_size = 0;
+int is_capturing = 0;
+uint8_t debug_data[256];
+#endif // USE_OVERSAMPLE
+
+
+// frequency hopping rate
+#define HOP_HZ 25
+// rate when scanning
+#define SCAN_HZ 5
+// time before next packet we should hop (10ms)
+#define HOP_LAG (HZ / 100)
 
 // frequency hopping table.  Use freqs433.ods to calculate.
 const uint16_t channels[] = 
@@ -186,6 +210,7 @@ const uint16_t channels[] =
 #define PMCREG 0x8201
 
 
+// AFC command. page 22
 // +3/-4 Fres
 //#define AFCCREG 0xc4f7
 // +15/-16 Fres
@@ -203,9 +228,10 @@ const uint16_t channels[] =
 #define DRVSREG (0xC600 | DRPE | RADIO_BAUD_CODE)
 
 
+// Receiver control command.  page 19
 // Page 37 of the SI4421 datasheet gives optimum bandwidth values
-// but the lowest that works is 200khz
-//#define RXCREG 0x9481     // BW 200KHz, LNA gain 0dB, RSSI -97dBm
+// Best results observed at 400khz  Applied regardless of BBFCREG value.
+//#define RXCREG 0x9480     // BW 200KHz, LNA gain 0dB, RSSI -103dBm
 //#define RXCREG 0x9440     // BW 340KHz, LNA gain 0dB, RSSI -103dBm
 #define RXCREG 0x9420       // BW 400KHz, LNA gain 0dB, RSSI -103dBm
 
@@ -214,8 +240,9 @@ const uint16_t channels[] =
 #define STSREG 0x0000
 #define RXFIFOREG 0xb000
 
-// analog filter for raw mode
-#define BBFCREG                 0xc23c
+// Baseband filter type.  page 20
+#define BBFCREG                 0xc23c // analog filter
+//#define BBFCREG                 0xc22c // digital filter
 
 volatile int current_channel = 0;
 volatile int missed_packets = 0;
@@ -327,39 +354,30 @@ void write_motor()
     }
 }
 
-
-
-void get_key();
-void get_packet()
+void process_packet()
 {
-    receive_buf[radio_counter++] = radio_data;
-    if(radio_counter >= PACKET_DATA)
-    {
-        radio_counter = 0;
-        radio_function = get_key;
-        
-        int i;
-        int failed = 0;
+    int i;
+    int failed = 0;
 
 // XOR the data key
-        for(i = 0; i < PACKET_DATA; i++)
-        {
-            receive_buf[i] ^= DATA_KEY[i];
-        }
+    for(i = 0; i < PACKET_DATA; i++)
+    {
+        receive_buf[i] ^= DATA_KEY[i];
+    }
 
-        for(i = 2; i < PACKET_DATA; i += 2)
-        {
+    for(i = 2; i < PACKET_DATA; i += 2)
+    {
 // reject an invalid packet
-            if(receive_buf[i] != receive_buf[0] ||
-                receive_buf[i + 1] != receive_buf[1])
-            {
-                failed = 1;
-                break;
-            }
-        }
-
-        if(!failed)
+        if(receive_buf[i] != receive_buf[0] ||
+            receive_buf[i + 1] != receive_buf[1])
         {
+            failed = 1;
+            break;
+        }
+    }
+
+    if(!failed)
+    {
 //TRACE2
 //print_text("tick=");
 //print_number(tick);
@@ -369,36 +387,49 @@ void get_packet()
 // print_lf();
 
 // flash for RF reception
-            TOGGLE_PIN(LED_GPIO, LED_PIN);
-            timeout_counter = 0;
+        TOGGLE_PIN(LED_GPIO, LED_PIN);
+        timeout_counter = 0;
 
-            uint8_t code_byte = receive_buf[0];
-            timelapse_code = (code_byte & 0xf);
-            current_channel = (code_byte >> 4);
-            adc_raw = receive_buf[1];
-            rf_valid = 1;
-            
-            int time_diff = packet_tick - last_hop;
+        uint8_t code_byte = receive_buf[0];
+        timelapse_code = (code_byte & 0xf);
+        current_channel = (code_byte >> 4);
+        adc_raw = receive_buf[1];
+        rf_valid = 1;
+
+        int time_diff = packet_tick - last_hop;
 
 
 // TRACE2
-print_text("chan=");
-print_number(current_channel);
+//print_text("chan=");
+//print_number(current_channel);
 print_text("timelapse_code=");
 print_number(timelapse_code);
 print_text("adc_raw=");
 print_number(adc_raw);
 //print_text("GOT IT ");
 // hop lag observed
-print_text("hop lag=");
-print_number(time_diff);
+//print_text("hop lag=");
+//print_number(time_diff);
 print_lf();
 
 // schedule the next hop based on the end time of this packet
-            scanning = 0;
-            missed_packets = 0;
-            next_hop = packet_tick + HZ / HOP_HZ - HOP_LAG;
-        }
+        scanning = 0;
+        missed_packets = 0;
+        next_hop = packet_tick + HZ / HOP_HZ - HOP_LAG;
+    }
+}
+
+
+#ifndef USE_OVERSAMPLE
+void get_key();
+void get_packet()
+{
+    receive_buf[radio_counter++] = radio_data;
+    if(radio_counter >= PACKET_DATA)
+    {
+        radio_counter = 0;
+        radio_function = get_key;
+        process_packet();
     }
 }
 
@@ -431,6 +462,8 @@ void get_key()
         radio_counter = 0;
     }
 }
+#endif // !USE_OVERSAMPLE
+
 
 // write radio SPI.  TODO: use hardware
 void write_radio(uint16_t data)
@@ -469,7 +502,6 @@ void init_radio()
 {
     TRACE
     GPIO_InitTypeDef GPIO_InitStructure;
-	radio_function = get_key;
 
 
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
@@ -491,6 +523,9 @@ void init_radio()
 // TX enabled
 //  GPIO_InitStructure.GPIO_Pin = 1 << RADIO_TX_PIN;
 //  GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+#ifndef USE_OVERSAMPLE
+	radio_function = get_key;
 
 	USART_InitTypeDef USART_InitStructure;
 // cam transmitter
@@ -516,6 +551,7 @@ void init_radio()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
   	USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
+#endif // !USE_OVERSAMPLE
 
 // initialize radio SPI
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -529,8 +565,8 @@ void init_radio()
     
     
 
-
-
+// disable radio for testing
+#if 1
 // scan for synchronous code
     write_radio(FIFORSTREG);
 // enable synchron latch
@@ -555,9 +591,181 @@ void init_radio()
 
 // receive mode
     write_radio(PMCREG | 0x0080);
+#endif // 0
+
+
+#ifdef USE_OVERSAMPLE
+// initialize the bitcount table
+    int i;
+    for(i = 0; i < 256; i++)
+    {
+        int j;
+        int count = 0;
+        for(j = 0; j < 8; j++)
+            if((i & (1 << j))) count++;
+        bitcount[i] = count;
+    }
+
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+
+// data
+    GPIO_PinAFConfig(GPIOC, GPIO_PinSource2, GPIO_AF_SPI2);
+// clock
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_SPI2);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+
+    SPI_InitTypeDef SPI_InitStructure;
+    DMA_InitTypeDef DMA_InitStructure;
+    DMA_StructInit(&DMA_InitStructure);
+    SPI_StructInit(&SPI_InitStructure);
+// select channel, stream, DMA# on page 164
+  	DMA_InitStructure.DMA_Channel = DMA_Channel_0;
+  	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&SPI2->DR;
+	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)dma_buffer;
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+	DMA_InitStructure.DMA_BufferSize = SPI_BUFSIZE;
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
+// more stable capture if FIFO disabled
+  	DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
+  	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+
+
+	SPI_InitStructure.SPI_Direction = SPI_Direction_1Line_Rx;
+	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+	SPI_InitStructure.SPI_CRCPolynomial = 7;
+	SPI_InitStructure.SPI_Mode = SPI_Mode_Slave;
+
+// generate SPI clock from timer to precisely control it
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource1, GPIO_AF_TIM3);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
+    
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+    TIM_OCInitTypeDef  TIM_OCInitStructure;
+    TIM_DeInit(TIM3);
+	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+	TIM_TimeBaseStructure.TIM_Prescaler = 0;
+	TIM_TimeBaseStructure.TIM_Period = RCC_ClocksStatus.SYSCLK_Frequency / 2 / 
+        SPI_SPEED - 1;
+	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
+	TIM_OCInitStructure.TIM_Pulse = 0;
+ 	TIM_OC4Init(TIM3, &TIM_OCInitStructure);
+    TIM3->CCR4 = TIM_TimeBaseStructure.TIM_Period / 2;
+	TIM_Cmd(TIM3, ENABLE);
+    TIM_CtrlPWMOutputs(TIM3, ENABLE);
+
+    SPI_I2S_DeInit(SPI2);
+    SPI_Init(SPI2, &SPI_InitStructure);
+
+// page 164
+	DMA_DeInit(DMA_STREAM);
+  	DMA_Init(DMA_STREAM, &DMA_InitStructure);
+	SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Rx, ENABLE);
+	SPI_Cmd(SPI2, ENABLE);
+	DMA_Cmd(DMA_STREAM, ENABLE);
+
+#endif // USE_OVERSAMPLE
+
 
 }
 
+
+#ifdef USE_OVERSAMPLE
+
+
+
+
+void handle_radio()
+{
+// load 8 samples in the newest slot
+    sample_buffer |= dma_buffer[dma_pointer++];
+    if(dma_pointer >= SPI_BUFSIZE) dma_pointer = 0;
+
+    int i;
+    for(i = 0; i < 8; i++)
+    {
+        sample_buffer <<= 1;
+        int ones = bitcount[((uint8_t*)&sample_buffer)[1]];
+        int got_transition = 0;
+        if(level_counter > 4 && current_level && ones < 4)
+        {
+            got_transition = 1;
+            current_level = 0;
+        }
+        else
+        if(level_counter > 4 && !current_level && ones > 4)
+        {
+            got_transition = 1;
+            current_level = 1;
+        }
+        else
+            level_counter++;
+
+        if(got_transition)
+        {
+            int got_value = 0;
+// got a 1 bit
+            if(level_counter >= 10)
+                got_value = 1;
+            else
+// got a 0 bit
+                got_value = 0;
+
+            level_counter = 0;
+            int j;
+            for(j = 0; j < RADIO_BUFSIZE - 1; j++)
+            {
+                receive_buf[j] <<= 1;
+                receive_buf[j] |= (receive_buf[j + 1] >> 7);
+            }
+            receive_buf[RADIO_BUFSIZE - 1] <<= 1;
+            receive_buf[RADIO_BUFSIZE - 1] |= got_value;
+
+            for(j = 0; j < sizeof(PACKET_KEY); j++)
+            {
+                if(receive_buf[j] != PACKET_KEY[j]) break;
+            }
+            if(j >= sizeof(PACKET_KEY))
+            {
+// process_packet expects it in the start of the buffer
+                for(j = 0; j < PACKET_DATA; j++)
+                    receive_buf[j] = receive_buf[sizeof(PACKET_KEY) + j];
+                process_packet();
+                print_text("got it\n");
+            }
+        }
+    }
+}
+#endif // USE_OVERSAMPLE
 
 
 
@@ -636,14 +844,14 @@ void USART6_IRQHandler(void)
 	uart.got_input = 1;
 }
 
+#ifndef USE_OVERSAMPLE
 // radio uart
 void USART3_IRQHandler(void)
 {
 	radio_data = USART3->DR;
 	radio_function();
 }
-
-
+#endif
 
 // TIM10 wraps at HZ
 void TIM1_UP_TIM10_IRQHandler()
@@ -936,10 +1144,10 @@ int main(void)
 
 	RCC_GetClocksFreq(&RCC_ClocksStatus);
 	print_text("Welcome to cam panner\n");
-// 	flush_uart();
-// 	print_text("SYSCLK_Frequency=");
-// 	print_number(RCC_ClocksStatus.SYSCLK_Frequency);
-// 	print_lf();
+ 	flush_uart();
+ 	print_text("SYSCLK_Frequency=");
+ 	print_number(RCC_ClocksStatus.SYSCLK_Frequency);
+ 	print_lf();
 // 	print_text("SystemCoreClock=");
 // 	print_number(SystemCoreClock);
 // 	print_lf();
@@ -1054,6 +1262,7 @@ int main(void)
     int seconds = 0;
     int prev_frame = 0;
     int debug_count = 0;
+#define DEBUG_INTERVAL 100
 	while(1)
 	{
         HANDLE_UART_OUT
@@ -1067,11 +1276,32 @@ int main(void)
             }
         }
 
+#ifdef USE_OVERSAMPLE
+// NDTR goes from 1-SPI_BUFSIZE
+        int ndtr_value = SPI_BUFSIZE - DMA_STREAM->NDTR;
+        if(ndtr_value != dma_pointer)
+            handle_radio();
+#endif
+
         if(tick != prev_frame)
         {
             prev_frame = tick;
             debug_count++;
-            debug_count = debug_count % HZ;
+            debug_count = debug_count % DEBUG_INTERVAL;
+
+// int value = DMA_STREAM->NDTR;
+// if(value <= 1 || value >= SPI_BUFSIZE)
+// {
+// print_number(value);
+// print_lf();
+// }
+// if(debug_count == 0)
+// {
+// print_number(dma_pointer);
+// print_number(ndtr_value);
+// print_lf();
+// }
+
 
 // update speed based on remote value
             int adc = adc_raw;
@@ -1245,19 +1475,18 @@ int main(void)
 //                  print_lf();
 //             }
 
+
         }
 
 
 // check clock
-        if(tick / HZ != seconds)
-        {
-            seconds = tick / HZ;
+//         if(tick / HZ != seconds)
+//         {
+//             seconds = tick / HZ;
 //             print_text("seconds=");
 //             print_number(seconds);
 //             print_lf();
-        }
-
-
+//         }
 
 
 #ifdef USE_SPI

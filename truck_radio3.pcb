@@ -918,7 +918,7 @@ Element["" "PAD" "" "" 131.1700mm 69.6100mm 184.00mil 50.00mil 3 100 ""]
 
 	)
 
-Element["" "PAD" "" "" 146.6200mm 111.1000mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 131.2200mm 85.5600mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
@@ -1135,7 +1135,7 @@ Element["" "Crystal" "" "5x3.2mm" 77.5600mm 70.2300mm -184.00mil -50.00mil 1 100
 
 	)
 
-Element["" "PAD" "" "" 147.5100mm 109.0900mm 184.00mil 50.00mil 3 100 ""]
+Element["" "PAD" "" "" 131.2200mm 83.9000mm 184.00mil 50.00mil 3 100 ""]
 (
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "1" "square"]
 	Pad[-1.00mil 0.0000 1.00mil 0.0000 80.00mil 30.00mil 86.00mil "" "2" "onsolder,square"]
@@ -1888,7 +1888,7 @@ Layer(5 "power")
 	Line[105.2200mm 60.1100mm 104.8100mm 59.7000mm 0.2500mm 20.00mil "clearline"]
 	Line[104.8100mm 59.7000mm 104.8100mm 59.3300mm 0.2500mm 20.00mil "clearline"]
 	Line[104.8100mm 59.3300mm 103.1300mm 57.6500mm 0.2500mm 20.00mil "clearline"]
-	Line[131.2200mm 73.6400mm 131.2200mm 81.7000mm 25.00mil 20.00mil "clearline"]
+	Line[131.2200mm 73.6400mm 131.2200mm 85.6300mm 25.00mil 20.00mil "clearline"]
 	Line[131.2200mm 79.0900mm 131.1700mm 79.1400mm 25.00mil 20.00mil "clearline"]
 	Line[123.4600mm 82.6700mm 123.4600mm 84.7700mm 25.00mil 20.00mil "clearline"]
 	Line[123.4600mm 84.7700mm 123.5200mm 84.8300mm 25.00mil 20.00mil "clearline"]
@@ -2175,6 +2175,7 @@ Layer(5 "power")
 	Line[109.2700mm 65.5200mm 109.2700mm 2400.00mil 25.00mil 20.00mil "clearline"]
 	Line[109.2700mm 2400.00mil 108.7000mm 60.3900mm 25.00mil 20.00mil "clearline"]
 	Line[107.7600mm 69.1200mm 105.8398mm 71.0402mm 30.00mil 20.00mil "clearline"]
+	Line[128.7300mm 59.6400mm 128.7300mm 57.6500mm 25.00mil 20.00mil "clearline"]
 )
 Layer(6 "bottom")
 (

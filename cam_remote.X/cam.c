@@ -749,8 +749,8 @@ void init_radio()
     si4463_cts();
 }
 
-// pack bits for synthetic RS232
-uint8_t bits_buffer[2 * (4 + sizeof(PACKET_KEY) + 8)];
+// pack bits for PWM coding
+uint8_t bits_buffer[2 * (1 + 4 + sizeof(PACKET_KEY) + 8 + 1)];
 uint8_t total_bytes = 0;
 uint8_t bits_temp = 0;
 uint8_t total_bits = 0;
@@ -778,44 +778,51 @@ void reset_bits()
     total_bytes = 0;
     bits_temp = 0;
 }
-void pack_rs232(uint8_t data)
+void pack_pwm(uint8_t data)
 {
-    pack_bits(0, 1); // start bit
-    pack_bits(data, 8); // data
-    pack_bits(0xff, 1); // stop bit
+    int i;
+    int current_value = 0;
+    for(i = 0; i < 8; i++)
+    {
+        if((data & 0x80)) 
+            pack_bits(current_value, 2);
+        else
+            pack_bits(current_value, 1);
+        current_value ^= 0xff;
+        data <<= 1;
+    }
 }
 
 void radio_on()
 {
-
-// create RS232 bitstream
+// create PWM bitstream
     reset_bits();
 // Fill TX FIFO command
     bits_buffer[total_bytes++] = 0x66;
-    pack_rs232(0xff);
-    pack_rs232(0xff);
-    pack_rs232(0xff);
-    pack_rs232(0xff);
+    pack_pwm(0x00);
+    pack_pwm(0x00);
+    pack_pwm(0x00);
+    pack_pwm(0x00);
 
     uint8_t i;
 
     for(i = 0; i < sizeof(PACKET_KEY); i++)
     {
-        pack_rs232(PACKET_KEY[i]);
+        pack_pwm(PACKET_KEY[i]);
     }
-    pack_rs232(code_byte ^ DATA_KEY[0]);
-    pack_rs232(adc_value ^ DATA_KEY[1]);
+    pack_pwm(code_byte ^ DATA_KEY[0]);
+    pack_pwm(adc_value ^ DATA_KEY[1]);
 
-    pack_rs232(code_byte ^ DATA_KEY[2]);
-    pack_rs232(adc_value ^ DATA_KEY[3]);
+    pack_pwm(code_byte ^ DATA_KEY[2]);
+    pack_pwm(adc_value ^ DATA_KEY[3]);
 
-    pack_rs232(code_byte ^ DATA_KEY[4]);
-    pack_rs232(adc_value ^ DATA_KEY[5]);
+    pack_pwm(code_byte ^ DATA_KEY[4]);
+    pack_pwm(adc_value ^ DATA_KEY[5]);
 
-    pack_rs232(code_byte ^ DATA_KEY[6]);
-    pack_rs232(adc_value ^ DATA_KEY[7]);
-    pack_bits(0xff, 8);
-    
+    pack_pwm(code_byte ^ DATA_KEY[6]);
+    pack_pwm(adc_value ^ DATA_KEY[7]);
+    pack_pwm(0x00); // flush the last bits
+
 
     si4463_command(bits_buffer, total_bytes);
 
