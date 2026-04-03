@@ -92,8 +92,8 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #define USE_STEERING_SOUND
 
 // the tick clock & the number of packets per second
-#define HZ 50
-//#define HZ 25
+//#define HZ 50 // 100 kbit
+#define HZ 25  // 10 kbit
 
 // delay between packets
 #define TIMER0_VALUE (CLOCKSPEED / 4 / 32 / HZ)
@@ -689,9 +689,9 @@ void init_radio()
     const uint8_t mod_type[] = { 
         0x11, 0x20, 0x0C, 0x00, 0x22, 0x00, 0x07, 
 //        0x13, 0x12, 0xd0, // 125kbit data rate * 10
-        0x0F, 0x42, 0x40, // 100kbit data rate * 10
+//        0x0F, 0x42, 0x40, // 100kbit data rate * 10
 //        0x07, 0xa1, 0x20, // 50kbit data rate * 10
-//        0x01, 0x86, 0xa0, // 10kbit data rate * 10
+        0x01, 0x86, 0xa0, // 10kbit data rate * 10
         0x01, 0xC9, 0xC3, 0x80, 0x00, 0x2D 
     };
     si4463_command(mod_type, sizeof(mod_type));

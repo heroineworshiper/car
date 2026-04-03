@@ -45,16 +45,19 @@
 
 #define HZ 1000
 //#define SPI_SPEED 1000000  // 125kbit
-#define SPI_SPEED 800000  // 100kbit
+//#define SPI_SPEED 800000  // 100kbit
 //#define SPI_SPEED 400000  // 50kbit
+#define SPI_SPEED 240000  // 10kbit * 24 bit oversampling
 #define SPI_BUFSIZE 2048
+#define LEVEL_THRESHOLD 12 // one samples to get 0 & 1 voltage
+#define ONE_THRESHOLD 32 // samples since last transition to get a 1 bit
 #define DMA_STREAM DMA1_Stream3
 uint8_t dma_buffer[SPI_BUFSIZE];
 // read position
 int dma_pointer = 0;
 // number of 1 bits in a byte
 uint8_t bitcount[256];
-uint16_t sample_buffer;
+uint32_t sample_buffer; // 24 bits + 8 shift bits
 int current_level = 0;
 int level_counter = 0;
 volatile int tick = 0;
@@ -394,15 +397,18 @@ void handle_radio()
     for(i = 0; i < 8; i++)
     {
         sample_buffer <<= 1;
-        int ones = bitcount[((uint8_t*)&sample_buffer)[1]];
+// count oldest 24 bits
+        int ones = bitcount[((uint8_t*)&sample_buffer)[1]] +
+            bitcount[((uint8_t*)&sample_buffer)[2]] +
+            bitcount[((uint8_t*)&sample_buffer)[3]];
         int got_transition = 0;
-        if(level_counter > 4 && current_level && ones < 4)
+        if(level_counter > LEVEL_THRESHOLD && current_level && ones < LEVEL_THRESHOLD)
         {
             got_transition = 1;
             current_level = 0;
         }
         else
-        if(level_counter > 4 && !current_level && ones > 4)
+        if(level_counter > LEVEL_THRESHOLD && !current_level && ones > LEVEL_THRESHOLD)
         {
             got_transition = 1;
             current_level = 1;
@@ -414,7 +420,7 @@ void handle_radio()
         {
             int got_value = 0;
 // got a 1 bit
-            if(level_counter >= 10)
+            if(level_counter >= ONE_THRESHOLD)
                 got_value = 1;
             else
 // got a 0 bit
