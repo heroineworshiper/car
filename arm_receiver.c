@@ -47,17 +47,17 @@
 //#define SPI_SPEED 1000000  // 125kbit
 //#define SPI_SPEED 800000  // 100kbit
 //#define SPI_SPEED 400000  // 50kbit
-#define SPI_SPEED 240000  // 10kbit * 24 bit oversampling
+#define SPI_SPEED 640000  // 20kbit * 32 bit oversampling
 #define SPI_BUFSIZE 2048
-#define LEVEL_THRESHOLD 12 // one samples to get 0 & 1 voltage
-#define ONE_THRESHOLD 32 // samples since last transition to get a 1 bit
+#define LEVEL_THRESHOLD 16 // one samples to get 0 & 1 voltage.  .5*oversampling
+#define ONE_THRESHOLD 48 // samples since last transition to get a 1 bit.  1.5*oversampling
 #define DMA_STREAM DMA1_Stream3
 uint8_t dma_buffer[SPI_BUFSIZE];
 // read position
 int dma_pointer = 0;
 // number of 1 bits in a byte
 uint8_t bitcount[256];
-uint32_t sample_buffer; // 24 bits + 8 shift bits
+uint32_t sample_buffer; // 32 samples
 int current_level = 0;
 int level_counter = 0;
 volatile int tick = 0;
@@ -68,7 +68,7 @@ RCC_ClocksTypeDef RCC_ClocksStatus;
 
 const uint8_t PACKET_KEY[] = 
 {
-    0x5b, 0xb1, 0x6e, 0x6b, 0x33, 0x30, 0x9e, 0x08
+    0x5b, 0xb1, 0x6e, 0x6b /*, 0x33, 0x30, 0x9e, 0x08 */
 };
 
 const uint8_t DATA_KEY[] =
@@ -390,15 +390,19 @@ void process_packet()
 void handle_radio()
 {
 // load 8 samples in the newest slot
-    sample_buffer |= dma_buffer[dma_pointer++];
+    uint8_t new_samples = dma_buffer[dma_pointer++];
     if(dma_pointer >= SPI_BUFSIZE) dma_pointer = 0;
 
     int i;
     for(i = 0; i < 8; i++)
     {
         sample_buffer <<= 1;
-// count oldest 24 bits
-        int ones = bitcount[((uint8_t*)&sample_buffer)[1]] +
+        sample_buffer |= ((new_samples & 0x80) ? 1 : 0);
+        new_samples <<= 1;
+
+// count ones in 32 samples
+        int ones = bitcount[((uint8_t*)&sample_buffer)[0]] +
+            bitcount[((uint8_t*)&sample_buffer)[1]] +
             bitcount[((uint8_t*)&sample_buffer)[2]] +
             bitcount[((uint8_t*)&sample_buffer)[3]];
         int got_transition = 0;
@@ -549,9 +553,8 @@ int main(void)
 	SET_PIN(LED_GPIO, LED_PIN);
     init_radio();
 
-    int prev_frame = 0;
     int debug_count = 0;
-#define DEBUG_INTERVAL 100
+#define DEBUG_INTERVAL 10000
 	while(1)
 	{
         HANDLE_UART_OUT
@@ -566,6 +569,16 @@ int main(void)
         int ndtr_value = SPI_BUFSIZE - DMA_STREAM->NDTR;
         if(ndtr_value != dma_pointer)
             handle_radio();
+
+// if(debug_count++ >= DEBUG_INTERVAL)
+// {
+//     debug_count = 0;
+//     print_number(dma_pointer);
+//     print_number(ndtr_value);
+//     print_lf();
+// }
+
+
         PET_WATCHDOG
     }
 }

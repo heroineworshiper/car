@@ -450,7 +450,7 @@
 #define RADIO_CONFIGURATION_DATA_ARRAY { \
         SI446X_PATCH_CMDS, \
         0x07, RF_POWER_UP, \
-        0x08, RF_GPIO_PIN_CFG, \
+        /* 0x08, RF_GPIO_PIN_CFG, */ \
         0x06, RF_GLOBAL_XO_TUNE_2, \
         0x05, RF_GLOBAL_CONFIG_1, \
         0x05, RF_INT_CTL_ENABLE_1, \
