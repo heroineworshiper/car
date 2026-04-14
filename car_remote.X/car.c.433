@@ -88,8 +88,11 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 // the tick clock
 #define HZ 50
-// maximum packet rate to conserve power
+// maximum packet rate if !MAXIMUM_SPEED
 #define PACKET_HZ 45
+// send packets as fast as possible by polling SPI.  
+// Requires reliable SPI during transmission.
+#define MAXIMUM_SPEED
 
 // delay between ticks
 #define TIMER0_VALUE (CLOCKSPEED / 4 / 32 / HZ)
@@ -626,13 +629,14 @@ void si4463_cts()
 
 uint8_t radio_sending()
 {
-// check minimum time between packets before probing SPI
+#ifndef MAXIMUM_SPEED
+// check minimum time between packets before sending
     if(!PIR1bits.TMR1IF) return 1;
     TMR1 = -TIMER1_VALUE;
     PIR1bits.TMR1IF = 0;
+    return 0;
 
-
-
+#else // !MAXIMUM_SPEED
 
     RADIO_SCK_LAT = 0;
     RADIO_CS_LAT = 0;
@@ -675,6 +679,7 @@ uint8_t radio_sending()
 
 // returns SPI active state when finished transmitting
     return (state != 2);
+#endif // MAXIMUM_SPEED
 }
 
 
@@ -843,15 +848,6 @@ void pack_pwm(uint8_t data)
 
 void radio_on()
 {
-// 1st call is going to fire the ADC before it's done sending
-    if(flags2.first)
-    {
-        TMR1 = -TIMER1_VALUE;
-        PIR1bits.TMR1IF = 0;
-        flags2.first = 0;
-    }
-
-
 // create RS232 bitstream
     reset_bits();
 // Fill TX FIFO command
@@ -900,7 +896,6 @@ void radio_on()
     si4463_command(tx_command, sizeof(tx_command));
 
     flags2.is_sending = 1;
-
 }
 
 // void radio_off()
@@ -1287,9 +1282,10 @@ void main()
             }
         }
 
-// send a packet when done sampling
+// done sampling
         if(adc_count >= ADC_PER_PACKET)
         {
+            flags2.is_capturing = 0;
             LED_LAT = !LED_LAT;
             steering_value = steering_accum / adc_count / 4;
             throttle_value = throttle_accum / adc_count / 4;
@@ -1328,7 +1324,7 @@ void main()
         else
         if(flags2.is_sending)
         {
-// test if radio is sending
+// test if radio is sending or radio timer has expired
             if(!radio_sending())
             {
                 flags2.is_sending = 0;
@@ -1340,8 +1336,18 @@ void main()
         else
         if(!flags2.is_capturing)
         {
-// retry until minimum packet period is done
-            radio_on();
+// The timer needs to be started after the 1st ADC capture & the
+// data needs to be ignored
+            if(flags2.first)
+            {
+                TMR1 = -TIMER1_VALUE;
+                PIR1bits.TMR1IF = 0;
+                flags2.first = 0;
+                flags2.is_capturing = 1;
+                ADCON0bits.GO = 1;
+            }
+            else
+                radio_on();
         }
     }
 }
@@ -1393,8 +1399,6 @@ void __interrupt(high_priority) isr()
 // stop sampling before the next packet
             if(adc_count < ADC_PER_PACKET)
                 ADCON0bits.GO = 1;
-            else
-                flags2.is_capturing = 0;
         }
 
 // sound

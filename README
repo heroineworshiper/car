@@ -332,16 +332,16 @@ motor4.FCStd: motor mount
 car_remote.FCMacro:
     create objects for car_remote & cam_remote
 
-car_remote3.FCStd: remote control for vehicle
-    mirror image to give antenna more clearance
+car_remote4.FCStd: remote control for vehicle
     Use 2.5mV/G hall effect sensors
     disable support for the top & bottom
     use support only for the joysticks
     no ironing
     .4mm nozzle
-    .8mm top/bottom thickness
+    .6mm top/bottom thickness
     1.2mm wall thickness
     skirt
+    use timelapse mode to improve columns
     bottom, top:
         expand all clones
         select base of mirror
@@ -352,18 +352,20 @@ car_remote3.FCStd: remote control for vehicle
         use support from magnet holder to bed
         Z seem on thicker walls
     steering lever, throttle lever:
-        use support from short side of hinge to bed
+        flat side down
     covers for power, increase speed, decrease speed:
         no support
         with wide part facing bed
     sock top/bottom: must clean the inside before welding
 
+car_remote.X: remote control firmware
+
+arm_receiver.c: oversampling, high quality receiver
 
 
-
-charger2.FCStd: charging stand for a Qi charger
+charger3.FCStd: charging stand for a Qi charger
     print with .4mm nozzle, .4mm line width, no support
-    TODO: 1 2mm screw on the USB side is misaligned
+    M2 self tappers
 
 confuser.FCStd: jetson nano enclosure
 
@@ -553,7 +555,7 @@ car_remote.s: orginal assembly language remote for CC1101 & XBee
 
 car_remote.X: 3D printed vehicle remote control
 
-car_receive.X: 3D printed vehicle receiver
+car_receive.X: low quality RS232 receiver
 
 car_remote.X.bak: failed remote for the XBee with frequency hopping
 
