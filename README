@@ -155,8 +155,11 @@ tire6.FCMacro: Create layer for the latest rear tire
 trailer9.FCStd: Towed drogue for aiding video composition.
     .8 nozzle .32 layers
 
+truck_radio3.pcb: remote control TX for camera panner
+    - obsolete RX
 
-truck_radio2.pcb: remote control tx/rx for 3D printed truck & the camera
+truck_radio4.pcb: remote control TX for 3D printed truck
+    - obsolete RX
     - uses Si4421 for receive + Si4463 for transmit
 
 truck4.pcb: mane board for 3D printed truck

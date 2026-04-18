@@ -92,7 +92,7 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 #define PACKET_HZ 45
 // send packets as fast as possible by polling SPI.  
 // Requires reliable SPI during transmission.
-#define MAXIMUM_SPEED
+//#define MAXIMUM_SPEED
 
 // delay between ticks
 #define TIMER0_VALUE (CLOCKSPEED / 4 / 32 / HZ)
