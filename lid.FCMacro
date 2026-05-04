@@ -59,7 +59,7 @@ if False:
         App.Rotation(App.Vector(0, 0, 1), 0))
 
 
-if True:
+if False:
     extrudeTris, extrudeSubs = libisogrid.makeGrid(152.0, 
         105.0, 
         10,
@@ -73,6 +73,25 @@ if True:
     extrudeTris.Placement = App.Placement(
         App.Vector(-173, 11, -20),
         App.Rotation(App.Vector(0, 0, 1), 0))
+
+
+# common grid for 2 piece lid
+if True:
+    BORDER2 = 1.5
+    extrudeTris, extrudeSubs = libisogrid.makeGrid(175.0, 
+        228.0, 
+        10,
+        10,
+        [ BORDER2, BORDER2 ],
+        [ BORDER2, BORDER2 ],
+        0,
+        0,
+        .64,
+        BORDER2)
+    extrudeTris.Placement = App.Placement(
+        App.Vector(-6.40, -64.00, 157.36),
+        App.Rotation(App.Vector(0, 0, 1), 0))
+
 
 
 

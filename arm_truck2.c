@@ -208,31 +208,25 @@ const uint8_t sin_table[] =
 // leash angle table
 float adc_to_angle[] = 
 {
-//     193, TO_RAD(-90 + 9.5),
-//     190, TO_RAD(-90 + 22.5),
-//     186, TO_RAD(-90 + 30),
-//     178, TO_RAD(-90 + 45),
-//     163, TO_RAD(-90 + 60),
-//     148, TO_RAD(-90 + 75),
-//     132, TO_RAD(0),
-//     114, TO_RAD(90 - 75),
-//     97,  TO_RAD(90 - 60),
-//     83,  TO_RAD(90 - 45),
-//     72,  TO_RAD(90 - 30),
-//     66,  TO_RAD(90 - 22)
+//     207, TO_RAD(-90 + 0),
+//     203, TO_RAD(-90 + 15),
+//     195, TO_RAD(-90 + 30),
+//     181, TO_RAD(-90 + 45),
+//     166, TO_RAD(-90 + 60),
+//     147, TO_RAD(-90 + 75),
+//     128, TO_RAD(0),
+//     109, TO_RAD(90 - 75),
+//     91, TO_RAD(90 - 60),
+//     75,  TO_RAD(90 - 45),
+//     62,  TO_RAD(90 - 30),
+//     54,  TO_RAD(90 - 16),
 
-    207, TO_RAD(-90 + 0),
-    203, TO_RAD(-90 + 15),
-    195, TO_RAD(-90 + 30),
-    181, TO_RAD(-90 + 45),
-    166, TO_RAD(-90 + 60),
-    147, TO_RAD(-90 + 75),
-    128, TO_RAD(0),
-    109, TO_RAD(90 - 75),
-    91, TO_RAD(90 - 60),
-    75,  TO_RAD(90 - 45),
-    62,  TO_RAD(90 - 30),
-    54,  TO_RAD(90 - 16),
+    21600, TO_RAD(-90),
+    20159, TO_RAD(-45),
+    16365, TO_RAD(0),
+    12480, TO_RAD(45),
+    11270, TO_RAD(90)
+
 };
 
 
@@ -1799,7 +1793,7 @@ void do_leash_throttle()
 // maximum tapering here
 //        float taper_angle1 = TO_RAD(50.0);
 // reverse here
-    float reverse_angle = TO_RAD(50.0);
+    float reverse_angle = TO_RAD(60.0);
     float angle_mag = fabs(leash.angle);
 
 // distance & angle must be within limits to start
@@ -1863,15 +1857,15 @@ void do_leash_throttle()
                 }
             }
 
-static int debug_counter = 0;
-debug_counter++;
-if(!(debug_counter % 10))
-{
-TRACE2
-print_number(truck.motors[LEFT_MOTOR].angle);
-print_number(truck.motors[LEFT_MOTOR].brake_angle);
-print_float(change[LEFT_MOTOR]);
-}
+// static int debug_counter = 0;
+// debug_counter++;
+// if(!(debug_counter % 10))
+// {
+// TRACE2
+// print_number(truck.motors[LEFT_MOTOR].angle);
+// print_number(truck.motors[LEFT_MOTOR].brake_angle);
+// print_float(change[LEFT_MOTOR]);
+// }
 
         }
 
@@ -3608,7 +3602,7 @@ void handle_input()
 
 #define START_CODE 0xff
 #define ESC_CODE 0xfe
-#define LEASH_SIZE 5
+#define LEASH_SIZE 6
 
 // handle leash input
 void handle_input()
@@ -3644,9 +3638,9 @@ void handle_input()
     if(leash.offset >= LEASH_SIZE)
     {
         leash.length = (int16_t)(leash.buffer[0] | (leash.buffer[1] << 8));
-        leash.angle_adc = leash.buffer[2];
-        leash.encoder0_adc = leash.buffer[3];
-        leash.encoder1_adc = leash.buffer[4];
+        leash.angle_adc = (uint16_t)(leash.buffer[2] | (leash.buffer[3] << 8));
+        leash.encoder0_adc = leash.buffer[4];
+        leash.encoder1_adc = leash.buffer[5];
 
 
 // convert ADC to angle using lookup table
@@ -3675,18 +3669,18 @@ void handle_input()
             }
 
 
-// static int debug_counter = 0;
-// debug_counter++;
-// if((debug_counter % 10) == 0)
-// {
-// //         print_text("LENGTH: ");
-// //         print_number(leash.length);
-//          print_text("ANGLE_ADC: ");
-//          print_number(leash.angle_adc);
-//          print_text("ANGLE: ");
-//          print_number(TO_DEG(leash.angle));
-//          print_lf();
-// }
+static int debug_counter = 0;
+debug_counter++;
+//if((debug_counter % 10) == 0)
+{
+//         print_text("LENGTH: ");
+//         print_number(leash.length);
+         print_text("ANGLE_ADC: ");
+         print_number(leash.angle_adc);
+         print_text("ANGLE: ");
+         print_number(TO_DEG(leash.angle));
+         print_lf();
+}
 
         leash.got_start = 0;
         leash.offset = 0;

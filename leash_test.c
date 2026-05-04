@@ -41,7 +41,7 @@
 #define START_CODE 0xff
 #define ESC_CODE 0xfe
 #define BUFFER_SIZE 1024
-#define TEXT_SIZE 5
+#define TEXT_SIZE 6
 uint8_t buffer[BUFFER_SIZE];
 uint8_t text[BUFFER_SIZE];
 int got_esc = 0;
@@ -104,9 +104,9 @@ void handle_text(uint8_t c)
         if(text_offset >= TEXT_SIZE)
         {
             int length = (int16_t)(text[0] | (text[1] << 8));
-            int angle_adc = text[2];
-            int encoder0 = text[3];
-            int encoder1 = text[4];
+            int angle_adc = (uint16_t)(text[2] | (text[3] << 8));
+            int encoder0 = text[4];
+            int encoder1 = text[5];
             float angle;
             if(angle_adc >= center_angle_adc)
                 angle = (float)(angle_adc - center_angle_adc) * 
@@ -117,12 +117,13 @@ void handle_text(uint8_t c)
                     (max_angle - 0) /
                     (center_angle_adc - max_angle_adc);
             
-            printf("%d %d %d %d %f\n", 
+            printf("encoder_counts=%d angle_adc=%d encoder0=%d encoder1=%d\n", 
                 length, 
                 angle_adc, 
                 encoder0, 
-                encoder1, 
-                TO_DEG(angle));
+                encoder1);
+//                , 
+//                TO_DEG(angle));
         }
     }
 }

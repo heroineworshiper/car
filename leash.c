@@ -70,7 +70,7 @@ uint16_t angle_accum = 0;
 uint8_t enable_adc = 0;
 uint8_t encoder0_adc = 0;
 uint8_t encoder1_adc = 0;
-uint8_t angle_adc = 0;
+uint16_t angle_adc = 0;
 uint8_t encoder_count = 0;
 uint8_t angle_count = 0;
 uint8_t enable_count = 0;
@@ -356,10 +356,12 @@ void main()
                     if(angle_count >= POT_OVERSAMPLE)
                     {
 // scale it to maximize resolution
-                        angle_accum -= 32 * 512;
-                        angle_accum /= POT_OVERSAMPLE;
-                        angle_accum += 128;
+//                        angle_accum -= 32 * 512;
+//                        angle_accum /= POT_OVERSAMPLE;
+//                        angle_accum += 128;
+// send the entire accumulator
                         angle_adc = angle_accum;
+// compress accumulator into 8 bits
 //                        angle_adc = angle_accum / POT_OVERSAMPLE / 4;
                         angle_accum = 0;
                         angle_count = 0;
@@ -372,7 +374,9 @@ void main()
                             encode_start();
                             encode_serial(encoder_counts & 0xff);
                             encode_serial(encoder_counts >> 8);
-                            encode_serial(angle_adc);
+// send the entire accumulator
+                            encode_serial(angle_adc & 0xff);
+                            encode_serial(angle_adc >> 8);
                             encode_serial(encoder0_adc);
                             encode_serial(encoder1_adc);
                         }

@@ -89,7 +89,8 @@ const uint8_t radio_config[] = RADIO_CONFIGURATION_DATA_ARRAY;
 // the tick clock
 #define HZ 50
 // maximum packet rate if !MAXIMUM_SPEED
-#define PACKET_HZ 45
+//#define PACKET_HZ 35  // 96mA
+#define PACKET_HZ 45  // 112mA
 // send packets as fast as possible by polling SPI.  
 // Requires reliable SPI during transmission.
 //#define MAXIMUM_SPEED
