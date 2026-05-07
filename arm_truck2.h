@@ -238,13 +238,13 @@ typedef struct
 // angular velocity in degrees/second
     int v;
     int v_temp;
-// 0 - powered + braking
-// 2 - powered + freewheel
-// 1 - unpowered + breaking
-// 3 - unpowered + freewheel
+
+// 0 - always freewheeling.  No advantage from leash braking with no traction.
+// 1 - enabled + regen braking in RC mode.  Leash mode is always powered.
+// 3 - enabled + powered braking in RC mode.  Leash mode is always powered.
     int mode;
-#define FREEWHEEL_BIT 0x2
-#define UNPOWERED_BIT 0x1
+#define ENABLE_BIT 0x1
+#define BRAKE_BIT 0x2
 } motor_t;
 
 #ifdef USE_LEASH
@@ -456,13 +456,18 @@ typedef struct
 	int min_steering_magnitude;
 	int throttle_ramp_step;
 
-// motor power 0 - MOTOR_PWM_PERIOD
+// motor power 0 ... MOTOR_PWM_PERIOD
     int power[MOTORS];
-// motor direction
+// direction to drive motor
     int reverse[MOTORS];
 // enable RPM feedback
     int auto_throttle;
 
+// enable powered braking in RC mode
+// conditions for enabling braking in RC mode:
+// wheels moved backwards, throttle is currently 0, motor mode is set
+// It can't use the last direction of the throttle stick because of dropped packets.
+    int enable_brake;
 
 
 	int rpm;

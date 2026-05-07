@@ -44,7 +44,7 @@ STEERING_ADC_MAX 195
 STEERING_ADC_MIN 80
 THROTTLE_ADC_DEADBAND 3
 THROTTLE_ADC_MAX 190
-THROTTLE_ADC_MIN 40
+THROTTLE_ADC_MIN 60
 
 # PWM cycles between I steps
 PID_DOWNSAMPLE 1
@@ -53,12 +53,11 @@ STEERING_STEP 20
 MAX_STEERING_STEP 90.0
 STEERING_OVERSHOOT 30
 
-# 0 - powered + braking
-# 2 - powered + freewheel
-# 1 - unpowered + breaking
-# 3 - unpowered + freewheel
-MOTOR_MODEL 0
-MOTOR_MODER 0
+# 0 - always freewheeling
+# 1 - enabled + regen braking in RC mode.  Leash mode is always powered.
+# 3 - enabled + powered braking in RC mode.  Leash mode is always powered.
+MOTOR_MODEL 3
+MOTOR_MODER 3
 
 BATTERY_ANALOG 980
 BATTERY_V0 8.67

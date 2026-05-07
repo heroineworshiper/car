@@ -208,25 +208,11 @@ const uint8_t sin_table[] =
 // leash angle table
 float adc_to_angle[] = 
 {
-//     207, TO_RAD(-90 + 0),
-//     203, TO_RAD(-90 + 15),
-//     195, TO_RAD(-90 + 30),
-//     181, TO_RAD(-90 + 45),
-//     166, TO_RAD(-90 + 60),
-//     147, TO_RAD(-90 + 75),
-//     128, TO_RAD(0),
-//     109, TO_RAD(90 - 75),
-//     91, TO_RAD(90 - 60),
-//     75,  TO_RAD(90 - 45),
-//     62,  TO_RAD(90 - 30),
-//     54,  TO_RAD(90 - 16),
-
     21600, TO_RAD(-90),
     20159, TO_RAD(-45),
     16365, TO_RAD(0),
     12480, TO_RAD(45),
     11270, TO_RAD(90)
-
 };
 
 
@@ -1653,6 +1639,96 @@ void handle_steering()
 }
 
 
+void do_stopped(int is_leash)
+{
+    if(!is_leash)
+    {
+        if(!truck.enable_brake)
+        {
+            if(get_motor_reverse())
+                truck.enable_brake = 1;
+            else
+            {
+// regen braking
+                truck.power[LEFT_MOTOR] = truck.power[RIGHT_MOTOR] = 0;
+                return;
+            }
+        }
+    }
+
+// reset the reference angles
+    if(truck.motors[LEFT_MOTOR].brake_angle < 0 || 
+        truck.motors[RIGHT_MOTOR].brake_angle < 0)
+    {
+        truck.motors[LEFT_MOTOR].brake_angle = truck.motors[LEFT_MOTOR].angle;
+        truck.motors[RIGHT_MOTOR].brake_angle = truck.motors[RIGHT_MOTOR].angle;
+    }
+
+    int i;
+// deg
+    float change[MOTORS];
+    for(i = 0; i < MOTORS; i++)
+    {
+        if((truck.motors[i].mode & BRAKE_BIT) || is_leash)
+        {
+            change[i] = get_angle_change_deg(truck.motors[i].brake_angle,
+                truck.motors[i].angle);
+
+// drag reference angle forward
+            if(change[i] > 90)
+            {
+                truck.motors[i].brake_angle += change[i] - 90;
+                truck.motors[i].brake_angle %= 360;
+                change[i] = 90;
+            }
+            else
+            if(change[i] < -90)
+            {
+                truck.motors[i].brake_angle += change[i] + 90;
+                if(truck.motors[i].brake_angle < 0) 
+                    truck.motors[i].brake_angle += 360;
+                truck.motors[i].brake_angle %= 360;
+                change[i] = -90;
+            }
+
+            if(change[i] > 0)
+                truck.reverse[i] = truck.reverse[1] = 1;
+            else
+                truck.reverse[i] = truck.reverse[1] = 0;
+
+// apply brake
+// Same PID constants for both motors, with P only & no need to reset
+            float brake_feedback = do_pid(&leash.brake_pid,
+                fabs(change[i]) / 90,
+                0,
+                0);
+
+            truck.power[i] = brake_feedback * 
+                MOTOR_PWM_PERIOD / 
+                100;
+        }
+        else
+        {
+            truck.power[i] = 0;
+        }
+// static int debug_counter = 0;
+// debug_counter++;
+// if(!(debug_counter % 10))
+// {
+// TRACE2
+// print_number(truck.motors[LEFT_MOTOR].angle);
+// print_number(truck.motors[LEFT_MOTOR].brake_angle);
+// print_float(change[LEFT_MOTOR]);
+// }
+    }
+}
+
+void exit_stopped()
+{
+    truck.motors[LEFT_MOTOR].brake_angle = -1;
+    truck.motors[RIGHT_MOTOR].brake_angle = -1;
+}
+
 void rpm_to_power(float target_rpm)
 {
 	truck.throttle_feedback = do_pid(&truck.rpm_pid,
@@ -1743,26 +1819,22 @@ void do_manual_throttle()
 // manual control
     if(truck.throttle > ADC_MID + truck.remote_throttle_deadband)
     {
-// full power for 1 cycle
-        truck.power[0] = MOTOR_PWM_PERIOD * 
+        truck.power[1] = truck.power[0] = MOTOR_PWM_PERIOD * 
             100 *
             (truck.throttle - ADC_MID - truck.remote_throttle_deadband) /
             (truck.remote_throttle_max - ADC_MID - truck.remote_throttle_deadband) /
             100;
         truck.reverse[1] = truck.reverse[0] = 0;
-        truck.power[1] = truck.power[0];
     }
     else
     if(truck.throttle < ADC_MID - truck.remote_throttle_deadband)
     {
-// full power for 1 cycle
-        truck.power[0] = MOTOR_PWM_PERIOD * 
+        truck.power[1] = truck.power[0] = MOTOR_PWM_PERIOD * 
             100 *
             (ADC_MID - truck.remote_throttle_deadband - truck.throttle) /
             (ADC_MID - truck.remote_throttle_deadband - truck.remote_throttle_min) /
             100;
         truck.reverse[1] = truck.reverse[0] = 1;
-        truck.power[1] = truck.power[0];
     }
 }
 
@@ -1790,9 +1862,7 @@ void do_leash_throttle()
     leash.distance2 = leash.distance;
 // start tapering here
     float taper_angle0 = TO_RAD(40.0);
-// maximum tapering here
-//        float taper_angle1 = TO_RAD(50.0);
-// reverse here
+// start reverse here
     float reverse_angle = TO_RAD(60.0);
     float angle_mag = fabs(leash.angle);
 
@@ -1802,86 +1872,13 @@ void do_leash_throttle()
             angle_mag >= taper_angle0) ||
         leash.distance < leash.distance0)
     {
-// braking mode
-// update the reference angles
-        if(truck.motors[LEFT_MOTOR].brake_angle < 0 || 
-            truck.motors[RIGHT_MOTOR].brake_angle < 0)
-        {
-            truck.motors[LEFT_MOTOR].brake_angle = truck.motors[LEFT_MOTOR].angle;
-            truck.motors[RIGHT_MOTOR].brake_angle = truck.motors[RIGHT_MOTOR].angle;
-        }
-
-        if(truck.motors[LEFT_MOTOR].brake_angle >= 0 &&
-            truck.motors[RIGHT_MOTOR].brake_angle >= 0)
-        {
-            int i;
-// deg
-            float change[MOTORS];
-            for(i = 0; i < MOTORS; i++)
-            {
-                change[i] = get_angle_change_deg(truck.motors[i].brake_angle,
-                    truck.motors[i].angle);
-
-// drag reference angle forward
-                if(change[i] > 90)
-                {
-                    truck.motors[i].brake_angle += change[i] - 90;
-                    truck.motors[i].brake_angle %= 360;
-                    change[i] = 90;
-                }
-                else
-                if(change[i] < -90)
-                {
-                    truck.motors[i].brake_angle += change[i] + 90;
-                    if(truck.motors[i].brake_angle < 0) 
-                        truck.motors[i].brake_angle += 360;
-                    truck.motors[i].brake_angle %= 360;
-                    change[i] = -90;
-                }
-
-                if(change[i] > 0)
-                    truck.reverse[i] = truck.reverse[1] = 1;
-                else
-                    truck.reverse[i] = truck.reverse[1] = 0;
-// only 1 set of PID constants for both motors, with P only & no need to reset
-                if(!(truck.motors[i].mode & FREEWHEEL_BIT))
-                {
-                    float brake_feedback = do_pid(&leash.brake_pid,
-                        fabs(change[i]) / 90,
-                        0,
-                        0);
-
-                    truck.power[i] = brake_feedback * 
-                        MOTOR_PWM_PERIOD / 
-                        100;
-                }
-            }
-
-// static int debug_counter = 0;
-// debug_counter++;
-// if(!(debug_counter % 10))
-// {
-// TRACE2
-// print_number(truck.motors[LEFT_MOTOR].angle);
-// print_number(truck.motors[LEFT_MOTOR].brake_angle);
-// print_float(change[LEFT_MOTOR]);
-// }
-
-        }
-
-// disable braking based on mode
-        int i;
-        for(i = 0; i < MOTORS; i++)
-        {
-            if(truck.motors[i].mode & FREEWHEEL_BIT)
-                truck.power[i] = 0;
-        }
+// stopped
+        do_stopped(1);
     }
     else
     {
 // leash moving
-        truck.motors[LEFT_MOTOR].brake_angle = -1;
-        truck.motors[RIGHT_MOTOR].brake_angle = -1;
+        exit_stopped();
 
 // convert leash distance to a pace
 // slowest min/mile
@@ -1907,7 +1904,6 @@ void do_leash_throttle()
 // reverse if angle is over a certain amount
         if(angle_mag >= reverse_angle)
         {
-//            max_pace = min_pace;
 // want a faster pace since we're going straight
 // so try the target reverse speed
             max_pace = rpm_to_pace(truck.target_reverse_rpm);
@@ -1919,16 +1915,7 @@ void do_leash_throttle()
         if(angle_mag >= taper_angle0 &&
             leash.reverse_timeout <= 0)
         {
-//             if(angle_mag >= taper_angle1)
-//             {
-                max_pace = min_pace;
-//             }
-//             else
-//             {
-//                 max_pace += (angle_mag - taper_angle0) / 
-//                     (taper_angle1 - taper_angle0) *
-//                     (min_pace - max_pace);
-//             }
+            max_pace = min_pace;
         }
 
 // limit pace
@@ -2138,7 +2125,7 @@ void feedback()
             truck.throttle < ADC_MID - truck.remote_throttle_deadband)
 		{
 			truck.steering_timeout = STEERING_RELOAD;
-
+            truck.enable_brake = 0;
 
             if(truck.auto_throttle)
             {
@@ -2151,7 +2138,7 @@ void feedback()
 		}
 		else
 		{
-			truck.power[0] = truck.power[1] = 0;
+            do_stopped(0);
 		}
 
 
@@ -2279,104 +2266,23 @@ void write_motors()
     if(lphase < 0) lphase += 360;
     if(rphase < 0) rphase += 360;
 
-
-// drive 2 phases
-// phase relative to the commutations is always the same
-// prev_phase < 0 is the starting condition
-// #define MOTOR_MACRO(phase, \
-//     prev_phase, \
-//     ccr1, \
-//     ccr2, \
-//     ccr3, \
-//     en1_gpio, \
-//     en1_pin, \
-//     en2_gpio, \
-//     en2_pin, \
-//     en3_gpio, \
-//     en3_pin) \
-//     if(phase >= 0 && phase < 120) \
-//     { \
-//         if(!truck.reverse && (prev_phase < 0 || prev_phase == 240) || \
-//             truck.reverse && (prev_phase < 0 || prev_phase == 120)) \
-//         { \
-//             prev_phase = 0; \
-//             ccr1 = truck.power; \
-//             ccr2 = 0; \
-//             ccr3 = 0; \
-// 	        SET_PIN(en1_gpio, en1_pin); \
-// 	        SET_PIN(en2_gpio, en2_pin); \
-// 	        CLEAR_PIN(en3_gpio, en3_pin); \
-//         } \
-// /* print_text("1"); */ \
-//     } \
-//     else \
-//     if(phase >= 120 && phase < 240) \
-//     { \
-//         if(!truck.reverse && (prev_phase < 0 || prev_phase == 0) || \
-//             truck.reverse && (prev_phase < 0 || prev_phase == 240)) \
-//         { \
-//             prev_phase = 120; \
-//             ccr1 = 0; \
-//             ccr2 = truck.power; \
-//             ccr3 = 0; \
-// 	        CLEAR_PIN(en1_gpio, en1_pin); \
-// 	        SET_PIN(en2_gpio, en2_pin); \
-// 	        SET_PIN(en3_gpio, en3_pin); \
-//         } \
-// /* print_text("2"); */ \
-//     } \
-//     else \
-//     if(phase >= 240) \
-//     { \
-//         if(!truck.reverse && (prev_phase < 0 || prev_phase == 120) || \
-//             truck.reverse && (prev_phase < 0 || prev_phase == 0)) \
-//         { \
-//             prev_phase = 240; \
-//             ccr1 = 0; \
-//             ccr2 = 0; \
-//             ccr3 = truck.power; \
-// 	        SET_PIN(en1_gpio, en1_pin); \
-// 	        CLEAR_PIN(en2_gpio, en2_pin); \
-// 	        SET_PIN(en3_gpio, en3_pin); \
-//         } \
-// /* print_text("3"); */ \
-//     }
-
-
-// leash mode overrides UNPOWERED_BIT
-    int leash_braking[MOTORS];
-    int leash_freewheel[MOTORS];
-    int i;
-    for(i = 0; i < MOTORS; i++)
-    {
-// powered braking when leash commands stop
-        leash_braking[i] = (leash.active && 
-            truck.motors[LEFT_MOTOR].brake_angle >= 0 &&
-            truck.motors[RIGHT_MOTOR].brake_angle >= 0 &&
-            !(truck.motors[i].mode & FREEWHEEL_BIT));
-// freewheel when leash commands movement
-        leash_freewheel[i] = leash.active &&
-            (truck.motors[i].mode & UNPOWERED_BIT);
-    }
-
-
 // left wheel
-    if(truck.power[LEFT_MOTOR] == 0 ||
-        ((truck.motors[LEFT_MOTOR].mode & UNPOWERED_BIT) && 
-        !leash_braking[LEFT_MOTOR]))
+    if(truck.power[LEFT_MOTOR] == 0 || truck.motors[LEFT_MOTOR].mode == 0)
     {
-// brake 
+// regen brake or freewheel
 	    TIM5->CCR1 = 0;
 	    TIM5->CCR3 = 0;
 	    TIM5->CCR2 = 0;
-        if((truck.motors[LEFT_MOTOR].mode & FREEWHEEL_BIT) || leash_freewheel[LEFT_MOTOR])
+        if(truck.motors[LEFT_MOTOR].mode == 0)
         {
+// freewheel if freewheel bit is set
 	        CLEAR_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
 	        CLEAR_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
 	        CLEAR_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
         }
         else
         {
+// regen brake
 	        SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
 	        SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
 	        SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
@@ -2385,8 +2291,6 @@ void write_motors()
     else
     {
 // drive all 3 phases
-//    if(1)
-//    {
 	    int index1 = (lphase * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 	    int index2 = (index1 + 120 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 	    int index3 = (index1 + 240 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
@@ -2399,42 +2303,26 @@ void write_motors()
 	    SET_PIN(LEFT_EN1_GPIO, LEFT_EN1_PIN);
 	    SET_PIN(LEFT_EN2_GPIO, LEFT_EN2_PIN);
 	    SET_PIN(LEFT_EN3_GPIO, LEFT_EN3_PIN);
-//     }
-//     else
-//     {
-// drive 2 phases
-//         MOTOR_MACRO(lphase, \
-//             truck.motors[LEFT_MOTOR].prev_phase, \
-//             TIM5->CCR1, \
-//             TIM5->CCR2, \
-//             TIM5->CCR3, \
-//             LEFT_EN1_GPIO, \
-//             LEFT_EN1_PIN, \
-//             LEFT_EN2_GPIO, \
-//             LEFT_EN2_PIN, \
-//             LEFT_EN3_GPIO, \
-//             LEFT_EN3_PIN)
-//     }
     }
 
 
 // right wheel
-    if(truck.power[RIGHT_MOTOR] == 0 ||
-        ((truck.motors[RIGHT_MOTOR].mode & UNPOWERED_BIT) && 
-        !leash_braking[RIGHT_MOTOR]))
+    if(truck.power[RIGHT_MOTOR] == 0 || truck.motors[RIGHT_MOTOR].mode == 0)
     {
-// brake 
+// regen brake or freewheel
 	    TIM3->CCR1 = 0;
 	    TIM3->CCR3 = 0;
 	    TIM3->CCR2 = 0;
-        if((truck.motors[RIGHT_MOTOR].mode & FREEWHEEL_BIT) || leash_freewheel[RIGHT_MOTOR])
+        if(truck.motors[RIGHT_MOTOR].mode == 0)
         {
+// freewheel
 	        CLEAR_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
 	        CLEAR_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
 	        CLEAR_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
         }
         else
         {
+// regen brake
             SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
             SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
             SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
@@ -2442,9 +2330,6 @@ void write_motors()
     }
     else
     {
-//    if(!truck.auto_throttle)
-//    if(1)
-//    {
 // drive all 3 phases
 	    int index1 = (rphase * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
 	    int index2 = (index1 + 120 * WAVEFORM_SIZE / 360) % WAVEFORM_SIZE;
@@ -2457,22 +2342,6 @@ void write_motors()
         SET_PIN(RIGHT_EN1_GPIO, RIGHT_EN1_PIN);
         SET_PIN(RIGHT_EN2_GPIO, RIGHT_EN2_PIN);
         SET_PIN(RIGHT_EN3_GPIO, RIGHT_EN3_PIN);
-//     }
-//     else
-//     {
-// drive 2 phases
-//         MOTOR_MACRO(rphase, \
-//             truck.motors[RIGHT_MOTOR].prev_phase, \
-//             TIM3->CCR1, \
-//             TIM3->CCR2, \
-//             TIM3->CCR3, \
-//             RIGHT_EN1_GPIO, \
-//             RIGHT_EN1_PIN, \
-//             RIGHT_EN2_GPIO, \
-//             RIGHT_EN2_PIN, \
-//             RIGHT_EN3_GPIO, \
-//             RIGHT_EN3_PIN)
-//     }
     }
 }
 
