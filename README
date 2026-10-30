@@ -116,7 +116,7 @@ offroad2.stl: OBSOLETE offroad rear tire for hard TPU
     260C
     left & right must be mirror images
 
-offroad3.stl: offroad rear tire for soft TPE
+offroad4.stl: offroad rear tire for soft TPE
     print with .8mm nozzle 260C
     All .32mm layer height stretched to .36
     Set Z seam to "shortest" to overcome nozzle clogs 
@@ -132,9 +132,13 @@ rear_wheel2.FCStd: OBSOLETE on-road rear wheel
         .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
     tire model is a mockup
 
-rear_wheel4.FCStd: most recent off-road rear wheel
+rear_wheel4.FCStd: OBSOLETE off-road rear wheel with multiple parts
     .4mm nozzle .32mm layer height for INNER HUB, INNER RING
     .4mm nozzle .2mm layer height for OUTER HUB, OUTER RING
+    change screw_r2 to select m2 or 6-32 farsteners
+
+rear_wheel5.FCStd: most recent off-road rear wheel with 2 parts
+    .4mm nozzle .32mm layer height for INNER HUB, INNER RING
     change screw_r2 to select m2 or 6-32 farsteners
 
 tire3.stl: OBSOLETE front tire for hard TPU
@@ -146,10 +150,12 @@ tire4.stl: front tire for soft TPE
     260C
     left & right must be mirror images
 
-tire6.FCMacro: Create layer for the latest rear tire
+tire6.FCMacro: Create layer for the latest rear tire & wheel hex pattern
     Extrude by the layer height .32mm, then export tire.stl
     Then run helix.c to generate a helix by creating discrete layers
         ./helix tire.stl offroad3.stl
+    Import back into blender.
+    Merge with TPE farsteners from rear_wheel5.FCStd
     tires must be mirror images or the truck will pull to 1 side
 
 trailer9.FCStd: Towed drogue for aiding video composition.
@@ -332,7 +338,7 @@ motor4.FCStd: motor mount
 
 
 
-car_remote.FCMacro:
+car_remote.FCMacro: OBSOLETE
     create objects for car_remote & cam_remote
 
 car_remote4.FCStd: remote control for vehicle
@@ -399,11 +405,11 @@ Carbon fiber farsteners for a fixed gopro
 
 Key files:
 
-isogrid_plane.FCMacro:
+isogrid_plane.FCMacro: OBSOLETE
     create isogrids for cam_remote, car_remote, & cam_gearbox.FCStd
 
-clamshell.FCMacro:
-    create walls for cam_remote, car_remote OBSOLETE
+clamshell.FCMacro: OBSOLETE
+    create walls for cam_remote, car_remote
 
 gopro_case2.FCStd: case for a gopro 7
     collars, interfaces for CF rod

@@ -39,11 +39,12 @@
 //#define TOTAL_H 40
 
 // 40mm tire after stretching the layers to .36mm
-//#define TOTAL_H 36
-//#define TOTAL_ANGLE (360.0 / 16)
+#define TOTAL_H 36
+#define TOTAL_ANGLE (360.0 / 16)
 
-#define TOTAL_H 6.4
-#define TOTAL_ANGLE 60
+// unknown
+//#define TOTAL_H 6.4
+//#define TOTAL_ANGLE 60
 
 //#define TOTAL_H 31.04 // parallel tread
 //#define TOTAL_H 60.0 // V tread
